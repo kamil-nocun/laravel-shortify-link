@@ -4,7 +4,7 @@
 
 **Goal:** `GET /{code}` redirects (302) to the link's `original_url`; inactive, expired or unknown codes show one Inertia 404 page.
 
-**Architecture:** A single-action `RedirectLinkController` resolves the link through a new `Link::active()` scope. `firstOrFail()` throws `ModelNotFoundException`, which `bootstrap/app.php` renders as the Inertia page `errors/NotFound` with status 404, only for the `links.redirect` route.
+**Architecture:** A single-action `RedirectLinkController` resolves the link through a new `Link::active()` scope. `firstOrFail()` throws `ModelNotFoundException`, which an `Inertia::handleExceptionsUsing` callback renders as the Inertia page `errors/NotFound` with status 404, only for the `links.redirect` route.
 
 **Tech Stack:** Laravel, Inertia v3 + Vue, Pest, Playwright.
 
@@ -83,7 +83,7 @@ git commit -m "Add public redirect route for short links"
 
 **Files:**
 - Create: `resources/js/pages/errors/NotFound.vue`
-- Modify: `resources/js/app.ts` (layout resolver), `bootstrap/app.php` (exception render)
+- Modify: `resources/js/app.ts` (layout resolver), `app/Providers/AppServiceProvider.php` (exception handling)
 - Test: `tests/Feature/LinkRedirectTest.php`
 
 **Interfaces:**
@@ -92,13 +92,13 @@ git commit -m "Add public redirect route for short links"
 
 - [ ] **Step 1: Write failing test** in `LinkRedirectTest`: `refused redirects render the NotFound page with 404`: for an inactive link, `get(route('links.redirect', $code))->assertNotFound()->assertInertia(fn (Assert $page) => $page->component('errors/NotFound'))`. Also `other 404s are not rendered as NotFound`: `get('/no/such/page')->assertNotFound()` and assert the response is not an Inertia page (`assertDontSee('errors\/NotFound')` or equivalent for the installed Inertia testing helpers).
 - [ ] **Step 2: Run** `php artisan test --compact --filter=LinkRedirectTest`. Expected: new tests FAIL.
-- [ ] **Step 3: Implement** in `bootstrap/app.php` a `$exceptions->render(function (ModelNotFoundException|NotFoundHttpException $e, Request $request) ...)` that returns `null` unless `$request->routeIs('links.redirect')` (note: Laravel converts `ModelNotFoundException` to `NotFoundHttpException` before render callbacks; verify which type reaches the callback and type-hint accordingly). Otherwise return `Inertia::render('errors/NotFound')->toResponse($request)->setStatusCode(404)`. Check `search-docs`/Inertia v3 docs for the exact exception-handling API before choosing between this and Inertia's own handler.
+- [ ] **Step 3: Implement** the 404 rendering with Inertia v3's `Inertia::handleExceptionsUsing(callable $callback)` (inertia-laravel v3.5.1), registered in `AppServiceProvider::boot()` (it needs the bound exception handler). The callback receives `Inertia\ExceptionResponse $response` and returns `$response->render('errors/NotFound')` when `$response->request->routeIs('links.redirect') && ! $response->request->expectsJson() && $response->statusCode() === 404`; otherwise it returns `null` (the original response is kept). `ExceptionResponse::toResponse()` shares the `HandleInertiaRequests` props and keeps the original status code, so no manual `setStatusCode(404)`. Verified in vendor: `ModelNotFoundException` is converted to `NotFoundHttpException` by `Handler::prepareException()` before render callbacks run, and the callback is not limited to Inertia requests, so the route and JSON guards are required. Do not use `$exceptions->render(...)` in `bootstrap/app.php` for this.
 - [ ] **Step 4: Implement** `errors/NotFound.vue` modelled on `resources/js/pages/auth/VerifyEmail.vue`: `defineOptions({ layout: { title: 'Link not found', description: 'This link does not exist or is no longer available.' } })`, `<Head title="Link not found" />`, a `TextLink`/`Button` to `/` using the Wayfinder route for `front_app` (`@/routes`). In `resources/js/app.ts` layout resolver add `name.startsWith('errors/')` → `AuthLayout` (public page must not use the sidebar `AppLayout`).
 - [ ] **Step 5: Run** `npm run build`, then `php artisan test --compact --filter=LinkRedirectTest`. Expected: build OK, PASS.
 - [ ] **Step 6: Commit**
 ```bash
 vendor/bin/pint --dirty --format agent
-git add resources/js/pages/errors/NotFound.vue resources/js/app.ts bootstrap/app.php tests/Feature/LinkRedirectTest.php
+git add resources/js/pages/errors/NotFound.vue resources/js/app.ts app/Providers/AppServiceProvider.php tests/Feature/LinkRedirectTest.php
 git commit -m "Render Inertia 404 page for refused short links"
 ```
 
