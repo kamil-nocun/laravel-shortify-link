@@ -10,6 +10,14 @@ use Throwable;
 class UpdateLinkRequest extends StoreLinkRequest
 {
     /**
+     * Only the link owner may update it.
+     */
+    public function authorize(): bool
+    {
+        return $this->user()->can('update', $this->route('link'));
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -32,7 +40,7 @@ class UpdateLinkRequest extends StoreLinkRequest
 
         try {
             return $link->expires_at !== null
-                && $link->expires_at->equalTo(Carbon::parse((string) $this->input('expires_at')));
+                && $link->expires_at->copy()->startOfMinute()->equalTo(Carbon::parse((string) $this->input('expires_at'))->startOfMinute());
         } catch (Throwable) {
             return false;
         }

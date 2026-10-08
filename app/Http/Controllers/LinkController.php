@@ -69,8 +69,6 @@ class LinkController extends Controller
      */
     public function update(UpdateLinkRequest $request, Link $link): RedirectResponse
     {
-        Gate::authorize('update', $link);
-
         $link->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link updated.')]);
