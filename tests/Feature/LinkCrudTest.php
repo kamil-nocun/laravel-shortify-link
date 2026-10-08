@@ -31,6 +31,7 @@ test('index lists only own links, newest first', function () {
             ->component('links/Index')
             ->where('links.data.0.id', $new->id)
             ->where('links.data.1.id', $old->id)
+            ->where('links.data.0.short_url', $new->short_url)
             ->has('links.data', 2));
 });
 
@@ -40,7 +41,7 @@ test('create and edit render their pages', function () {
     $this->actingAs($this->user)->get(route('links.create'))
         ->assertInertia(fn (Assert $page) => $page->component('links/Create'));
     $this->actingAs($this->user)->get(route('links.edit', $link))
-        ->assertInertia(fn (Assert $page) => $page->component('links/Edit')->where('link.id', $link->id));
+        ->assertInertia(fn (Assert $page) => $page->component('links/Edit')->where('link.id', $link->id)->where('link.short_url', $link->short_url));
 });
 
 test('store creates a link with a generated code and ignores a supplied one', function () {
@@ -93,10 +94,11 @@ test('destroy deletes the link', function () {
     $this->assertModelMissing($link);
 });
 
-test('other users links are forbidden', function (string $method, string $route) {
+test('other users links redirect to the list with an error toast', function (string $method, string $route) {
     $link = Link::factory()->create();
 
-    $this->actingAs($this->user)->{$method}(route($route, $link))->assertForbidden();
+    $this->actingAs($this->user)->{$method}(route($route, $link))
+        ->assertRedirect(route('links.index'));
 })->with([
     ['get', 'links.edit'],
     ['patch', 'links.update'],
@@ -109,6 +111,7 @@ test('store validates input', function (array $payload, string $field) {
     'missing url' => [[], 'original_url'],
     'javascript scheme' => [['original_url' => 'javascript:alert(1)'], 'original_url'],
     'ftp scheme' => [['original_url' => 'ftp://example.com/file'], 'original_url'],
+    'plain http' => [['original_url' => 'http://example.com'], 'original_url'],
     'url too long' => [['original_url' => 'https://example.com/'.str_repeat('a', 2050)], 'original_url'],
     'title too long' => [['original_url' => 'https://example.com', 'title' => str_repeat('a', 256)], 'title'],
     'expires in the past' => [['original_url' => 'https://example.com', 'expires_at' => '2000-01-01 00:00:00'], 'expires_at'],

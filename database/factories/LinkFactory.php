@@ -22,7 +22,7 @@ class LinkFactory extends Factory
         return [
             'user_id' => User::factory(),
             'title' => fake()->optional()->sentence(3),
-            'original_url' => fake()->url(),
+            'original_url' => 'https://'.fake()->domainName().'/'.fake()->slug(),
             'code' => Str::random(6),
             'is_active' => true,
             'expires_at' => null,

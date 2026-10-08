@@ -49,7 +49,7 @@ defineOptions({
                     <tr>
                         <th class="p-3">Title</th>
                         <th class="p-3">Target URL</th>
-                        <th class="p-3">Code</th>
+                        <th class="p-3">Short URL</th>
                         <th class="p-3">Status</th>
                         <th class="p-3">Expires</th>
                         <th class="p-3 text-right">Actions</th>
@@ -65,7 +65,7 @@ defineOptions({
                         <td class="max-w-64 truncate p-3">
                             {{ link.original_url }}
                         </td>
-                        <td class="p-3 font-mono">{{ link.code }}</td>
+                        <td class="p-3 font-mono">{{ link.short_url }}</td>
                         <td class="p-3">
                             <Badge
                                 :variant="

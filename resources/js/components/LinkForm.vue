@@ -45,8 +45,8 @@ const form = useLinkForm();
 <template>
     <form class="space-y-6" @submit.prevent="action(form)">
         <div v-if="link" class="grid gap-2">
-            <Label for="code">Short code</Label>
-            <Input id="code" :model-value="link.code" readonly />
+            <Label for="short_url">Short URL</Label>
+            <Input id="short_url" :model-value="link.short_url" readonly />
         </div>
 
         <div class="grid gap-2">

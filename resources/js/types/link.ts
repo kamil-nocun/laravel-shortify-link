@@ -3,6 +3,7 @@ export type Link = {
     title: string | null;
     original_url: string;
     code: string;
+    short_url: string;
     is_active: boolean;
     expires_at: string | null;
 };
