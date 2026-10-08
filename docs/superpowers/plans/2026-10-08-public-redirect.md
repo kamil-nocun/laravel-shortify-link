@@ -1,126 +1,127 @@
-# Public Redirect Implementation Plan
+# Publiczny redirect: plan implementacji
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Dla agentów wykonawczych:** WYMAGANY SUB-SKILL: użyj superpowers:subagent-driven-development (rekomendowane) lub superpowers:executing-plans, żeby realizować plan zadanie po zadaniu. Kroki mają checkboxy (`- [ ]`).
 
-**Goal:** `GET /{code}` redirects (302) to the link's `original_url`; inactive, expired or unknown codes show one Inertia 404 page.
+**Cel:** `GET /{code}` przekierowuje (302) na `original_url` linku; link nieaktywny, wygasły lub nieistniejący pokazuje jedną stronę 404 w Inertia.
 
-**Architecture:** A single-action `RedirectLinkController` resolves the link through a new `Link::active()` scope. `firstOrFail()` throws `ModelNotFoundException`, which an `Inertia::handleExceptionsUsing` callback renders as the Inertia page `errors/NotFound` with status 404, only for the `links.redirect` route.
+**Architektura:** Jednoakcyjny `RedirectLinkController` znajduje link przez nowy scope `Link::active()`. `firstOrFail()` rzuca `ModelNotFoundException`, który callback `Inertia::handleExceptionsUsing` renderuje jako stronę Inertia `errors/NotFound` ze statusem 404, tylko dla trasy `links.redirect`.
 
-**Tech Stack:** Laravel, Inertia v3 + Vue, Pest, Playwright.
+**Stack:** Laravel, Inertia v3 + Vue, Pest, Playwright.
 
 **Spec:** `docs/superpowers/specs/2026-10-08-public-redirect-design.md`
 
-## Global Constraints
+## Ograniczenia globalne
 
-- Redirect is 302, never 301.
-- Route is public (no `auth`), named `links.redirect`, registered **last** in `routes/web.php`, with `where('code', '[0-9A-Za-z]+')`.
-- Every refusal (inactive, expired, unknown, wrong case) gives the same 404; no distinct messages.
-- `code` is case-sensitive (`utf8mb4_bin`).
-- Only 404s from `links.redirect` are customised; other 404s unchanged.
-- Out of scope: click counters, per-reason messages, cache.
-- Follow project rules: Pest feature tests, `vendor/bin/pint --dirty --format agent` after PHP changes, UI strings are English literals, Wayfinder for frontend route imports.
+- Redirect to 302, nigdy 301.
+- Trasa jest publiczna (bez `auth`), nazywa się `links.redirect`, jest rejestrowana **na końcu** `routes/web.php`, z `where('code', '[0-9A-Za-z]+')`.
+- Każda odmowa (nieaktywny, wygasły, nieistniejący, zła wielkość liter) daje ten sam 404, bez osobnych komunikatów.
+- `code` rozróżnia wielkość liter (`utf8mb4_bin`).
+- Dostosowujemy tylko 404 z `links.redirect`; pozostałe 404 bez zmian.
+- Poza zakresem: liczniki kliknięć, komunikaty per powód, cache.
+- Zasady projektu: testy Pest, `vendor/bin/pint --dirty --format agent` po zmianach PHP, teksty UI jako angielskie literały, Wayfinder do importu tras we froncie.
+- Specyfikacje i plany piszemy po polsku.
 
-## Review Focus
+## Fokus przeglądu
 
-- Link expiring exactly now (`expires_at = now()`): treated as expired (404). Test in Task 1.
-- `expires_at` in the future: still redirects. Test in Task 1.
-- Code with different letter case (`abc123` vs `Abc123`): 404. Test in Task 2.
-- Code with characters outside the alphabet (e.g. `ab-12`): 404 via route constraint, not a 500. Test in Task 2.
-- `/login`, `/dashboard`, `/links` unaffected by the catch-all route. Test in Task 2.
+- Link wygasający dokładnie teraz (`expires_at = now()`): traktowany jako wygasły (404). Test w zadaniu 1.
+- `expires_at` w przyszłości: nadal przekierowuje. Test w zadaniu 1.
+- Kod z inną wielkością liter (`abc123` vs `Abc123`): 404. Test w zadaniu 2.
+- Kod ze znakami spoza alfabetu (np. `ab-12`): 404 przez ograniczenie trasy, nie 500. Test w zadaniu 2.
+- `/login`, `/dashboard`, `/links` nie są przesłaniane przez trasę catch-all. Test w zadaniu 2.
 
 ---
 
-### Task 1: `Link::active()` scope
+### Zadanie 1: scope `Link::active()`
 
-**Files:**
-- Modify: `app/Models/Link.php`
-- Test: `tests/Feature/LinkScopeTest.php` (create via `php artisan make:test --pest LinkScopeTest`)
+**Pliki:**
+- Zmiana: `app/Models/Link.php`
+- Test: `tests/Feature/LinkScopeTest.php` (utworzyć przez `php artisan make:test --pest LinkScopeTest`)
 
-**Interfaces:**
-- Produces: `Link::active()` query scope (`scopeActive(Builder $query): void`), used by Task 2.
+**Interfejsy:**
+- Dostarcza: scope `Link::active()` (`scopeActive(Builder $query): void`), używany w zadaniu 2.
 
-- [ ] **Step 1: Write failing tests** in `LinkScopeTest`: `active scope returns only active, non-expired links`. Create with factories: active, `inactive()`, `expired()`, active with `expires_at = now()->addDay()`, active with `expires_at = now()` (frozen via `$this->freezeTime()`). Assert `Link::active()->pluck('id')` contains exactly the first and the future-expiry link.
-- [ ] **Step 2: Run** `php artisan test --compact --filter=LinkScopeTest`. Expected: FAIL (`active` undefined).
-- [ ] **Step 3: Implement** `scopeActive(Builder $query): void` in `Link` (with `#[Scope]` attribute if the installed Laravel version uses it, otherwise `scopeActive`; check sibling code/docs): `is_active = true` and (`expires_at` null or `expires_at > now()`).
-- [ ] **Step 4: Run** the same command. Expected: PASS.
-- [ ] **Step 5: Commit**
+- [ ] **Krok 1: Napisz testy, które padają** w `LinkScopeTest`: `active scope returns only active, non-expired links`. Utwórz fabrykami: aktywny, `inactive()`, `expired()`, aktywny z `expires_at = now()->addDay()`, aktywny z `expires_at = now()` (czas zamrożony przez `$this->freezeTime()`). Asercja: `Link::active()->pluck('id')` zawiera dokładnie pierwszy link i link z przyszłym `expires_at`.
+- [ ] **Krok 2: Uruchom** `php artisan test --compact --filter=LinkScopeTest`. Oczekiwane: FAIL (brak `active`).
+- [ ] **Krok 3: Zaimplementuj** `scopeActive(Builder $query): void` w `Link` (z atrybutem `#[Scope]`, jeśli zainstalowana wersja Laravela tak robi, w przeciwnym razie `scopeActive`; sprawdź sąsiedni kod i dokumentację): `is_active = true` oraz (`expires_at` null lub `expires_at > now()`).
+- [ ] **Krok 4: Uruchom** to samo polecenie. Oczekiwane: PASS.
+- [ ] **Krok 5: Commit**
 ```bash
 vendor/bin/pint --dirty --format agent
 git add app/Models/Link.php tests/Feature/LinkScopeTest.php
 git commit -m "Add Link active scope"
 ```
 
-### Task 2: Redirect route and controller
+### Zadanie 2: trasa i kontroler redirectu
 
-**Files:**
-- Create: `app/Http/Controllers/RedirectLinkController.php` (via `php artisan make:controller RedirectLinkController --invokable --no-interaction`)
-- Modify: `routes/web.php` (append route after the auth group, before `require settings.php` is fine only if it stays last among web routes; place it as the final route statement)
-- Test: `tests/Feature/LinkRedirectTest.php` (via `php artisan make:test --pest LinkRedirectTest`)
+**Pliki:**
+- Utworzenie: `app/Http/Controllers/RedirectLinkController.php` (przez `php artisan make:controller RedirectLinkController --invokable --no-interaction`)
+- Zmiana: `routes/web.php` (trasa jako ostatnia instrukcja trasy)
+- Test: `tests/Feature/LinkRedirectTest.php` (przez `php artisan make:test --pest LinkRedirectTest`)
 
-**Interfaces:**
-- Consumes: `Link::active()` from Task 1.
-- Produces: route `links.redirect` (`GET {code}`), `RedirectLinkController::__invoke(string $code): RedirectResponse`.
+**Interfejsy:**
+- Używa: `Link::active()` z zadania 1.
+- Dostarcza: trasę `links.redirect` (`GET {code}`), `RedirectLinkController::__invoke(string $code): RedirectResponse`.
 
-- [ ] **Step 1: Write failing tests** in `LinkRedirectTest`:
+- [ ] **Krok 1: Napisz testy, które padają** w `LinkRedirectTest`:
   - `active link redirects with 302 to original_url`: `get(route('links.redirect', $link->code))->assertStatus(302)->assertRedirect($link->original_url)`.
   - `link expiring in the future still redirects`.
-  - `inactive, expired and unknown codes return 404` (dataset: `inactive()`, `expired()`, unknown code `zzzzzz`) → `assertNotFound()`.
-  - `code lookup is case sensitive`: link code `Abc123`, request `abc123` → 404.
-  - `code outside the alphabet returns 404`: request `ab-12` → 404.
-  - `catch-all route does not shadow existing pages`: guest `get('/login')` is 200; `get('/dashboard')` redirects to `route('login')`.
-  Use `Link::factory()->create(['code' => ...])` for fixed codes.
-- [ ] **Step 2: Run** `php artisan test --compact --filter=LinkRedirectTest`. Expected: FAIL (route not defined).
-- [ ] **Step 3: Implement** the controller (`__invoke(string $code): RedirectResponse`, `Link::active()->where('code', $code)->firstOrFail()`, `redirect()->away($link->original_url)`) and the route `Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z]+')->name('links.redirect');` as the last route in `routes/web.php`.
-- [ ] **Step 4: Run** the same command. Expected: PASS (404 tests pass with default error page; Inertia rendering is Task 3).
-- [ ] **Step 5: Commit**
+  - `inactive, expired and unknown codes return 404` (dataset: `inactive()`, `expired()`, nieistniejący kod `zzzzzz`) → `assertNotFound()`.
+  - `code lookup is case sensitive`: kod linku `Abc123`, żądanie `abc123` → 404.
+  - `code outside the alphabet returns 404`: żądanie `ab-12` → 404.
+  - `catch-all route does not shadow existing pages`: gość na `get('/login')` dostaje 200; `get('/dashboard')` przekierowuje na `route('login')`.
+  Stałe kody: `Link::factory()->create(['code' => ...])`.
+- [ ] **Krok 2: Uruchom** `php artisan test --compact --filter=LinkRedirectTest`. Oczekiwane: FAIL (brak trasy).
+- [ ] **Krok 3: Zaimplementuj** kontroler (`__invoke(string $code): RedirectResponse`, `Link::active()->where('code', $code)->firstOrFail()`, `redirect()->away($link->original_url)`) oraz trasę `Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z]+')->name('links.redirect');` jako ostatnią w `routes/web.php`.
+- [ ] **Krok 4: Uruchom** to samo polecenie. Oczekiwane: PASS (testy 404 przechodzą z domyślną stroną błędu; render Inertia to zadanie 3).
+- [ ] **Krok 5: Commit**
 ```bash
 vendor/bin/pint --dirty --format agent
 git add app/Http/Controllers/RedirectLinkController.php routes/web.php tests/Feature/LinkRedirectTest.php
 git commit -m "Add public redirect route for short links"
 ```
 
-### Task 3: Inertia 404 page
+### Zadanie 3: strona 404 w Inertia
 
-**Files:**
-- Create: `resources/js/pages/errors/NotFound.vue`
-- Modify: `resources/js/app.ts` (layout resolver), `app/Providers/AppServiceProvider.php` (exception handling)
+**Pliki:**
+- Utworzenie: `resources/js/pages/errors/NotFound.vue`
+- Zmiana: `resources/js/app.ts` (resolver layoutu), `app/Providers/AppServiceProvider.php` (obsługa wyjątków)
 - Test: `tests/Feature/LinkRedirectTest.php`
 
-**Interfaces:**
-- Consumes: route `links.redirect` (Task 2).
-- Produces: Inertia component `errors/NotFound`, status 404, rendered only when the failing route is `links.redirect`.
+**Interfejsy:**
+- Używa: trasy `links.redirect` (zadanie 2).
+- Dostarcza: komponent Inertia `errors/NotFound`, status 404, renderowany tylko gdy zawodzi trasa `links.redirect`.
 
-- [ ] **Step 1: Write failing test** in `LinkRedirectTest`: `refused redirects render the NotFound page with 404`: for an inactive link, `get(route('links.redirect', $code))->assertNotFound()->assertInertia(fn (Assert $page) => $page->component('errors/NotFound'))`. Also `other 404s are not rendered as NotFound`: `get('/no/such/page')->assertNotFound()` and assert the response is not an Inertia page (`assertDontSee('errors\/NotFound')` or equivalent for the installed Inertia testing helpers).
-- [ ] **Step 2: Run** `php artisan test --compact --filter=LinkRedirectTest`. Expected: new tests FAIL.
-- [ ] **Step 3: Implement** the 404 rendering with Inertia v3's `Inertia::handleExceptionsUsing(callable $callback)` (inertia-laravel v3.5.1), registered in `AppServiceProvider::boot()` (it needs the bound exception handler). The callback receives `Inertia\ExceptionResponse $response` and returns `$response->render('errors/NotFound')` when `$response->request->routeIs('links.redirect') && ! $response->request->expectsJson() && $response->statusCode() === 404`; otherwise it returns `null` (the original response is kept). `ExceptionResponse::toResponse()` shares the `HandleInertiaRequests` props and keeps the original status code, so no manual `setStatusCode(404)`. Verified in vendor: `ModelNotFoundException` is converted to `NotFoundHttpException` by `Handler::prepareException()` before render callbacks run, and the callback is not limited to Inertia requests, so the route and JSON guards are required. Do not use `$exceptions->render(...)` in `bootstrap/app.php` for this.
-- [ ] **Step 4: Implement** `errors/NotFound.vue` modelled on `resources/js/pages/auth/VerifyEmail.vue`: `defineOptions({ layout: { title: 'Link not found', description: 'This link does not exist or is no longer available.' } })`, `<Head title="Link not found" />`, a `TextLink`/`Button` to `/` using the Wayfinder route for `front_app` (`@/routes`). In `resources/js/app.ts` layout resolver add `name.startsWith('errors/')` → `AuthLayout` (public page must not use the sidebar `AppLayout`).
-- [ ] **Step 5: Run** `npm run build`, then `php artisan test --compact --filter=LinkRedirectTest`. Expected: build OK, PASS.
-- [ ] **Step 6: Commit**
+- [ ] **Krok 1: Napisz testy, które padają** w `LinkRedirectTest`: `refused redirects render the NotFound page with 404`: dla nieaktywnego linku `get(route('links.redirect', $code))->assertNotFound()->assertInertia(fn (Assert $page) => $page->component('errors/NotFound'))`. Dodatkowo `other 404s are not rendered as NotFound`: `get('/no/such/page')->assertNotFound()` i asercja, że odpowiedź nie jest stroną Inertia (`assertDontSee('errors\/NotFound')` lub odpowiednik dla zainstalowanych helperów testowych Inertia).
+- [ ] **Krok 2: Uruchom** `php artisan test --compact --filter=LinkRedirectTest`. Oczekiwane: nowe testy FAIL.
+- [ ] **Krok 3: Zaimplementuj** render 404 przez `Inertia::handleExceptionsUsing(callable $callback)` (inertia-laravel v3.5.1), zarejestrowane w `AppServiceProvider::boot()` (potrzebuje podpiętego handlera wyjątków). Callback dostaje `Inertia\ExceptionResponse $response` i zwraca `$response->render('errors/NotFound')`, gdy `$response->request->routeIs('links.redirect') && ! $response->request->expectsJson() && $response->statusCode() === 404`; w przeciwnym razie zwraca `null` (zostaje oryginalna odpowiedź). `ExceptionResponse::toResponse()` dokłada współdzielone propsy z `HandleInertiaRequests` i zachowuje status, więc nie trzeba ręcznie `setStatusCode(404)`. Sprawdzone w vendorze: `Handler::prepareException()` zamienia `ModelNotFoundException` na `NotFoundHttpException` przed callbackami render, a callback nie jest ograniczony do requestów Inertia, więc warunki trasy i JSON są wymagane. Nie używać do tego `$exceptions->render(...)` w `bootstrap/app.php`.
+- [ ] **Krok 4: Zaimplementuj** `errors/NotFound.vue` wzorowany na `resources/js/pages/auth/VerifyEmail.vue`: `defineOptions({ layout: { title: 'Link not found', description: 'This link does not exist or is no longer available.' } })`, `<Head title="Link not found" />`, `TextLink`/`Button` do `/` przez trasę Wayfinder `front_app` (`@/routes`). W resolverze layoutu w `resources/js/app.ts` dodaj `name.startsWith('errors/')` → `AuthLayout` (publiczna strona nie może używać `AppLayout` z sidebarem).
+- [ ] **Krok 5: Uruchom** `npm run build`, potem `php artisan test --compact --filter=LinkRedirectTest`. Oczekiwane: build OK, PASS.
+- [ ] **Krok 6: Commit**
 ```bash
 vendor/bin/pint --dirty --format agent
 git add resources/js/pages/errors/NotFound.vue resources/js/app.ts app/Providers/AppServiceProvider.php tests/Feature/LinkRedirectTest.php
 git commit -m "Render Inertia 404 page for refused short links"
 ```
 
-### Task 4: E2E flow
+### Zadanie 4: przepływ E2E
 
-**Files:**
-- Create: `tests/e2e/redirect.spec.ts`
+**Pliki:**
+- Utworzenie: `tests/e2e/redirect.spec.ts`
 
-**Interfaces:**
-- Consumes: routes and page from Tasks 2-3. Reuse the `run()` tinker helper pattern from `tests/e2e/links.spec.ts` (no auth state needed: `test.use({ storageState: undefined })`).
+**Interfejsy:**
+- Używa: tras i strony z zadań 2-3. Wzorzec helpera `run()` (tinker) z `tests/e2e/links.spec.ts`; bez stanu logowania: `test.use({ storageState: undefined })`.
 
-- [ ] **Step 1: Write** `redirect.spec.ts` with two tests, creating links via tinker with unique codes and cleaning them in `afterAll`:
-  - `active short link redirects to the target`: link with `original_url` `https://example.com/`; `page.goto('/<code>')` then `await expect(page).toHaveURL('https://example.com/')` (route-intercept the external host with `page.route` to avoid real network if needed).
-  - `inactive short link shows the not found page`: `goto` → `expect(page.getByText('This link does not exist or is no longer available.')).toBeVisible()` and response status 404.
-- [ ] **Step 2: Run** `npx playwright test tests/e2e/redirect.spec.ts`. Expected: PASS (needs the app server per `playwright.config.ts`).
-- [ ] **Step 3: Commit**
+- [ ] **Krok 1: Napisz** `redirect.spec.ts` z dwoma testami; linki tworzone przez tinker z unikalnymi kodami, sprzątane w `afterAll`:
+  - `active short link redirects to the target`: link z `original_url` `https://example.com/`; `page.goto('/<code>')`, potem `await expect(page).toHaveURL('https://example.com/')` (w razie potrzeby przechwyć zewnętrzny host przez `page.route`, żeby nie wychodzić w sieć).
+  - `inactive short link shows the not found page`: `goto`, potem `expect(page.getByText('This link does not exist or is no longer available.')).toBeVisible()` oraz status odpowiedzi 404.
+- [ ] **Krok 2: Uruchom** `npx playwright test tests/e2e/redirect.spec.ts`. Oczekiwane: PASS (wymaga serwera aplikacji wg `playwright.config.ts`).
+- [ ] **Krok 3: Commit**
 ```bash
 git add tests/e2e/redirect.spec.ts
 git commit -m "Add E2E tests for public redirect"
 ```
 
-### Task 5: Final verification
+### Zadanie 5: weryfikacja końcowa
 
-- [ ] **Step 1:** Run `php artisan test --compact tests/Feature/LinkRedirectTest.php tests/Feature/LinkScopeTest.php tests/Feature/LinkCrudTest.php tests/Feature/AuthRedirectTest.php`. Expected: all PASS.
-- [ ] **Step 2:** Ask the user to run the full suite `php artisan test --compact` (project rule).
+- [ ] **Krok 1:** Uruchom `php artisan test --compact tests/Feature/LinkRedirectTest.php tests/Feature/LinkScopeTest.php tests/Feature/LinkCrudTest.php tests/Feature/AuthRedirectTest.php`. Oczekiwane: wszystko PASS.
+- [ ] **Krok 2:** Poproś użytkownika o uruchomienie pełnego zestawu `php artisan test --compact` (zasada projektu).
