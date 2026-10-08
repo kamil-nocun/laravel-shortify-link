@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Database\Factories\LinkFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -56,6 +58,18 @@ class Link extends Model
     protected function shortUrl(): Attribute
     {
         return Attribute::get(fn (): string => Str::of(config('app.url'))->rtrim('/')->replaceMatches('#^http://#', 'https://')->append('/', $this->code)->toString());
+    }
+
+    /**
+     * Links that are switched on and not yet expired.
+     *
+     * @param  Builder<Link>  $query
+     */
+    #[Scope]
+    protected function active(Builder $query): void
+    {
+        $query->where('is_active', true)
+            ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()));
     }
 
     /**
