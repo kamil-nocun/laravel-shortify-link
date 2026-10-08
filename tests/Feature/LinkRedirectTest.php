@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Link;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('active link redirects with 302 to original_url', function () {
     $link = Link::factory()->create();
@@ -43,4 +44,18 @@ test('code outside the alphabet returns 404', function () {
 test('catch-all route does not shadow existing pages', function () {
     $this->get('/login')->assertOk();
     $this->get('/dashboard')->assertRedirect(route('login'));
+});
+
+test('refused redirects render the NotFound page with 404', function () {
+    $link = Link::factory()->inactive()->create();
+
+    $this->get(route('links.redirect', $link->code))
+        ->assertNotFound()
+        ->assertInertia(fn (Assert $page) => $page->component('errors/NotFound'));
+});
+
+test('other 404s are not rendered as the NotFound page', function () {
+    $this->get('/no/such/page')
+        ->assertNotFound()
+        ->assertDontSee('errors\/NotFound', false);
 });
