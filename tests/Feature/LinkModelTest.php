@@ -3,7 +3,6 @@
 use App\Models\Link;
 use App\Models\User;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\DB;
 
 test('a link belongs to a user and is listed in user links', function () {
     $user = User::factory()->create();
@@ -25,4 +24,4 @@ test('code is case sensitive unique', function () {
     Link::factory()->create(['code' => 'ABC123']);
 
     expect(fn () => Link::factory()->create(['code' => 'abc123']))->toThrow(QueryException::class);
-})->skip(fn () => ! in_array(DB::getDriverName(), ['mysql', 'mariadb']), 'requires MySQL collation');
+});

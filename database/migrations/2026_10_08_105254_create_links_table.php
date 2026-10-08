@@ -16,10 +16,7 @@ return new class extends Migration
             $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
             $table->string('title')->nullable();
             $table->string('original_url', 2048);
-            $code = $table->string('code')->unique();
-            if (in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
-                $code->collation('utf8mb4_bin');
-            }
+            $table->string('code')->unique()->collation('utf8mb4_bin');
             $table->boolean('is_active')->default(true);
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
