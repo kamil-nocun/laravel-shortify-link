@@ -42,7 +42,7 @@ Data: 2026-10-08
 
 ### Pełny adres skróconego linku
 
-- Pełny adres (np. `https://example.com/aB3xY9`) to **wartość wyliczana**: adres aplikacji (`config('app.url')`) + `/` + `code`, **zawsze z schematem `https://`** (`http://` z `APP_URL` jest podmieniane na `https://`).
+- Pełny adres (np. `https://example.com/aB3xY9`) to **wartość wyliczana**: adres aplikacji (`config('app.url')`) + `/` + `code`, ze schematem z `APP_URL`.
 - **Nie zapisujemy go w bazie.** Nie ma na to kolumny.
 - Wyliczamy go w modelu `Link` (accessor `short_url`) i dołączamy do danych przekazywanych do frontendu.
 - Zmiana domeny aplikacji nie wymaga migracji danych.
@@ -102,7 +102,7 @@ Jedna mała klasa: `App\Support\LinkCodeGenerator`. Jej jedyne zadanie to zwróc
 
 | Pole | Reguła |
 |---|---|
-| `original_url` | required, `url` **tylko `https`**, max 2048 |
+| `original_url` | required, `url` (`http` lub `https`), max 2048 |
 | `title` | nullable, string, max 255 |
 | `is_active` | boolean |
 | `expires_at` | nullable, date, po bieżącej chwili |
@@ -156,7 +156,7 @@ Jedna mała klasa: `App\Support\LinkCodeGenerator`. Jej jedyne zadanie to zwróc
 
 **Walidacja**
 - Niepoprawny URL.
-- Adres docelowy inny niż `https` (`http://`, `javascript:`, `ftp:`).
+- Adres docelowy inny niż `http` lub `https` (`javascript:`, `ftp:`).
 - Za długi URL lub tytuł.
 - `expires_at` w przeszłości.
 
@@ -167,7 +167,7 @@ Jedna mała klasa: `App\Support\LinkCodeGenerator`. Jej jedyne zadanie to zwróc
 - Niezmienność po update.
 
 **Pełny adres**
-- `short_url` = adres aplikacji + `/` + `code`, zawsze `https://` (także gdy `APP_URL` ma `http://`).
+- `short_url` = adres aplikacji + `/` + `code`, ze schematem z `APP_URL`.
 - Lista i strona edycji przekazują `short_url` do frontendu.
 - Tabela `links` nie ma kolumny na ten adres.
 

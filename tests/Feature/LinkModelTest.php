@@ -19,7 +19,7 @@ test('short_url joins the app url and the code and is not stored', function () {
     config(['app.url' => 'http://example.test/']);
     $link = Link::factory()->create(['code' => 'aB3xY9']);
 
-    expect($link->short_url)->toBe('https://example.test/aB3xY9')
+    expect($link->short_url)->toBe('http://example.test/aB3xY9')
         ->and($link->toArray())->toHaveKey('short_url')
         ->and(Schema::hasColumn('links', 'short_url'))->toBeFalse();
 });

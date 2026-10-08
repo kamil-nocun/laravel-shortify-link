@@ -15,7 +15,7 @@ class StoreLinkRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'original_url' => ['required', 'url:https', 'max:2048'],
+            'original_url' => ['required', 'url:http,https', 'max:2048'],
             'title' => ['nullable', 'string', 'max:255'],
             'is_active' => ['boolean'],
             'expires_at' => ['nullable', 'date', 'after:now'],

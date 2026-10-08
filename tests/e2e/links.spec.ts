@@ -46,9 +46,9 @@ test('create form requires target URL with a friendly name', async ({ page }) =>
     await expect(page.getByText('The target URL field is required.')).toBeVisible();
 });
 
-test('create form rejects http and past expiry', async ({ page }) => {
+test('create form rejects non-http schemes and past expiry', async ({ page }) => {
     await page.goto('/links/create');
-    await page.getByLabel('Target URL').fill('http://example.com');
+    await page.getByLabel('Target URL').fill('ftp://example.com/file');
     await page.getByRole('button', { name: 'Create link' }).click();
     await expect(page.getByText('must be a valid URL')).toBeVisible();
 
@@ -86,7 +86,7 @@ test('create, edit and delete a link', async ({ page }) => {
     const row = page.getByRole('row', { name: /E2E link/ });
     await expect(row).toContainText('https://example.com/a');
     await expect(row).toContainText('Active');
-    const shortUrl = await row.getByText(/^https:\/\/.+\/\w{6}$/).innerText();
+    const shortUrl = await row.getByText(/^https?:\/\/.+\/\w{6}$/).innerText();
 
     await row.getByRole('link', { name: 'Edit' }).click();
     await page.getByLabel('Title').fill('E2E renamed');

@@ -111,11 +111,17 @@ test('store validates input', function (array $payload, string $field) {
     'missing url' => [[], 'original_url'],
     'javascript scheme' => [['original_url' => 'javascript:alert(1)'], 'original_url'],
     'ftp scheme' => [['original_url' => 'ftp://example.com/file'], 'original_url'],
-    'plain http' => [['original_url' => 'http://example.com'], 'original_url'],
     'url too long' => [['original_url' => 'https://example.com/'.str_repeat('a', 2050)], 'original_url'],
     'title too long' => [['original_url' => 'https://example.com', 'title' => str_repeat('a', 256)], 'title'],
     'expires in the past' => [['original_url' => 'https://example.com', 'expires_at' => '2000-01-01 00:00:00'], 'expires_at'],
 ]);
+
+test('store accepts plain http targets', function () {
+    $this->actingAs($this->user)->post(route('links.store'), ['original_url' => 'http://example.com'])
+        ->assertSessionHasNoErrors();
+
+    expect(Link::where('original_url', 'http://example.com')->exists())->toBeTrue();
+});
 
 test('store reports validation errors with form label names', function () {
     $this->actingAs($this->user)->post(route('links.store'), [])

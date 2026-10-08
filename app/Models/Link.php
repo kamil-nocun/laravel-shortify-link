@@ -51,13 +51,13 @@ class Link extends Model
     }
 
     /**
-     * Full public address of the short link; derived, never stored, always HTTPS.
+     * Full public address of the short link; derived, never stored; the scheme comes from APP_URL.
      *
      * @return Attribute<string, never>
      */
     protected function shortUrl(): Attribute
     {
-        return Attribute::get(fn (): string => Str::of(config('app.url'))->rtrim('/')->replaceMatches('#^http://#', 'https://')->append('/', $this->code)->toString());
+        return Attribute::get(fn (): string => Str::of(config('app.url'))->rtrim('/')->append('/', $this->code)->toString());
     }
 
     /**
