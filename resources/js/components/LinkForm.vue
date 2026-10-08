@@ -13,13 +13,30 @@ const props = defineProps<{
     action: (form: ReturnType<typeof useLinkForm>) => void;
 }>();
 
+function toLocalInput(iso: string | null | undefined): string {
+    if (!iso) {
+        return '';
+    }
+
+    const date = new Date(iso);
+
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+}
+
 function useLinkForm() {
     return useForm({
         original_url: props.link?.original_url ?? '',
         title: props.link?.title ?? '',
         is_active: props.link?.is_active ?? true,
-        expires_at: props.link?.expires_at?.slice(0, 16) ?? '',
-    });
+        expires_at: toLocalInput(props.link?.expires_at),
+    }).transform((data) => ({
+        ...data,
+        expires_at: data.expires_at
+            ? new Date(data.expires_at).toISOString()
+            : null,
+    }));
 }
 
 const form = useLinkForm();

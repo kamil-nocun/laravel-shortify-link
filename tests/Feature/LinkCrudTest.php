@@ -113,3 +113,14 @@ test('store validates input', function (array $payload, string $field) {
     'title too long' => [['original_url' => 'https://example.com', 'title' => str_repeat('a', 256)], 'title'],
     'expires in the past' => [['original_url' => 'https://example.com', 'expires_at' => '2000-01-01 00:00:00'], 'expires_at'],
 ]);
+
+test('store accepts an ISO 8601 UTC expires_at as sent by the form', function () {
+    $at = now()->addDay()->startOfMinute();
+
+    $this->actingAs($this->user)->post(route('links.store'), [
+        'original_url' => 'https://example.com',
+        'expires_at' => $at->toIso8601ZuluString('millisecond'),
+    ])->assertSessionHasNoErrors();
+
+    expect($this->user->links()->sole()->expires_at->equalTo($at))->toBeTrue();
+});
