@@ -117,6 +117,11 @@ test('store validates input', function (array $payload, string $field) {
     'expires in the past' => [['original_url' => 'https://example.com', 'expires_at' => '2000-01-01 00:00:00'], 'expires_at'],
 ]);
 
+test('store reports validation errors with form label names', function () {
+    $this->actingAs($this->user)->post(route('links.store'), [])
+        ->assertSessionHasErrors(['original_url' => 'The target URL field is required.']);
+});
+
 test('store accepts an ISO 8601 UTC expires_at as sent by the form', function () {
     $at = now()->addDay()->startOfMinute();
 

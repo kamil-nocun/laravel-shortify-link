@@ -21,4 +21,17 @@ class StoreLinkRequest extends FormRequest
             'expires_at' => ['nullable', 'date', 'after:now'],
         ];
     }
+
+    /**
+     * Get custom attribute names matching the form labels.
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'original_url' => __('target URL'),
+            'expires_at' => __('expiry date'),
+        ];
+    }
 }
