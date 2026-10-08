@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import DateTimePicker from '@/components/DateTimePicker.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -69,11 +70,7 @@ const form = useLinkForm();
 
         <div class="grid gap-2">
             <Label for="expires_at">Expires at</Label>
-            <Input
-                id="expires_at"
-                v-model="form.expires_at"
-                type="datetime-local"
-            />
+            <DateTimePicker id="expires_at" v-model="form.expires_at" />
             <InputError :message="form.errors.expires_at" />
         </div>
 
