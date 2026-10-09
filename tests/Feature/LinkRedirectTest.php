@@ -92,3 +92,23 @@ test('redirect passes the user agent to the job', function () {
 
     Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->userAgent === 'TestAgent/1.0');
 });
+
+test('forwarded ip is ignored unless proxies are trusted', function () {
+    Queue::fake();
+    config(['trustedproxy.proxies' => null]);
+    $link = Link::factory()->create();
+
+    $this->withHeader('X-Forwarded-For', '89.64.0.1')->get(route('links.redirect', $link->code));
+
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->ip === '127.0.0.1');
+});
+
+test('forwarded ip is used when proxies are trusted', function () {
+    Queue::fake();
+    config(['trustedproxy.proxies' => '*']);
+    $link = Link::factory()->create();
+
+    $this->withHeader('X-Forwarded-For', '89.64.0.1')->get(route('links.redirect', $link->code));
+
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->ip === '89.64.0.1');
+});
