@@ -43,6 +43,7 @@ test('only the super admin changes roles of others', function (string $actorRole
 })->with([
     ['superAdmin', 'user', true],
     ['superAdmin', 'admin', true],
+    ['superAdmin', 'superAdmin', false],
     ['admin', 'user', false],
     ['user', 'user', false],
 ]);

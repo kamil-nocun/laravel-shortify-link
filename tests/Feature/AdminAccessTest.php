@@ -16,6 +16,7 @@ function adminRoutes(): array
     return collect(Route::getRoutes()->getRoutes())
         ->filter(fn (LaravelRoute $route) => str_starts_with((string) $route->getName(), 'admin.'))
         ->map(fn (LaravelRoute $route) => [$route->methods()[0], '/'.ltrim(str_replace('{user}', $target->id, $route->uri()), '/')])
+        ->sortBy(fn (array $route) => $route[0] === 'DELETE' && str_ends_with($route[1], $target->id))
         ->values()
         ->all();
 }
@@ -34,6 +35,10 @@ test('admin routes are forbidden for regular users', function () {
 
 test('admin routes are not forbidden for admins', function (string $state) {
     foreach (adminRoutes() as [$method, $uri]) {
+        if ($state === 'admin' && str_ends_with($uri, '/role')) {
+            continue; // role changes are super admin only (policy)
+        }
+
         expect($this->actingAs(User::factory()->{$state}()->create())->call($method, $uri)->status())->not->toBe(403, "{$method} {$uri} was forbidden");
     }
 })->with(['admin', 'superAdmin'])->skip(fn () => Route::getRoutes()->getByName('admin.users.index') === null, 'No admin routes yet.');

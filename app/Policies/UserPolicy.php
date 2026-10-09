@@ -27,7 +27,7 @@ class UserPolicy
      */
     public function changeRole(User $actor, User $target): bool
     {
-        return $actor->isSuperAdmin() && ! $target->is($actor);
+        return $actor->isSuperAdmin() && ! $target->is($actor) && ! $target->isSuperAdmin();
     }
 
     private function outranks(User $actor, User $target): bool

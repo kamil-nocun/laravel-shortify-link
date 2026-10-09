@@ -186,3 +186,12 @@ test('super admin cannot change own role', function () {
     $this->actingAs($super)->patch(route('admin.users.role', $super), ['role' => 'user'])->assertForbidden();
     expect($super->fresh()->role)->toBe(UserRole::SuperAdmin);
 });
+
+test('super admin cannot change another super admin role', function () {
+    $other = User::factory()->create()->forceFill(['role' => UserRole::SuperAdmin]);
+    $other->save();
+
+    $this->actingAs(User::factory()->superAdmin()->create())
+        ->patch(route('admin.users.role', $other), ['role' => 'user'])->assertForbidden();
+    expect($other->fresh()->role)->toBe(UserRole::SuperAdmin);
+});
