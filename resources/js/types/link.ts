@@ -26,3 +26,16 @@ export type Paginated<T> = {
     prev_page_url: string | null;
     next_page_url: string | null;
 };
+
+export type StatsFilterKey =
+    'country' | 'city' | 'browser' | 'os' | 'device_type';
+
+export type StatsFilters = Record<StatsFilterKey, string | null>;
+
+export type StatsOptions = {
+    countries: string[];
+    cities: string[];
+    browsers: string[];
+    systems: string[];
+    devices: string[];
+};

@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink } from '@inertiajs/vue3';
+import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { index, stats } from '@/routes/links';
-import type { DailyClicks, Link, StatsRow } from '@/types';
+import type {
+    DailyClicks,
+    Link,
+    StatsFilterKey,
+    StatsFilters,
+    StatsOptions,
+    StatsRow,
+} from '@/types';
 
 const props = defineProps<{
     link: Link;
@@ -16,9 +23,52 @@ const props = defineProps<{
     browsers: StatsRow[];
     systems: StatsRow[];
     devices: StatsRow[];
+    filters: StatsFilters;
+    options: StatsOptions;
 }>();
 
 const ranges = [7, 30, 90];
+
+const filterFields: {
+    key: StatsFilterKey;
+    label: string;
+    options: string[];
+}[] = [
+    { key: 'country', label: 'Country', options: props.options.countries },
+    { key: 'city', label: 'City', options: props.options.cities },
+    { key: 'browser', label: 'Browser', options: props.options.browsers },
+    { key: 'os', label: 'Operating system', options: props.options.systems },
+    { key: 'device_type', label: 'Device', options: props.options.devices },
+];
+
+const activeFilters = computed(() =>
+    filterFields.filter((field) => props.filters[field.key] !== null),
+);
+
+const query = (filters: StatsFilters, days: number = props.days) => ({
+    days,
+    ...Object.fromEntries(
+        Object.entries(filters).filter(([, value]) => value !== null),
+    ),
+});
+
+const visit = (filters: StatsFilters) =>
+    router.get(stats(props.link.id, { query: query(filters) }), undefined, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+
+const setFilter = (key: StatsFilterKey, value: string | null) =>
+    visit({ ...props.filters, [key]: value || null });
+
+const clearFilters = () =>
+    visit({
+        country: null,
+        city: null,
+        browser: null,
+        os: null,
+        device_type: null,
+    });
 
 const maxDaily = computed(() =>
     Math.max(1, ...props.daily.map((day) => day.count)),
@@ -49,13 +99,63 @@ defineOptions({
                     as-child
                 >
                     <InertiaLink
-                        :href="stats(link.id, { query: { days: range } })"
+                        :href="stats(link.id, { query: query(filters, range) })"
                         preserve-scroll
                     >
                         {{ range }} days
                     </InertiaLink>
                 </Button>
             </div>
+        </div>
+
+        <div class="flex flex-wrap items-end gap-3">
+            <label
+                v-for="field in filterFields"
+                :key="field.key"
+                class="flex flex-col gap-1 text-sm"
+            >
+                {{ field.label }}
+                <select
+                    class="rounded-md border bg-background px-2 py-1.5 text-sm"
+                    :value="filters[field.key] ?? ''"
+                    @change="
+                        setFilter(
+                            field.key,
+                            ($event.target as HTMLSelectElement).value,
+                        )
+                    "
+                >
+                    <option value="">All</option>
+                    <option
+                        v-for="option in field.options"
+                        :key="option"
+                        :value="option"
+                    >
+                        {{ option }}
+                    </option>
+                </select>
+            </label>
+        </div>
+
+        <div v-if="activeFilters.length > 0" class="flex flex-wrap gap-2">
+            <span
+                v-for="field in activeFilters"
+                :key="field.key"
+                class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm"
+            >
+                {{ field.label }}: {{ filters[field.key] }}
+                <button
+                    type="button"
+                    class="ml-1 rounded-full px-1 hover:bg-muted"
+                    :aria-label="`Remove ${field.label} filter`"
+                    @click="setFilter(field.key, null)"
+                >
+                    ×
+                </button>
+            </span>
+            <Button variant="outline" size="sm" @click="clearFilters"
+                >Clear all</Button
+            >
         </div>
 
         <p class="text-3xl font-semibold">
