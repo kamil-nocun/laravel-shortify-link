@@ -47,3 +47,4 @@ yarn-error.log
 /playwright-report/
 .playwright-cli/
 /storage/app/geoip
+*.mmdb
