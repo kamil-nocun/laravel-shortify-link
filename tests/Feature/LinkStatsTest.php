@@ -66,6 +66,18 @@ test('null geo is shown as Unknown', function () {
             ->where('cities', [['name' => 'Unknown', 'count' => 1]]));
 });
 
+test('cities with unknown name are listed per country, not merged under one label', function () {
+    clickOn($this->link, ['country' => 'Poland', 'city' => null]);
+    clickOn($this->link, ['country' => 'Germany', 'city' => null]);
+
+    $this->actingAs($this->user)->get(route('links.stats', $this->link))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('cities.0.name', fn (string $name) => in_array($name, ['Unknown, Poland', 'Unknown, Germany'], true))
+            ->where('cities.1.name', fn (string $name) => in_array($name, ['Unknown, Poland', 'Unknown, Germany'], true))
+            ->where('cities.0.name', fn (string $name) => $name !== 'Unknown')
+            ->has('cities', 2));
+});
+
 test('countries and cities are capped at the top 10', function () {
     foreach (range(1, 12) as $index) {
         clickOn($this->link, ['country' => "Country {$index}", 'city' => "City {$index}"]);

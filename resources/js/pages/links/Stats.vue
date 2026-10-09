@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink } from "@inertiajs/vue3";
-import { computed } from "vue";
-import Heading from "@/components/Heading.vue";
-import { Button } from "@/components/ui/button";
-import { index, stats } from "@/routes/links";
-import type { DailyClicks, Link, StatsRow } from "@/types";
+import { Head, Link as InertiaLink } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import Heading from '@/components/Heading.vue';
+import { Button } from '@/components/ui/button';
+import { index, stats } from '@/routes/links';
+import type { DailyClicks, Link, StatsRow } from '@/types';
 
 const props = defineProps<{
     link: Link;
@@ -23,7 +23,7 @@ const maxDaily = computed(() =>
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: "Links", href: index() }],
+        breadcrumbs: [{ title: 'Links', href: index() }],
     },
 });
 </script>

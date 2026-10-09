@@ -48,7 +48,7 @@ class LinkStatsController extends Controller
             ->limit(self::TOP_LIMIT)
             ->get()
             ->map(fn ($row): array => [
-                'name' => $row->city === null ? self::UNKNOWN : collect([$row->city, $row->country])->filter()->implode(', '),
+                'name' => collect([$row->city ?? self::UNKNOWN, $row->country])->filter()->implode(', '),
                 'count' => (int) $row->total,
             ]);
 

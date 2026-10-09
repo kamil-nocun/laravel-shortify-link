@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use BadMethodCallException;
 use GeoIp2\Database\Reader;
 use GeoIp2\Exception\AddressNotFoundException;
 use InvalidArgumentException;
@@ -26,7 +27,7 @@ class GeoLocator
 
         try {
             $record = $this->reader()?->city($ip);
-        } catch (AddressNotFoundException|InvalidArgumentException|InvalidDatabaseException) {
+        } catch (AddressNotFoundException|BadMethodCallException|InvalidArgumentException|InvalidDatabaseException) {
             return $unknown;
         }
 

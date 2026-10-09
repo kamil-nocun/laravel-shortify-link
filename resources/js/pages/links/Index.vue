@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from "@inertiajs/vue3";
-import Heading from "@/components/Heading.vue";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
+import Heading from '@/components/Heading.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogClose,
@@ -12,15 +12,15 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog";
-import { create, destroy, edit, index, stats } from "@/routes/links";
-import type { Link, Paginated } from "@/types";
+} from '@/components/ui/dialog';
+import { create, destroy, edit, index, stats } from '@/routes/links';
+import type { Link, Paginated } from '@/types';
 
 defineProps<{ links: Paginated<Link> }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: "Links", href: index() }],
+        breadcrumbs: [{ title: 'Links', href: index() }],
     },
 });
 </script>
@@ -59,7 +59,7 @@ defineOptions({
                         :key="link.id"
                         class="border-t"
                     >
-                        <td class="p-3">{{ link.title ?? "—" }}</td>
+                        <td class="p-3">{{ link.title ?? '—' }}</td>
                         <td class="max-w-64 truncate p-3">
                             {{ link.original_url }}
                         </td>
@@ -71,7 +71,7 @@ defineOptions({
                                     link.is_active ? 'default' : 'secondary'
                                 "
                                 >{{
-                                    link.is_active ? "Active" : "Inactive"
+                                    link.is_active ? 'Active' : 'Inactive'
                                 }}</Badge
                             >
                         </td>
@@ -79,7 +79,7 @@ defineOptions({
                             {{
                                 link.expires_at
                                     ? new Date(link.expires_at).toLocaleString()
-                                    : "—"
+                                    : '—'
                             }}
                         </td>
                         <td class="space-x-2 p-3 text-right">
