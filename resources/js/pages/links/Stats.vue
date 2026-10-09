@@ -29,20 +29,43 @@ const props = defineProps<{
 
 const ranges = [7, 30, 90];
 
-const filterFields: {
-    key: StatsFilterKey;
-    label: string;
-    options: string[];
-}[] = [
-    { key: 'country', label: 'Country', options: props.options.countries },
-    { key: 'city', label: 'City', options: props.options.cities },
-    { key: 'browser', label: 'Browser', options: props.options.browsers },
-    { key: 'os', label: 'Operating system', options: props.options.systems },
-    { key: 'device_type', label: 'Device', options: props.options.devices },
-];
+const filterFields = computed(() => {
+    const fields: { key: StatsFilterKey; label: string; options: string[] }[] =
+        [
+            {
+                key: 'country',
+                label: 'Country',
+                options: props.options.countries,
+            },
+            { key: 'city', label: 'City', options: props.options.cities },
+            {
+                key: 'browser',
+                label: 'Browser',
+                options: props.options.browsers,
+            },
+            {
+                key: 'os',
+                label: 'Operating system',
+                options: props.options.systems,
+            },
+            {
+                key: 'device_type',
+                label: 'Device',
+                options: props.options.devices,
+            },
+        ];
+
+    return fields.map((field) => {
+        const active = props.filters[field.key];
+
+        return active !== null && !field.options.includes(active)
+            ? { ...field, options: [...field.options, active] }
+            : field;
+    });
+});
 
 const activeFilters = computed(() =>
-    filterFields.filter((field) => props.filters[field.key] !== null),
+    filterFields.value.filter((field) => props.filters[field.key] !== null),
 );
 
 const query = (filters: StatsFilters, days: number = props.days) => ({

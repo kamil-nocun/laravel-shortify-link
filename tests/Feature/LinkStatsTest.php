@@ -171,6 +171,19 @@ test('the city filter matches the plain city name', function () {
         ->assertInertia(fn (Assert $page) => $page->where('total', 0));
 });
 
+test('a filter never reveals clicks of another link', function () {
+    $other = Link::factory()->for($this->user)->create();
+    clickOn($other, ['browser' => 'Opera']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'browser' => 'Opera']))
+        ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('browsers', []));
+});
+
+test('an array filter value fails validation', function () {
+    $this->actingAs($this->user)->get(route('links.stats', $this->link).'?browser[]=Chrome')
+        ->assertSessionHasErrors('browser');
+});
+
 test('options list the distinct values of the link within the range', function () {
     clickOn($this->link, ['country' => 'Poland', 'city' => 'Warsaw', 'browser' => 'Chrome', 'os' => 'Windows', 'device_type' => 'desktop']);
     clickOn($this->link, ['country' => 'Germany', 'city' => null, 'browser' => 'Firefox', 'os' => 'Linux', 'device_type' => 'tablet']);

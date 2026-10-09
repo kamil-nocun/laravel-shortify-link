@@ -100,3 +100,26 @@ test('stats can be filtered, filters removed one by one and reset', async ({
         0,
     );
 });
+
+test('filter selects follow the page after browser back', async ({ page }) => {
+    await page.goto('/links');
+    await page
+        .getByRole('row', { name: /Filters e2e/ })
+        .getByRole('link', { name: 'Stats' })
+        .click();
+
+    await page.getByLabel('Browser').selectOption('Firefox');
+    await expect(page).toHaveURL(/browser=Firefox/);
+    await page.getByRole('button', { name: 'Clear all' }).click();
+    await expect(page).not.toHaveURL(/browser=/);
+
+    await page.goBack();
+
+    await expect(page).toHaveURL(/browser=Firefox/);
+    await expect(
+        page.locator('label', { hasText: 'Browser' }).locator('select'),
+    ).toHaveValue('Firefox');
+    await expect(
+        page.getByRole('button', { name: 'Remove Browser filter' }),
+    ).toBeVisible();
+});
