@@ -54,7 +54,7 @@ class MakeSuperAdmin extends Command
                 $user->forceFill(['email_verified_at' => now()]);
             }
 
-            $user->forceFill(['role' => UserRole::SuperAdmin, 'blocked_at' => null])->save();
+            $user->forceFill(['role' => UserRole::SuperAdmin, 'blocked_at' => null, 'blocked_by' => null])->save();
             $this->info("{$user->email} is now the super admin.");
 
             return self::SUCCESS;

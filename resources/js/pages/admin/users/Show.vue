@@ -128,7 +128,7 @@ const toggleLink = (link: Link) =>
 
 const linkStatus = (link: Link) =>
     link.disabled_by_admin_at
-        ? 'Disabled by admin'
+        ? `Disabled by ${link.disabled_by_name ?? 'admin'}`
         : link.is_active
           ? 'Active'
           : 'Disabled by owner';
@@ -155,6 +155,9 @@ setLayoutProps({
                         :variant="user.blocked_at ? 'destructive' : 'secondary'"
                     >
                         {{ user.blocked_at ? 'Blocked' : 'Active' }}
+                        <template v-if="user.blocked_by_name">
+                            by {{ user.blocked_by_name }}
+                        </template>
                     </Badge>
                     <span class="text-muted-foreground">
                         Registered

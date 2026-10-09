@@ -33,12 +33,14 @@ class AdministratorController extends Controller
                 fn ($query) => $query->whereRaw("name LIKE ? ESCAPE '!'", [$pattern])
                     ->orWhereRaw("email LIKE ? ESCAPE '!'", [$pattern])
             ))
+            ->with('blockedBy:id,name')
             ->latest()
             ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString()
             ->through(fn (User $user) => [
                 ...$user->only(['id', 'name', 'email', 'blocked_at', 'created_at']),
+                'blocked_by_name' => $user->blockedBy?->name,
                 'can' => [
                     'block' => $request->user()->can('block', $user),
                     'update' => $request->user()->can('update', $user),

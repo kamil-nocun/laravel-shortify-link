@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -28,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $two_factor_confirmed_at
  * @property UserRole $role
  * @property Carbon|null $blocked_at
+ * @property string|null $blocked_by
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -72,6 +74,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isBlocked(): bool
     {
         return $this->blocked_at !== null;
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function blockedBy(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'blocked_by');
     }
 
     /**

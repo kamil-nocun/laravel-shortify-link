@@ -81,3 +81,24 @@ test('super admin can disable an admin link', function () {
 
     expect($link->fresh()->disabled_by_admin_at)->not->toBeNull();
 });
+
+test('disabling records the acting admin, enabling clears it, and the user page shows the name', function () {
+    $this->admin->update(['name' => 'Alice Admin']);
+
+    $this->actingAs($this->admin)->patch(route('admin.links.disable', $this->link));
+    expect($this->link->fresh()->disabled_by)->toBe($this->admin->id);
+
+    $this->actingAs($this->admin)->get(route('admin.users.show', $this->link->user))
+        ->assertInertia(fn (Assert $page) => $page->where('links.data.0.disabled_by_name', 'Alice Admin'));
+
+    $this->actingAs($this->admin)->delete(route('admin.links.enable', $this->link));
+    expect($this->link->fresh())->disabled_by_admin_at->toBeNull()->disabled_by->toBeNull();
+});
+
+test('deleting the disabling admin nulls disabled_by', function () {
+    $this->actingAs($this->admin)->patch(route('admin.links.disable', $this->link));
+
+    $this->admin->delete();
+
+    expect($this->link->fresh())->disabled_by->toBeNull()->disabled_by_admin_at->not->toBeNull();
+});

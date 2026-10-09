@@ -329,3 +329,27 @@ test('link creation for another user follows the role hierarchy', function () {
     $this->actingAs($super)->post(route('admin.users.links.store', $otherAdmin), $payload)->assertRedirect();
     $this->actingAs(User::factory()->create())->get(route('admin.users.links.create', $admin))->assertForbidden();
 });
+
+test('blocking records the acting admin, unblocking clears it, and the index shows the name', function () {
+    $admin = User::factory()->admin()->create(['name' => 'Alice Admin']);
+    $user = User::factory()->assignedTo($admin)->create();
+
+    $this->actingAs($admin)->patch(route('admin.users.block', $user));
+    expect($user->fresh()->blocked_by)->toBe($admin->id);
+
+    $this->actingAs($admin)->get(route('admin.users.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('users.data.0.blocked_by_name', 'Alice Admin'));
+
+    $this->actingAs($admin)->delete(route('admin.users.unblock', $user));
+    expect($user->fresh())->blocked_at->toBeNull()->blocked_by->toBeNull();
+});
+
+test('deleting the blocking admin nulls blocked_by', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create(['blocked_at' => now()]);
+    $user->forceFill(['blocked_by' => $admin->id])->save();
+
+    $admin->delete();
+
+    expect($user->fresh())->blocked_by->toBeNull()->blocked_at->not->toBeNull();
+});

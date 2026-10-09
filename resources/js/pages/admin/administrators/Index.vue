@@ -115,6 +115,9 @@ defineOptions({
                                 "
                             >
                                 {{ user.blocked_at ? "Blocked" : "Active" }}
+                                <template v-if="user.blocked_by_name">
+                                    by {{ user.blocked_by_name }}
+                                </template>
                             </Badge>
                         </td>
                         <td class="p-3">

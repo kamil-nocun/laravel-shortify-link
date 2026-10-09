@@ -25,6 +25,7 @@ use Illuminate\Support\Str;
  * @property bool $is_active
  * @property Carbon|null $expires_at
  * @property Carbon|null $disabled_by_admin_at
+ * @property string|null $disabled_by
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -101,6 +102,14 @@ class Link extends Model
     public function isDisabledByAdmin(): bool
     {
         return $this->disabled_by_admin_at !== null;
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function disabledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'disabled_by');
     }
 
     /**

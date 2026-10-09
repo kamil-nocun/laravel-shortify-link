@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminStatsRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
+use App\Models\Link;
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
 use App\Support\AdminStatsReport;
@@ -35,6 +36,7 @@ class UserController extends Controller
             ->visibleTo($request->user())
             ->where('role', UserRole::User)
             ->withCount('links')
+            ->with('blockedBy:id,name')
             ->with(['assignedAdmins' => fn ($query) => $query->whereKey($request->user()->id)])
             ->when($search !== '', fn ($query) => $query->where(
                 fn ($query) => $query->whereRaw("name LIKE ? ESCAPE '!'", [$pattern])
@@ -90,11 +92,12 @@ class UserController extends Controller
     public function show(AdminStatsRequest $request, User $user): Response
     {
         return Inertia::render('admin/users/Show', [
-            'user' => $this->present($user->loadCount('links'), $request->user()),
+            'user' => $this->present($user->loadCount('links')->load('blockedBy:id,name'), $request->user()),
             'assignedAdministrators' => $this->isAssignable($request->user(), $user)
                 ? $user->assignedAdmins()->orderBy('name')->get(['users.id', 'users.name', 'users.email'])->map->only(['id', 'name', 'email'])->all()
                 : [],
-            'links' => $user->links()->withCount('clicks')->latest()->paginate(15)->withQueryString(),
+            'links' => $user->links()->withCount('clicks')->with('disabledBy:id,name')->latest()->paginate(15)->withQueryString()
+                ->through(fn (Link $link) => [...$link->toArray(), 'disabled_by_name' => $link->disabledBy?->name]),
             ...$this->report->build($user, $request),
         ]);
     }
@@ -181,6 +184,7 @@ class UserController extends Controller
     {
         return [
             ...$user->only(['id', 'name', 'email', 'role', 'blocked_at', 'created_at', 'links_count']),
+            'blocked_by_name' => $user->blockedBy?->name,
             'can' => [
                 'block' => $actor->can('block', $user),
                 'update' => $actor->can('update', $user),

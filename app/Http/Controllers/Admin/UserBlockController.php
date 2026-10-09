@@ -17,7 +17,7 @@ class UserBlockController extends Controller
     {
         Gate::authorize('block', $user);
 
-        $user->forceFill(['blocked_at' => now()])->save();
+        $user->forceFill(['blocked_at' => now(), 'blocked_by' => auth()->id()])->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User blocked.')]);
 
@@ -31,7 +31,7 @@ class UserBlockController extends Controller
     {
         Gate::authorize('block', $user);
 
-        $user->forceFill(['blocked_at' => null])->save();
+        $user->forceFill(['blocked_at' => null, 'blocked_by' => null])->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User unblocked.')]);
 

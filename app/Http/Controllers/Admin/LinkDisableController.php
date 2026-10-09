@@ -16,7 +16,7 @@ class LinkDisableController extends Controller
     public function store(Link $link): RedirectResponse
     {
         Gate::authorize('block', $link->user);
-        $link->forceFill(['disabled_by_admin_at' => now()])->save();
+        $link->forceFill(['disabled_by_admin_at' => now(), 'disabled_by' => auth()->id()])->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link disabled.')]);
 
@@ -29,7 +29,7 @@ class LinkDisableController extends Controller
     public function destroy(Link $link): RedirectResponse
     {
         Gate::authorize('block', $link->user);
-        $link->forceFill(['disabled_by_admin_at' => null])->save();
+        $link->forceFill(['disabled_by_admin_at' => null, 'disabled_by' => null])->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link enabled.')]);
 

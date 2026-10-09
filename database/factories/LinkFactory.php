@@ -42,7 +42,7 @@ class LinkFactory extends Factory
      */
     public function disabledByAdmin(): static
     {
-        return $this->state(['disabled_by_admin_at' => now()]);
+        return $this->state(['disabled_by_admin_at' => now(), 'disabled_by' => User::factory()]);
     }
 
     /**
