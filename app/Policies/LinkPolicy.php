@@ -8,11 +8,11 @@ use App\Models\User;
 class LinkPolicy
 {
     /**
-     * Determine whether the user owns the link and may see its stats.
+     * Determine whether the user owns the link (or is an admin) and may see its stats.
      */
     public function view(User $user, Link $link): bool
     {
-        return $user->id === $link->user_id;
+        return $user->id === $link->user_id || $user->isAdmin();
     }
 
     /**
@@ -29,5 +29,13 @@ class LinkPolicy
     public function delete(User $user, Link $link): bool
     {
         return $user->id === $link->user_id;
+    }
+
+    /**
+     * Determine whether the user owns the link and an admin has not disabled it.
+     */
+    public function toggle(User $user, Link $link): bool
+    {
+        return $user->id === $link->user_id && $link->disabled_by_admin_at === null;
     }
 }

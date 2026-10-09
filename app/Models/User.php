@@ -37,6 +37,11 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasFactory, HasUuids, Notifiable;
 
     /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = ['role' => 'user'];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
