@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Links\LinkStatsRequest;
 use App\Models\Link;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,7 +21,7 @@ class LinkStatsController extends Controller
     {
         $days = $request->days();
         $from = now()->subDays($days - 1)->startOfDay();
-        $clicks = fn (): Builder => $link->clicks()->getQuery()->where('clicked_at', '>=', $from);
+        $clicks = fn (): Builder => $link->clicks()->toBase()->where('clicked_at', '>=', $from);
 
         $perDay = $clicks()
             ->selectRaw('DATE(clicked_at) as day, count(*) as total')
