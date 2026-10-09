@@ -12,7 +12,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 test('admin sees users with counts and capability flags', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create(['name' => 'Zed']);
+    $user = User::factory()->assignedTo($admin)->create(['name' => 'Zed']);
     User::factory()->superAdmin()->create();
     Link::factory()->for($user)->count(2)->create();
 
@@ -72,7 +72,7 @@ test('users are paginated by fifteen', function () {
 
 test('show returns user, links and stats scoped to the user', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
+    $user = User::factory()->assignedTo($admin)->create();
     $link = Link::factory()->for($user)->create();
     LinkClick::factory()->for($link)->count(2)->create();
     LinkClick::factory()->for(Link::factory()->for($admin))->create();
@@ -90,7 +90,7 @@ test('show returns user, links and stats scoped to the user', function () {
 
 test('user links pagination keeps the stats period', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
+    $user = User::factory()->assignedTo($admin)->create();
     Link::factory()->for($user)->count(16)->create();
 
     $this->actingAs($admin)->get(route('admin.users.show', [$user, 'period' => '7d']))
@@ -108,7 +108,7 @@ test('missing or malformed ids give 404', function (string $id) {
 
 test('admin blocks and unblocks a user', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
+    $user = User::factory()->assignedTo($admin)->create();
 
     $this->actingAs($admin)->patch(route('admin.users.block', $user))->assertRedirect();
     expect($user->fresh()->blocked_at)->not->toBeNull();
@@ -121,8 +121,8 @@ test('moderation is limited by rank', function (string $actor, string $target, b
     $actor = $actor === 'admin' ? User::factory()->admin()->create() : User::factory()->superAdmin()->create();
     $target = $target === 'self' ? $actor : User::factory()->admin()->create();
 
-    $this->actingAs($actor)->patch(route('admin.users.block', $target))->assertStatus($allowed ? 302 : 403);
-    $this->actingAs($actor)->delete(route('admin.users.destroy', $target))->assertStatus($allowed ? 302 : 403);
+    $this->actingAs($actor)->patch(route('admin.users.block', $target))->assertStatus($allowed ? 302 : 404);
+    $this->actingAs($actor)->delete(route('admin.users.destroy', $target))->assertStatus($allowed ? 302 : 404);
 })->with([
     'admin blocks admin' => ['admin', 'admin', false],
     'admin blocks self' => ['admin', 'self', false],
@@ -132,12 +132,12 @@ test('moderation is limited by rank', function (string $actor, string $target, b
 test('unblock is forbidden for equal rank', function () {
     $this->actingAs(User::factory()->admin()->create())
         ->delete(route('admin.users.unblock', User::factory()->admin()->blocked()->create()))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('deleting a user removes their links and statistics only', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
+    $user = User::factory()->assignedTo($admin)->create();
     $other = User::factory()->create();
     $link = Link::factory()->for($user)->create();
     $otherLink = Link::factory()->for($other)->create();
@@ -175,9 +175,10 @@ test('super admin promotes and demotes a user', function () {
 });
 
 test('admin cannot change roles', function () {
-    $user = User::factory()->create();
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->assignedTo($admin)->create();
 
-    $this->actingAs(User::factory()->admin()->create())
+    $this->actingAs($admin)
         ->patch(route('admin.users.role', $user), ['role' => 'admin'])->assertForbidden();
     expect($user->fresh()->role)->toBe(UserRole::User);
 });
@@ -208,7 +209,7 @@ test('super admin cannot change another super admin role', function () {
 
 test('admin edits a user profile and password is optional', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
+    $user = User::factory()->assignedTo($admin)->create();
     $oldHash = $user->password;
 
     $this->actingAs($admin)->get(route('admin.users.edit', $user))
@@ -226,7 +227,7 @@ test('admin edits a user profile and password is optional', function () {
 
 test('admin can set a new password for a user', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
+    $user = User::factory()->assignedTo($admin)->create();
 
     $this->actingAs($admin)->put(route('admin.users.update', $user), [
         'name' => $user->name,
@@ -241,7 +242,7 @@ test('admin can set a new password for a user', function () {
 
 test('update validates input and keeps email unique', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
+    $user = User::factory()->assignedTo($admin)->create();
     $other = User::factory()->create();
 
     $this->actingAs($admin)->put(route('admin.users.update', $user), ['name' => '', 'email' => $other->email])
@@ -256,8 +257,8 @@ test('editing is limited by rank', function () {
     $target = User::factory()->admin()->create();
     $payload = ['name' => 'X', 'email' => 'x@example.com'];
 
-    $this->actingAs($admin)->get(route('admin.users.edit', $target))->assertForbidden();
-    $this->actingAs($admin)->put(route('admin.users.update', $target), $payload)->assertForbidden();
+    $this->actingAs($admin)->get(route('admin.users.edit', $target))->assertNotFound();
+    $this->actingAs($admin)->put(route('admin.users.update', $target), $payload)->assertNotFound();
     $this->actingAs(User::factory()->create())->put(route('admin.users.update', $target), $payload)->assertForbidden();
 });
 
@@ -298,7 +299,7 @@ test('regular user and guest cannot create users', function () {
 
 test('admin adds a link owned by the user', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
+    $user = User::factory()->assignedTo($admin)->create();
 
     $this->actingAs($admin)->post(route('admin.users.links.store', $user), ['original_url' => 'https://example.com/a', 'title' => 'A', 'is_active' => true])
         ->assertRedirect(route('admin.users.show', $user));
@@ -311,7 +312,7 @@ test('admin adds a link owned by the user', function () {
 
 test('adding a user link validates the url', function () {
     $admin = User::factory()->admin()->create();
-    $user = User::factory()->create();
+    $user = User::factory()->assignedTo($admin)->create();
 
     $this->actingAs($admin)->post(route('admin.users.links.store', $user), ['original_url' => 'not-a-url'])
         ->assertSessionHasErrors('original_url');
@@ -323,8 +324,8 @@ test('link creation for another user follows the role hierarchy', function () {
     $super = User::factory()->superAdmin()->create();
     $payload = ['original_url' => 'https://example.com'];
 
-    $this->actingAs($admin)->get(route('admin.users.links.create', $otherAdmin))->assertForbidden();
-    $this->actingAs($admin)->post(route('admin.users.links.store', $otherAdmin), $payload)->assertForbidden();
+    $this->actingAs($admin)->get(route('admin.users.links.create', $otherAdmin))->assertNotFound();
+    $this->actingAs($admin)->post(route('admin.users.links.store', $otherAdmin), $payload)->assertNotFound();
     $this->actingAs($super)->post(route('admin.users.links.store', $otherAdmin), $payload)->assertRedirect();
     $this->actingAs(User::factory()->create())->get(route('admin.users.links.create', $admin))->assertForbidden();
 });

@@ -22,6 +22,7 @@ function makeUserWithRole(string $role): User
 test('block and delete follow the role hierarchy', function (string $actorRole, string $targetRole, bool $expected) {
     $actor = makeUserWithRole($actorRole);
     $target = makeUserWithRole($targetRole);
+    $target->assignedAdmins()->attach($actor);
 
     expect(Gate::forUser($actor)->allows('block', $target))->toBe($expected)
         ->and(Gate::forUser($actor)->allows('update', $target))->toBe($expected)

@@ -27,7 +27,7 @@ class UserPolicy
      */
     public function createLink(User $actor, User $target): bool
     {
-        return $this->outranks($actor, $target);
+        return $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**
@@ -35,7 +35,7 @@ class UserPolicy
      */
     public function block(User $actor, User $target): bool
     {
-        return $this->outranks($actor, $target);
+        return $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**
@@ -43,7 +43,7 @@ class UserPolicy
      */
     public function update(User $actor, User $target): bool
     {
-        return $this->outranks($actor, $target);
+        return $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**
@@ -51,7 +51,7 @@ class UserPolicy
      */
     public function delete(User $actor, User $target): bool
     {
-        return $this->outranks($actor, $target);
+        return $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**
@@ -60,6 +60,26 @@ class UserPolicy
     public function changeRole(User $actor, User $target): bool
     {
         return $actor->isSuperAdmin() && ! $target->is($actor) && ! $target->isSuperAdmin();
+    }
+
+    /**
+     * Determine whether the actor may change which administrators manage a client.
+     */
+    public function assignAdministrators(User $actor): bool
+    {
+        return $actor->isSuperAdmin();
+    }
+
+    /**
+     * Determine whether the target is within the actor's scope of clients.
+     */
+    public function manages(User $actor, User $target): bool
+    {
+        if ($actor->isSuperAdmin()) {
+            return true;
+        }
+
+        return $actor->isAdmin() && $target->assignedAdmins()->whereKey($actor->id)->exists();
     }
 
     private function outranks(User $actor, User $target): bool

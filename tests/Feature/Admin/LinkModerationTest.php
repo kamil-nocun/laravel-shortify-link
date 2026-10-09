@@ -7,7 +7,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
     $this->admin = User::factory()->admin()->create();
-    $this->link = Link::factory()->for(User::factory()->create())->create();
+    $this->link = Link::factory()->for(User::factory()->assignedTo($this->admin)->create())->create();
 });
 
 test('admin disables and enables a link without touching is_active', function () {
@@ -67,9 +67,9 @@ test('regular users keep denied on foreign link stats and get own urls', functio
 test('admin cannot moderate links owned by admins or super admins', function (string $ownerState) {
     $link = Link::factory()->for(User::factory()->{$ownerState}()->create())->create();
 
-    $this->actingAs($this->admin)->patch(route('admin.links.disable', $link))->assertForbidden();
+    $this->actingAs($this->admin)->patch(route('admin.links.disable', $link))->assertNotFound();
     $link->forceFill(['disabled_by_admin_at' => now()])->save();
-    $this->actingAs($this->admin)->delete(route('admin.links.enable', $link))->assertForbidden();
+    $this->actingAs($this->admin)->delete(route('admin.links.enable', $link))->assertNotFound();
 
     expect($link->fresh()->disabled_by_admin_at)->not->toBeNull();
 })->with(['admin', 'superAdmin']);

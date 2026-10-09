@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\Link;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\ExceptionResponse;
@@ -26,7 +29,26 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->scopeAdminRouteBindings();
         $this->renderRefusedRedirectsAsNotFoundPage();
+    }
+
+    /**
+     * Resolve user and link bindings within an administrator's scope on admin routes.
+     *
+     * Regular users are rejected by the admin middleware (403), so the binding must not turn that into a 404.
+     */
+    protected function scopeAdminRouteBindings(): void
+    {
+        foreach (['user' => User::class, 'link' => Link::class] as $key => $model) {
+            Route::bind($key, function (string $value) use ($model) {
+                $actor = request()->user();
+
+                return request()->routeIs('admin.*') && $actor?->isAdmin()
+                    ? $model::visibleTo($actor)->findOrFail($value)
+                    : $model::findOrFail($value);
+            });
+        }
     }
 
     /**
