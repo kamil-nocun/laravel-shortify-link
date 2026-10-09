@@ -350,7 +350,11 @@ test('a server-clamped page is not resent by other tables', async ({
         await route.fulfill({ response, json: body });
     });
 
+    // "Page 1 of 3" is also the initial state, so wait for the clamped response itself
+    const clamped = page.waitForResponse('**/stats/data?*');
     await cities.getByRole('button', { name: 'Next' }).click();
+    await clamped;
+    await page.evaluate(() => new Promise(requestAnimationFrame));
     await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
     const request = page.waitForRequest('**/stats/data?*');
     await section(page, 'Countries')

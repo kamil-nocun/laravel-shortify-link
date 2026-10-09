@@ -114,7 +114,10 @@ test('create, edit and delete a link', async ({ page }) => {
     await expect(page.getByText('Link created.')).toBeVisible();
     const row = page.getByRole('row', { name: /E2E link/ });
     await expect(row).toContainText('https://example.com/a');
-    await expect(row).toContainText('Active');
+    await expect(row.getByRole('switch')).toHaveAttribute(
+        'aria-checked',
+        'true',
+    );
     const shortUrl = await row.getByText(/^https?:\/\/.+\/\w{6}$/).innerText();
 
     await row.getByRole('link', { name: 'Edit' }).click();
@@ -124,7 +127,10 @@ test('create, edit and delete a link', async ({ page }) => {
 
     await expect(page.getByText('Link updated.')).toBeVisible();
     const renamed = page.getByRole('row', { name: /E2E renamed/ });
-    await expect(renamed).toContainText('Inactive');
+    await expect(renamed.getByRole('switch')).toHaveAttribute(
+        'aria-checked',
+        'false',
+    );
     await expect(renamed).toContainText(shortUrl);
 
     await renamed.getByRole('button', { name: 'Delete' }).click();
