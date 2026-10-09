@@ -87,7 +87,7 @@ class UserController extends Controller
     {
         return Inertia::render('admin/users/Show', [
             'user' => $this->present($user->loadCount('links'), $request->user()),
-            'assignedAdministrators' => $request->user()->isSuperAdmin()
+            'assignedAdministrators' => $this->isAssignable($request->user(), $user)
                 ? $user->assignedAdmins()->orderBy('name')->get(['users.id', 'users.name', 'users.email'])->map->only(['id', 'name', 'email'])->all()
                 : [],
             'links' => $user->links()->withCount('clicks')->latest()->paginate(15)->withQueryString(),
@@ -104,8 +104,8 @@ class UserController extends Controller
 
         return Inertia::render('admin/users/Edit', [
             'user' => $user->only(['id', 'name', 'email']),
-            'administrators' => $this->administratorOptions($request->user()),
-            'assignedAdministratorIds' => $request->user()->isSuperAdmin()
+            'administrators' => $this->isAssignable($request->user(), $user) ? $this->administratorOptions($request->user()) : [],
+            'assignedAdministratorIds' => $this->isAssignable($request->user(), $user)
                 ? $user->assignedAdmins()->pluck('users.id')->all()
                 : [],
         ]);
@@ -148,6 +148,14 @@ class UserController extends Controller
     }
 
     /**
+     * Whether the actor may assign administrators to the target, which must be a client.
+     */
+    private function isAssignable(User $actor, User $user): bool
+    {
+        return $actor->can('assignAdministrators', User::class) && $user->role === UserRole::User;
+    }
+
+    /**
      * Administrators selectable for assignment; empty unless the actor is a super administrator.
      *
      * @return list<array{id: string, name: string, email: string}>
@@ -175,7 +183,7 @@ class UserController extends Controller
                 'delete' => $actor->can('delete', $user),
                 'createLink' => $actor->can('createLink', $user),
                 'changeRole' => $actor->can('changeRole', $user),
-                'assignAdministrators' => $actor->can('assignAdministrators', $user),
+                'assignAdministrators' => $this->isAssignable($actor, $user),
             ],
         ];
     }

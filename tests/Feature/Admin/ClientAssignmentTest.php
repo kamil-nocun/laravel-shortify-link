@@ -275,3 +275,25 @@ test('edit and show expose assigned administrators for super admin only', functi
     $this->actingAs($admin)->get(route('admin.users.edit', $client))
         ->assertInertia(fn (Assert $page) => $page->where('administrators', [])->where('assignedAdministratorIds', []));
 });
+
+test('administrator assignment is rejected for non-client targets', function (string $state) {
+    $super = User::factory()->superAdmin()->create();
+    $admin = User::factory()->admin()->create();
+    $target = User::factory()->{$state}()->create();
+
+    $this->actingAs($super)->put(route('admin.users.administrators.update', $target), ['administrators' => [$admin->id]])->assertForbidden();
+
+    expect(DB::table('client_admin')->count())->toBe(0);
+})->with(['admin', 'superAdmin']);
+
+test('assignment props are empty for non-client targets', function (string $state) {
+    $super = User::factory()->superAdmin()->create();
+    User::factory()->admin()->create();
+    $target = User::factory()->{$state}()->create();
+
+    $this->actingAs($super)->get(route('admin.users.edit', $target))
+        ->assertInertia(fn (Assert $page) => $page->where('administrators', [])->where('assignedAdministratorIds', []));
+
+    $this->actingAs($super)->get(route('admin.users.show', $target))
+        ->assertInertia(fn (Assert $page) => $page->where('assignedAdministrators', [])->where('user.can.assignAdministrators', false));
+})->with(['admin', 'superAdmin']);

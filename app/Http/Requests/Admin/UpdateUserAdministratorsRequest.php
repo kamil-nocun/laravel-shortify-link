@@ -12,7 +12,8 @@ class UpdateUserAdministratorsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('assignAdministrators', User::class);
+        return $this->user()->can('assignAdministrators', User::class)
+            && $this->route('user')->role === UserRole::User;
     }
 
     /**
