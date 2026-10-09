@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, setLayoutProps, useHttp } from '@inertiajs/vue3';
+import { Head, setLayoutProps, useHttp, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref, watch } from 'vue';
 import ClicksChart from '@/components/ClicksChart.vue';
 import StatsTable from '@/components/StatsTable.vue';
@@ -38,7 +38,10 @@ const initial = defineProps<{
 }>();
 
 setLayoutProps({
-    breadcrumbs: [{ title: 'Links', href: initial.backUrl }],
+    breadcrumbs: [
+        { title: 'Links', href: initial.backUrl },
+        { title: 'Stats', href: usePage().url },
+    ],
 });
 
 const ranges = [7, 30, 90];

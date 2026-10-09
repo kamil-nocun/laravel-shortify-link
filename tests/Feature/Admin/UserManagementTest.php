@@ -84,6 +84,16 @@ test('show returns user, links and stats scoped to the user', function () {
             ->has('series'));
 });
 
+test('user links pagination keeps the stats period', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+    Link::factory()->for($user)->count(16)->create();
+
+    $this->actingAs($admin)->get(route('admin.users.show', [$user, 'period' => '7d']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('links.next_page_url', fn (string $url) => str_contains($url, 'period=7d')));
+});
+
 test('missing or malformed ids give 404', function (string $id) {
     $this->actingAs(User::factory()->admin()->create());
 

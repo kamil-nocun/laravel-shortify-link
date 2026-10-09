@@ -20,7 +20,7 @@ const props = defineProps<{
     granularity: 'day' | 'month';
     total: number;
     series: DailyClicks[];
-    counters: AdminCounters;
+    counters: AdminCounters & { users: number };
     topLinks: TopLink[];
     topUsers: TopUser[];
 }>();

@@ -5,7 +5,7 @@ import {
     router,
     setLayoutProps,
 } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 import ClicksChart from '@/components/ClicksChart.vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
@@ -78,12 +78,40 @@ const toggleBlock = () =>
         ? router.delete(unblock(props.user.id).url, { preserveScroll: true })
         : router.patch(block(props.user.id).url, {}, { preserveScroll: true });
 
-const changeRole = (value: string) =>
+type AssignableRole = Exclude<AdminUser['role'], 'super_admin'>;
+
+/** Sends the new role; the select always ends up showing the saved role. */
+const changeRole = (select: HTMLSelectElement) =>
     router.patch(
         updateRole(props.user.id).url,
-        { role: value },
-        { preserveScroll: true },
+        { role: select.value as AssignableRole },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                select.value = props.user.role;
+            },
+        },
     );
+
+const isDeleteOpen = ref(false);
+const isDeleting = ref(false);
+const cancelButton = useTemplateRef<{ $el: HTMLElement }>('cancelButton');
+
+const focusCancel = (event: Event) => {
+    event.preventDefault();
+    cancelButton.value?.$el.focus();
+};
+
+const deleteUser = () =>
+    router.delete(destroy(props.user.id).url, {
+        onStart: () => {
+            isDeleting.value = true;
+        },
+        onFinish: () => {
+            isDeleting.value = false;
+            isDeleteOpen.value = false;
+        },
+    });
 
 const toggleLink = (link: Link) =>
     link.disabled_by_admin_at
@@ -133,9 +161,7 @@ setLayoutProps({
                     aria-label="Role"
                     class="rounded-md border bg-background px-2 py-1.5 text-sm"
                     :value="user.role"
-                    @change="
-                        changeRole(($event.target as HTMLSelectElement).value)
-                    "
+                    @change="changeRole($event.target as HTMLSelectElement)"
                 >
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
@@ -148,11 +174,11 @@ setLayoutProps({
                 >
                     {{ user.blocked_at ? 'Unblock' : 'Block' }}
                 </Button>
-                <Dialog v-if="user.can.delete">
+                <Dialog v-if="user.can.delete" v-model:open="isDeleteOpen">
                     <DialogTrigger as-child>
                         <Button variant="destructive" size="sm">Delete</Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent @open-auto-focus="focusCancel">
                         <DialogHeader>
                             <DialogTitle>Delete user?</DialogTitle>
                             <DialogDescription>
@@ -162,11 +188,14 @@ setLayoutProps({
                         </DialogHeader>
                         <DialogFooter class="gap-2">
                             <DialogClose as-child>
-                                <Button variant="secondary">Cancel</Button>
+                                <Button ref="cancelButton" variant="secondary"
+                                    >Cancel</Button
+                                >
                             </DialogClose>
                             <Button
                                 variant="destructive"
-                                @click="router.delete(destroy(user.id).url)"
+                                :disabled="isDeleting"
+                                @click="deleteUser"
                                 >Delete</Button
                             >
                         </DialogFooter>

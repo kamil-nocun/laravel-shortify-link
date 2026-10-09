@@ -45,7 +45,7 @@ class UserController extends Controller
     {
         return Inertia::render('admin/users/Show', [
             'user' => $this->present($user->loadCount('links'), $request->user()),
-            'links' => $user->links()->withCount('clicks')->latest()->paginate(15),
+            'links' => $user->links()->withCount('clicks')->latest()->paginate(15)->withQueryString(),
             ...$this->report->build($user, $request),
         ]);
     }
