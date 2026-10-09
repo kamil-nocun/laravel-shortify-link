@@ -12,6 +12,7 @@ use App\Notifications\AccountCreatedNotification;
 use App\Support\AdminStatsReport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -34,6 +35,7 @@ class UserController extends Controller
             ->visibleTo($request->user())
             ->where('role', UserRole::User)
             ->withCount('links')
+            ->with(['assignedAdmins' => fn ($query) => $query->whereKey($request->user()->id)])
             ->when($search !== '', fn ($query) => $query->where(
                 fn ($query) => $query->whereRaw("name LIKE ? ESCAPE '!'", [$pattern])
                     ->orWhereRaw("email LIKE ? ESCAPE '!'", [$pattern])
@@ -65,13 +67,15 @@ class UserController extends Controller
         $user = new User($request->safe()->except('administrators'));
         $user->password = Str::password(32);
         $user->email_verified_at = now();
-        $user->save();
+        DB::transaction(function () use ($user, $request): void {
+            $user->save();
 
-        if ($request->user()->isSuperAdmin()) {
-            $user->assignedAdmins()->sync($request->validated('administrators', []));
-        } else {
-            $user->assignedAdmins()->attach($request->user());
-        }
+            if ($request->user()->isSuperAdmin()) {
+                $user->assignedAdmins()->sync($request->validated('administrators', []));
+            } else {
+                $user->assignedAdmins()->attach($request->user());
+            }
+        });
 
         $user->notify(new AccountCreatedNotification(Password::createToken($user)));
 

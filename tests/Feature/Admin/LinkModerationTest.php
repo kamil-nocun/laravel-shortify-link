@@ -38,7 +38,7 @@ test('unknown links are 404', function () {
     $this->actingAs($this->admin)->patch('/admin/links/'.fake()->uuid().'/disable')->assertNotFound();
 });
 
-test('admin views stats of any link, as page and as json', function () {
+test('admin views stats of the link of an assigned client, as page and as json', function () {
     LinkClick::factory()->for($this->link)->count(2)->create();
 
     $this->actingAs($this->admin)->get(route('admin.links.stats', $this->link))

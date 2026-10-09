@@ -42,7 +42,7 @@ Ograniczyć dostęp administratorów do danych osobowych klientów (RODO). Admin
 ## UI (Vue)
 
 - `admin/users/Create.vue`, `Edit.vue`: dla super administratora wielokrotny wybór administratorów (prop `administrators`). Edycja zapisuje przez `UserAdministratorController`.
-- `admin/users/Show.vue`: sekcja „Przypisani administratorzy”, tylko do odczytu dla administratora, edytowalna dla super administratora.
+- `admin/users/Show.vue`: sekcja „Przypisani administratorzy”, widoczna tylko dla super administratora (administrator nigdy nie widzi innych administratorów; sekcja jest ukryta także dla celów niebędących klientami) i edytowalna.
 - `Index.vue` bez zmian, lista jest już przefiltrowana po stronie serwera.
 - `present()` w `UserController` zwraca dodatkowo `can.assignAdministrators`.
 

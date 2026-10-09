@@ -79,6 +79,10 @@ class UserPolicy
             return true;
         }
 
+        if ($target->relationLoaded('assignedAdmins')) {
+            return $actor->isAdmin() && $target->assignedAdmins->contains('id', $actor->id);
+        }
+
         return $actor->isAdmin() && $target->assignedAdmins()->whereKey($actor->id)->exists();
     }
 

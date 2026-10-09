@@ -5,6 +5,7 @@ use App\Models\Link;
 use App\Models\LinkClick;
 use App\Models\User;
 use App\Policies\UserPolicy;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -297,3 +298,62 @@ test('assignment props are empty for non-client targets', function (string $stat
     $this->actingAs($super)->get(route('admin.users.show', $target))
         ->assertInertia(fn (Assert $page) => $page->where('assignedAdministrators', [])->where('user.can.assignAdministrators', false));
 })->with(['admin', 'superAdmin']);
+
+test('assignment update validates administrators', function (string $kind, string $errorKey) {
+    $super = User::factory()->superAdmin()->create();
+    $client = User::factory()->create();
+    $payload = match ($kind) {
+        'client' => ['administrators' => [User::factory()->create()->id]],
+        'random' => ['administrators' => [(string) Str::uuid()]],
+        'missing' => [],
+    };
+
+    $this->actingAs($super)->put(route('admin.users.administrators.update', $client), $payload)
+        ->assertSessionHasErrors($errorKey);
+})->with([
+    'client' => ['client', 'administrators.0'],
+    'random' => ['random', 'administrators.0'],
+    'missing' => ['missing', 'administrators'],
+]);
+
+test('policy assignAdministrators is for super administrator only', function () {
+    $policy = new UserPolicy;
+
+    expect($policy->assignAdministrators(User::factory()->superAdmin()->create()))->toBeTrue()
+        ->and($policy->assignAdministrators(User::factory()->admin()->create()))->toBeFalse()
+        ->and($policy->assignAdministrators(User::factory()->create()))->toBeFalse();
+});
+
+test('user visibleTo excludes an administrator attached as client', function () {
+    $admin = User::factory()->admin()->create();
+    $otherAdmin = User::factory()->admin()->create();
+    $otherAdmin->assignedAdmins()->attach($admin);
+
+    expect(User::visibleTo($admin)->count())->toBe(0);
+});
+
+test('link visibleTo hides links owned by administrators', function () {
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->admin()->create();
+    $owner->assignedAdmins()->attach($admin);
+    Link::factory()->for($owner)->create();
+
+    expect(Link::visibleTo($admin)->count())->toBe(0);
+});
+
+test('duplicate assignment rows are rejected by the database', function () {
+    $admin = User::factory()->admin()->create();
+    $client = User::factory()->assignedTo($admin)->create();
+
+    $client->assignedAdmins()->attach($admin);
+})->throws(QueryException::class);
+
+test('administrator search is limited to assigned clients', function () {
+    $admin = User::factory()->admin()->create();
+    $mine = User::factory()->assignedTo($admin)->create(['name' => 'Zed Mine']);
+    User::factory()->assignedTo($admin)->create(['name' => 'Other Mine']);
+    User::factory()->create(['name' => 'Zed Foreign']);
+
+    $this->actingAs($admin)->get(route('admin.users.index', ['search' => 'Zed']))
+        ->assertInertia(fn (Assert $page) => $page->has('users.data', 1)->where('users.data.0.id', $mine->id));
+});

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Link;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -41,7 +42,7 @@ class AppServiceProvider extends ServiceProvider
     protected function scopeAdminRouteBindings(): void
     {
         foreach (['user' => User::class, 'link' => Link::class] as $key => $model) {
-            Route::bind($key, function (string $value) use ($model) {
+            Route::bind($key, function (string $value) use ($model): Model {
                 $actor = request()->user();
 
                 return request()->routeIs('admin.*') && $actor?->isAdmin()
