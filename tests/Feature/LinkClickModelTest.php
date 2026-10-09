@@ -3,6 +3,7 @@
 use App\Models\Link;
 use App\Models\LinkClick;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Schema;
 
 test('a link has many clicks', function () {
     $link = Link::factory()->create();
@@ -41,4 +42,12 @@ test('browser, os and device_type may be null', function () {
     expect($click->browser)->toBeNull()
         ->and($click->os)->toBeNull()
         ->and($click->device_type)->toBeNull();
+});
+
+test('clicks are stored in the link_statistics table', function () {
+    $click = LinkClick::factory()->create();
+
+    expect($click->getTable())->toBe('link_statistics')
+        ->and(Schema::hasTable('link_statistics'))->toBeTrue()
+        ->and(Schema::hasTable('link_clicks'))->toBeFalse();
 });

@@ -13,7 +13,7 @@ Data: 2026-10-09
 
 | W zakresie | Poza zakresem |
 |---|---|
-| Tabela `link_clicks`, model, factory | Unikalni odwiedzający (wymagałoby IP) |
+| Tabela `link_statistics`, model, factory | Unikalni odwiedzający (wymagałoby IP) |
 | Job `RecordLinkClick` i `GeoLocator` (MaxMind GeoLite2-City) | Wstępna agregacja dzienna |
 | Rozpoznawanie przeglądarki, systemu i typu urządzenia z User-Agent (`matomo/device-detector`) | Referrer |
 | Strona statystyk z filtrem 7/30/90 dni | Wersje przeglądarek i systemów, model urządzenia |
@@ -29,11 +29,12 @@ Data: 2026-10-09
 - Zapisujemy tylko nazwy: `browser`, `os`, `device_type`. Bez wersji i bez surowego User-Agent.
 - Boty (`isBot()`) są zapisywane z `device_type = 'bot'`, a `browser` i `os` jako `null`, żeby właściciel widział ruch botów osobno.
 - Brak User-Agent lub nierozpoznany klient daje `null` we wszystkich trzech polach.
+- Tabela nazywa się `link_statistics` (model nadal `LinkClick`, `$table` ustawione jawnie). Zmiana nazwy z `link_clicks` idzie osobną migracją `rename_link_clicks_to_link_statistics`, bo wcześniejsze migracje są już uruchomione.
 - Kolumny klienta dochodzą osobną migracją `add_client_columns_to_link_clicks_table`, bo pierwotna migracja jest już uruchomiona.
 
 ## Dane
 
-Migracja `link_clicks` (UUID PK i FK, zgodnie z konwencją projektu):
+Migracja `link_statistics` (UUID PK i FK, zgodnie z konwencją projektu):
 
 | Kolumna | Typ |
 |---|---|

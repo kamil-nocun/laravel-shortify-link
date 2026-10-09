@@ -12,7 +12,7 @@ Każdy udany redirect zapisuje kliknięcie (czas, kraj, miasto, przeglądarka, s
 
 Odhaczaj po zakończeniu zadania. Jedno zadanie = jeden commit.
 
-- [x] **1.** Tabela `link_clicks` + model
+- [x] **1.** Tabela `link_statistics` + model
 - [x] **2.** `GeoLocator`
 - [x] **3.** Job `RecordLinkClick`
 - [x] **4.** Dispatch z redirectu
@@ -35,8 +35,8 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 
 ## Zasady (obowiązują w każdym zadaniu)
 
-- UUID PK/FK. `link_clicks` bez `created_at`/`updated_at`.
-- **Nigdy** nie zapisuj IP ani surowego User-Agent w `link_clicks`. Zapisujemy tylko `browser`, `os`, `device_type` (nazwy, bez wersji).
+- UUID PK/FK. `link_statistics` bez `created_at`/`updated_at`.
+- **Nigdy** nie zapisuj IP ani surowego User-Agent w `link_statistics`. Zapisujemy tylko `browser`, `os`, `device_type` (nazwy, bez wersji).
 - `clicked_at` ustawia kontroler (czas żądania), nie job.
 - Brak geo = `null` kraj/miasto, klik i tak zapisany.
 - `days` ∈ `7|30|90`, domyślnie `30`.
@@ -60,7 +60,7 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 
 ---
 
-## Zadanie 1: Tabela `link_clicks` + model
+## Zadanie 1: Tabela `link_statistics` + model
 
 **Po co:** miejsce na kliknięcia. Reszta zależy od tego modelu.
 
@@ -84,7 +84,7 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 - [ ] **1.8** Factory: `link_id` → `Link::factory()`, `clicked_at` → `now()`, `PL` / `Poland` / `Warsaw`
 - [ ] **1.9** Dodaj `Link::clicks()` (PHPDoc generics jak w `user()`)
 - [ ] **1.10** Uruchom test ponownie. Oczekiwane: **PASS**
-- [ ] **1.11** Pint, potem commit: `Add link_clicks table and LinkClick model`
+- [ ] **1.11** Pint, potem commit: `Add link_statistics table and LinkClick model`
 
 **Gotowe gdy:** test przechodzi, migracja działa, `geoip2` jest w `composer.json`.
 
@@ -244,7 +244,7 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 
 - [ ] **7.1** Poproś użytkownika o pełny zestaw: `php artisan test --compact`
 - [ ] **7.2** Uruchom Pint i larastan (komenda z `composer.json`, jeśli jest)
-- [ ] **7.3** Ręczny test geo (robi użytkownik): pobierz GeoLite2-City do `storage/app/geoip/` (konto MaxMind), kliknij krótki link z publicznego IP, uruchom `php artisan queue:work`, sprawdź wiersz w `link_clicks`
+- [ ] **7.3** Ręczny test geo (robi użytkownik): pobierz GeoLite2-City do `storage/app/geoip/` (konto MaxMind), kliknij krótki link z publicznego IP, uruchom `php artisan queue:work`, sprawdź wiersz w `link_statistics`
 
 **Gotowe gdy:** testy zielone, a wiersz z krajem i miastem pojawia się w bazie.
 
@@ -270,10 +270,10 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 - [ ] **8.4** Zaimplementuj `detect`: `null` lub pusty (po `trim`) → trzy `null`; inaczej `DeviceDetector($userAgent)` + `parse()`; `isBot()` → `['browser' => null, 'os' => null, 'device_type' => 'bot']`; wpp `getClient('name')`, `getOs('name')`, `getDeviceName()`; wartość nierozpoznana (`UNK`, pusty string, tablica) mapuj na `null`
 - [ ] **8.5** Uruchom test. Oczekiwane: **PASS**
 - [ ] **8.6** Dopisz do `LinkClickModelTest` test `client fields may be null` (analogiczny do testu geo)
-- [ ] **8.7** Migracja: `php artisan make:migration add_client_columns_to_link_clicks_table --table=link_clicks --no-interaction`; dodaj `string('browser')->nullable()`, `string('os')->nullable()`, `string('device_type')->nullable()`; `down()` usuwa kolumny
+- [ ] **8.7** Migracja: `php artisan make:migration add_client_columns_to_link_clicks_table --table=link_statistics --no-interaction`; dodaj `string('browser')->nullable()`, `string('os')->nullable()`, `string('device_type')->nullable()`; `down()` usuwa kolumny
 - [ ] **8.8** `LinkClick`: dopisz pola do `#[Fillable]` i `@property`. Factory: `Chrome` / `Windows` / `desktop`
 - [ ] **8.9** Uruchom `LinkClickModelTest` i `ClientDetectorTest`. Oczekiwane: **PASS**
-- [ ] **8.10** Pint, potem commit: `Add ClientDetector and client columns to link_clicks`
+- [ ] **8.10** Pint, potem commit: `Add ClientDetector and client columns to link_statistics`
 
 **Gotowe gdy:** `ClientDetectorTest` (4 testy) i `LinkClickModelTest` zielone.
 

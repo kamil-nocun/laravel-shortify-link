@@ -27,6 +27,8 @@ class LinkClick extends Model
     /** @use HasFactory<LinkClickFactory> */
     use HasFactory, HasUuids;
 
+    protected $table = 'link_statistics';
+
     public $timestamps = false;
 
     /**
