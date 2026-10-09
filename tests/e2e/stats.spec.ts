@@ -53,8 +53,7 @@ test('stats page shows clicks and switches the range', async ({ page }) => {
         ).toBeVisible();
     }
 
-    await page.getByRole('link', { name: '7 days' }).click();
-    await expect(page).toHaveURL(/period=7d/);
+    await page.getByRole('button', { name: '7 days' }).click();
     await expect(page.getByText('3 clicks in the last 7 days')).toBeVisible();
 });
 
@@ -73,11 +72,8 @@ test('stats can be filtered, filters removed one by one and reset', async ({
 
     await page.getByLabel('Browser').selectOption('Firefox');
     await expect(page.getByText('1 clicks in the last 30 days')).toBeVisible();
-    await expect(page).toHaveURL(/browser=Firefox/);
 
-    await page.getByRole('link', { name: '7 days' }).click();
-    await expect(page).toHaveURL(/period=7d/);
-    await expect(page).toHaveURL(/browser=Firefox/);
+    await page.getByRole('button', { name: '7 days' }).click();
 
     await page.getByLabel('Country').selectOption('Germany');
     await expect(
@@ -88,40 +84,13 @@ test('stats can be filtered, filters removed one by one and reset', async ({
     ).toBeVisible();
 
     await page.getByRole('button', { name: 'Remove Browser filter' }).click();
-    await expect(page).not.toHaveURL(/browser=/);
-    await expect(page).toHaveURL(/country=Germany/);
     await expect(page.getByText('1 clicks in the last 7 days')).toBeVisible();
 
     await page.getByRole('button', { name: 'Clear all' }).click();
-    await expect(page).not.toHaveURL(/country=/);
-    await expect(page).toHaveURL(/period=7d/);
     await expect(page.getByText('3 clicks in the last 7 days')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Clear all' })).toHaveCount(
         0,
     );
-});
-
-test('filter selects follow the page after browser back', async ({ page }) => {
-    await page.goto('/links');
-    await page
-        .getByRole('row', { name: /Filters e2e/ })
-        .getByRole('link', { name: 'Stats' })
-        .click();
-
-    await page.getByLabel('Browser').selectOption('Firefox');
-    await expect(page).toHaveURL(/browser=Firefox/);
-    await page.getByRole('button', { name: 'Clear all' }).click();
-    await expect(page).not.toHaveURL(/browser=/);
-
-    await page.goBack();
-
-    await expect(page).toHaveURL(/browser=Firefox/);
-    await expect(
-        page.locator('label', { hasText: 'Browser' }).locator('select'),
-    ).toHaveValue('Firefox');
-    await expect(
-        page.getByRole('button', { name: 'Remove Browser filter' }),
-    ).toBeVisible();
 });
 
 const openStats = async (page: Page, title: string) => {
@@ -142,19 +111,16 @@ test('period can be switched to all time, a month and a range', async ({
     await openStats(page, 'Period e2e');
     await expect(page.getByText('3 clicks in the last 30 days')).toBeVisible();
 
-    await page.getByRole('link', { name: 'All time' }).click();
+    await page.getByRole('button', { name: 'All time' }).click();
     await expect(page.getByText('9 clicks in total')).toBeVisible();
 
     await page.getByLabel('Custom period').selectOption('month');
     await page.getByLabel('Month', { exact: true }).fill('2020-03');
-    await expect(page).toHaveURL(/period=month/);
-    await expect(page).toHaveURL(/month=2020-03/);
     await expect(page.getByText('4 clicks in 2020-03')).toBeVisible();
 
     await page.getByLabel('Custom period').selectOption('range');
     await page.getByLabel('From', { exact: true }).fill('2021-06-01');
     await page.getByLabel('To', { exact: true }).fill('2021-06-30');
-    await expect(page).toHaveURL(/period=range/);
     await expect(
         page.getByText('2 clicks in 2021-06-01 - 2021-06-30'),
     ).toBeVisible();
@@ -166,11 +132,9 @@ test('table can be sorted by name, toggling direction', async ({ page }) => {
     const header = cities.getByRole('button', { name: /^Name/ });
 
     await header.click();
-    await expect(page).toHaveURL(/sort%5Bcities%5D=name_asc/);
     await expect(cities.getByRole('cell').first()).toHaveText(/^City01/);
 
     await header.click();
-    await expect(page).toHaveURL(/sort%5Bcities%5D=name_desc/);
     await expect(cities.getByRole('cell').first()).toHaveText(/^City25/);
 });
 
@@ -184,7 +148,7 @@ test('table paginates, limit changes and resets keep the limit', async ({
     await cities.getByRole('button', { name: 'Next' }).click();
     await expect(cities.getByText('Page 2 of 3 (25 rows)')).toBeVisible();
 
-    await page.getByRole('link', { name: '7 days' }).click();
+    await page.getByRole('button', { name: '7 days' }).click();
     await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
 
     await cities.getByRole('button', { name: 'Next' }).click();
@@ -199,14 +163,103 @@ test('table paginates, limit changes and resets keep the limit', async ({
         0,
     );
 
-    await page.getByRole('link', { name: '30 days' }).click();
+    await page.getByRole('button', { name: '30 days' }).click();
     await expect(cities.getByLabel('Rows')).toHaveValue('50');
 });
 
-test('an invalid range shows a validation message', async ({ page }) => {
+test('interactions never change the URL and reload restores defaults', async ({
+    page,
+}) => {
+    await openStats(page, 'Pages e2e');
+    await expect(page).toHaveURL(/\/stats$/);
+    const url = page.url();
+    expect(url).toMatch(/\/links\/[^/?]+\/stats$/);
+    const cities = section(page, 'Cities');
+
+    await page.getByRole('button', { name: '7 days' }).click();
+    await cities.getByRole('button', { name: 'Next' }).click();
+    await cities.getByRole('button', { name: /^Name/ }).click();
+    await cities.getByLabel('Rows').selectOption('25');
+    await expect(cities.getByText('Page 1 of 1 (25 rows)')).toBeVisible();
+    await page.getByLabel('Country').selectOption({ index: 1 });
+    await expect(page.getByRole('button', { name: 'Clear all' })).toBeVisible();
+    expect(page.url()).toBe(url);
+
+    await page.reload();
+    await expect(page.getByText('25 clicks in the last 30 days')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Clear all' })).toHaveCount(
+        0,
+    );
+    await expect(cities.getByLabel('Rows')).toHaveValue('10');
+});
+
+test('table actions request only their section, period requests all', async ({
+    page,
+}) => {
+    await openStats(page, 'Pages e2e');
+    const cities = section(page, 'Cities');
+
+    let request = page.waitForRequest('**/stats/data?*');
+    await cities.getByRole('button', { name: 'Next' }).click();
+    let url = new URL((await request).url());
+    expect(url.searchParams.getAll('sections[]')).toEqual(['cities']);
+
+    request = page.waitForRequest('**/stats/data?*');
+    await cities.getByLabel('Rows').selectOption('25');
+    url = new URL((await request).url());
+    expect(url.searchParams.getAll('sections[]')).toEqual(['cities']);
+
+    request = page.waitForRequest('**/stats/data?*');
+    await page.getByRole('button', { name: '7 days' }).click();
+    url = new URL((await request).url());
+    expect(url.searchParams.getAll('sections[]').length).not.toBe(1);
+});
+
+test('a slow stale response never overwrites a newer one', async ({ page }) => {
+    await openStats(page, 'Period e2e');
+    let first = true;
+    await page.route('**/stats/data?*', async (route) => {
+        if (first) {
+            first = false;
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+        await route.continue().catch(() => {});
+    });
+
+    await page.getByRole('button', { name: '7 days' }).click();
+    await page.getByRole('button', { name: 'All time' }).click();
+    await expect(page.getByText('9 clicks in total')).toBeVisible();
+    await page.waitForTimeout(2000);
+    await expect(page.getByText('9 clicks in total')).toBeVisible();
+});
+
+test('an invalid range keeps previous data and tables are stacked', async ({
+    page,
+}) => {
     await openStats(page, 'Period e2e');
     await page.getByLabel('Custom period').selectOption('range');
     await page.getByLabel('From', { exact: true }).fill('2021-06-30');
     await page.getByLabel('To', { exact: true }).fill('2021-06-01');
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByRole('alert').first()).toBeVisible();
+    await expect(page.getByText('3 clicks in the last 30 days')).toBeVisible();
+
+    const titles = [
+        'Countries',
+        'Cities',
+        'Browsers',
+        'Operating systems',
+        'Devices',
+    ];
+    const boxes = [];
+    for (const title of titles) {
+        boxes.push(
+            await page
+                .getByRole('heading', { name: title, exact: true })
+                .boundingBox(),
+        );
+    }
+    for (let i = 1; i < boxes.length; i++) {
+        expect(boxes[i]!.y).toBeGreaterThan(boxes[i - 1]!.y);
+        expect(boxes[i]!.x).toBe(boxes[0]!.x);
+    }
 });

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router, usePage } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { Head, useHttp } from '@inertiajs/vue3';
+import { computed, reactive, ref, watch } from 'vue';
 import StatsTable from '@/components/StatsTable.vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
-import { index, stats } from '@/routes/links';
+import { index } from '@/routes/links';
+import type { RouteQueryOptions } from '@/wayfinder';
+import { data as statsData } from '@/routes/links/stats';
 import type {
     DailyClicks,
     Link,
@@ -17,7 +19,7 @@ import type {
     StatsTableKey,
 } from '@/types';
 
-const props = defineProps<{
+const initial = defineProps<{
     link: Link;
     period: StatsPeriodParams;
     granularity: 'day' | 'month';
@@ -51,16 +53,63 @@ const tableTitles: Record<StatsTableKey, string> = {
     devices: 'Devices',
 };
 
-const rangeDraft = ref<{ from?: string; to?: string }>({});
+type StatsQuery = NonNullable<RouteQueryOptions['query']>;
+
+type Section = 'summary' | 'options' | StatsTableKey;
+
+const link = computed(() => initial.link);
+const period = ref(initial.period);
+const granularity = ref(initial.granularity);
+const sort = ref(initial.sort);
+const total = ref(initial.total);
+const series = ref(initial.series);
+const filters = ref(initial.filters);
+const options = ref(initial.options);
+const tables = ref<Record<StatsTableKey, StatsTableData>>({
+    countries: initial.countries,
+    cities: initial.cities,
+    browsers: initial.browsers,
+    systems: initial.systems,
+    devices: initial.devices,
+});
+
+const pendingSections = ref(new Set<Section>());
+const isLoading = (section: Section) => pendingSections.value.has(section);
+
+/** Requested state; updated immediately so rapid changes build on each other. */
+const wanted = reactive({
+    period: { ...initial.period } as StatsPeriodParams,
+    filters: { ...initial.filters } as StatsFilters,
+    sort: { ...initial.sort } as StatsSorts,
+    perPage: Object.fromEntries(
+        tableKeys.map((key) => [key, initial[key].perPage]),
+    ) as Record<StatsTableKey, number>,
+    pages: Object.fromEntries(
+        tableKeys.map((key) => [key, initial[key].page]),
+    ) as Record<StatsTableKey, number>,
+});
+
+const resyncWanted = () => {
+    wanted.period = { ...period.value };
+    wanted.filters = { ...filters.value };
+    wanted.sort = { ...sort.value };
+
+    for (const key of tableKeys) {
+        wanted.perPage[key] = tables.value[key].perPage;
+        wanted.pages[key] = tables.value[key].page;
+    }
+};
 
 const customTypes = ['day', 'month', 'year', 'range'];
 
 const customType = ref(
-    customTypes.includes(props.period.period) ? props.period.period : '',
+    customTypes.includes(period.value.period) ? period.value.period : '',
 );
 
+const rangeDraft = ref<{ from?: string; to?: string }>({});
+
 watch(
-    () => props.period.period,
+    () => period.value.period,
     (value) => {
         customType.value = customTypes.includes(value) ? value : '';
         rangeDraft.value = {};
@@ -71,26 +120,148 @@ watch(customType, () => {
     rangeDraft.value = {};
 });
 
-const page = usePage();
+const buildQuery = (sections: Section[] | null) => {
+    const current = wanted.period;
+    const query: StatsQuery = { period: current.period };
 
-const periodErrors = computed(() =>
-    ['date', 'month', 'year', 'from', 'to']
-        .map((key) => (page.props.errors as Record<string, string>)?.[key])
-        .filter(Boolean),
-);
+    for (const key of ['date', 'month', 'year', 'from', 'to'] as const) {
+        const relevant =
+            current.period === 'range'
+                ? key === 'from' || key === 'to'
+                : current.period === key ||
+                  (key === 'date' && current.period === 'day');
 
-const periodLabel = computed(() => {
-    const { period, from, to } = props.period;
-
-    if (/^\d+d$/.test(period)) {
-        return `in the last ${period.slice(0, -1)} days`;
+        if (relevant && current[key]) {
+            query[key] = current[key];
+        }
     }
 
-    if (period === 'all') {
+    for (const [key, value] of Object.entries(wanted.filters)) {
+        if (value !== null) {
+            query[key] = value;
+        }
+    }
+
+    for (const key of tableKeys) {
+        query[`${key}_per_page`] = wanted.perPage[key];
+        query[`${key}_page`] = wanted.pages[key];
+    }
+
+    query.sort = { ...wanted.sort };
+
+    if (sections) {
+        query.sections = sections;
+    }
+
+    return query;
+};
+
+let query: StatsQuery = {};
+let requestId = 0;
+
+const http = useHttp<Record<string, never>, Record<string, unknown>>(
+    'get',
+    () => statsData.url(link.value.id, { query }),
+    {},
+);
+
+const merge = (response: Record<string, unknown>) => {
+    if (response.period) {
+        period.value = response.period as StatsPeriodParams;
+    }
+
+    if (response.granularity) {
+        granularity.value = response.granularity as 'day' | 'month';
+    }
+
+    if (response.series) {
+        series.value = response.series as DailyClicks[];
+    }
+
+    if (response.total !== undefined) {
+        total.value = response.total as number;
+    }
+
+    if (response.filters) {
+        filters.value = response.filters as StatsFilters;
+    }
+
+    if (response.options) {
+        options.value = response.options as StatsOptions;
+    }
+
+    if (response.sort) {
+        sort.value = response.sort as StatsSorts;
+    }
+
+    for (const key of tableKeys) {
+        if (response[key]) {
+            tables.value[key] = response[key] as StatsTableData;
+        }
+    }
+};
+
+/** Loads the given sections (all when null); a newer request supersedes the in-flight one. */
+const load = (sections: Section[] | null) => {
+    const all: Section[] = ['summary', 'options', ...tableKeys];
+
+    if (sections === null) {
+        pendingSections.value = new Set(all);
+    } else {
+        sections.forEach((section) => pendingSections.value.add(section));
+    }
+
+    const pending = pendingSections.value;
+    const id = ++requestId;
+
+    query = buildQuery(pending.size === all.length ? null : [...pending]);
+    http.cancel();
+    http.get(statsData.url(link.value.id, { query }))
+        .then((response) => {
+            if (id !== requestId) {
+                return;
+            }
+
+            merge(response);
+            sort.value = { ...wanted.sort };
+            pendingSections.value = new Set();
+        })
+        .catch(() => {
+            if (id !== requestId) {
+                return;
+            }
+
+            resyncWanted();
+            pendingSections.value = new Set();
+        });
+};
+
+const periodErrors = computed(() =>
+    (['date', 'month', 'year', 'from', 'to'] as const)
+        .map((key) => ({
+            key,
+            message: (http.errors as Record<string, string>)[key],
+        }))
+        .filter((error) => error.message),
+);
+
+const errorFor = (key: string) =>
+    periodErrors.value.some((error) => error.key === key);
+
+const errorId = (key: string) => (errorFor(key) ? `error-${key}` : undefined);
+
+const periodLabel = computed(() => {
+    const { period: kind, from, to } = period.value;
+
+    if (/^\d+d$/.test(kind)) {
+        return `in the last ${kind.slice(0, -1)} days`;
+    }
+
+    if (kind === 'all') {
         return 'in total';
     }
 
-    return `in ${period === 'range' ? `${from} - ${to}` : (props.period[period === 'day' ? 'date' : (period as 'month' | 'year')] ?? '')}`;
+    return `in ${kind === 'range' ? `${from} - ${to}` : (period.value[kind === 'day' ? 'date' : (kind as 'month' | 'year')] ?? '')}`;
 });
 
 const filterFields = computed(() => {
@@ -99,28 +270,28 @@ const filterFields = computed(() => {
             {
                 key: 'country',
                 label: 'Country',
-                options: props.options.countries,
+                options: options.value.countries,
             },
-            { key: 'city', label: 'City', options: props.options.cities },
+            { key: 'city', label: 'City', options: options.value.cities },
             {
                 key: 'browser',
                 label: 'Browser',
-                options: props.options.browsers,
+                options: options.value.browsers,
             },
             {
                 key: 'os',
                 label: 'Operating system',
-                options: props.options.systems,
+                options: options.value.systems,
             },
             {
                 key: 'device_type',
                 label: 'Device',
-                options: props.options.devices,
+                options: options.value.devices,
             },
         ];
 
     return fields.map((field) => {
-        const active = props.filters[field.key];
+        const active = filters.value[field.key];
 
         return active !== null && !field.options.includes(active)
             ? { ...field, options: [...field.options, active] }
@@ -129,88 +300,26 @@ const filterFields = computed(() => {
 });
 
 const activeFilters = computed(() =>
-    filterFields.value.filter((field) => props.filters[field.key] !== null),
+    filterFields.value.filter((field) => filters.value[field.key] !== null),
 );
 
-type VisitOverrides = {
-    period?: Partial<StatsPeriodParams>;
-    filters?: StatsFilters;
-    sort?: [StatsTableKey, string];
-    perPage?: [StatsTableKey, number];
-    page?: [StatsTableKey, number];
-};
-
-const buildQuery = (overrides: VisitOverrides = {}) => {
-    const period = { ...props.period, ...overrides.period };
-    const filters = overrides.filters ?? props.filters;
-    const resetPages = !overrides.page && !overrides.perPage;
-    const sort: Record<string, string> = {};
-    const query: Record<string, string | number | Record<string, string>> = {
-        period: period.period,
-    };
-
-    for (const key of ['date', 'month', 'year', 'from', 'to'] as const) {
-        const relevant =
-            period.period === 'range'
-                ? key === 'from' || key === 'to'
-                : period.period === key ||
-                  (key === 'date' && period.period === 'day');
-
-        if (relevant && period[key]) {
-            query[key] = period[key];
-        }
-    }
-
-    for (const [key, value] of Object.entries(filters)) {
-        if (value !== null) {
-            query[key] = value;
-        }
-    }
-
+const resetPages = () => {
     for (const key of tableKeys) {
-        sort[key] =
-            overrides.sort?.[0] === key ? overrides.sort[1] : props.sort[key];
-
-        const perPage =
-            overrides.perPage?.[0] === key
-                ? overrides.perPage[1]
-                : props[key].perPage;
-        const page = resetPages
-            ? 1
-            : overrides.page?.[0] === key
-              ? overrides.page[1]
-              : overrides.perPage?.[0] === key
-                ? 1
-                : props[key].page;
-
-        if (perPage !== 10) {
-            query[`${key}_per_page`] = perPage;
-        }
-
-        if (page > 1) {
-            query[`${key}_page`] = page;
-        }
+        wanted.pages[key] = 1;
     }
-
-    query.sort = sort;
-
-    return query;
 };
 
-const visit = (overrides: VisitOverrides = {}) =>
-    router.get(
-        stats(props.link.id, { query: buildQuery(overrides) }),
-        undefined,
-        {
-            preserveState: true,
-            preserveScroll: true,
-        },
-    );
+const changePeriod = (next: Partial<StatsPeriodParams>) => {
+    wanted.period = { ...wanted.period, ...next } as StatsPeriodParams;
+    resetPages();
+    load(null);
+};
 
 const setPeriodValue = (key: keyof StatsPeriodParams, value: string) => {
     if (customType.value !== 'range') {
         if (value) {
-            visit({ period: { period: customType.value, [key]: value } });
+            wanted.period = { period: customType.value } as StatsPeriodParams;
+            changePeriod({ [key]: value });
         }
 
         return;
@@ -218,30 +327,57 @@ const setPeriodValue = (key: keyof StatsPeriodParams, value: string) => {
 
     rangeDraft.value = { ...rangeDraft.value, [key]: value };
 
-    const from = rangeDraft.value.from ?? props.period.from;
-    const to = rangeDraft.value.to ?? props.period.to;
+    const from = rangeDraft.value.from ?? period.value.from;
+    const to = rangeDraft.value.to ?? period.value.to;
 
     if (from && to) {
-        visit({ period: { period: 'range', from, to } });
+        wanted.period = { period: 'range' } as StatsPeriodParams;
+        changePeriod({ from, to });
     }
 };
 
-const setFilter = (key: StatsFilterKey, value: string | null) =>
-    visit({ filters: { ...props.filters, [key]: value || null } });
+const setPreset = (kind: string) => {
+    wanted.period = { period: kind } as StatsPeriodParams;
+    changePeriod({});
+};
 
-const clearFilters = () =>
-    visit({
-        filters: {
-            country: null,
-            city: null,
-            browser: null,
-            os: null,
-            device_type: null,
-        },
-    });
+const setFilter = (key: StatsFilterKey, value: string | null) => {
+    wanted.filters = { ...wanted.filters, [key]: value || null };
+    resetPages();
+    load(null);
+};
+
+const clearFilters = () => {
+    wanted.filters = {
+        country: null,
+        city: null,
+        browser: null,
+        os: null,
+        device_type: null,
+    };
+    resetPages();
+    load(null);
+};
+
+const sortTable = (key: StatsTableKey, value: string) => {
+    wanted.sort[key] = value;
+    wanted.pages[key] = 1;
+    load([key]);
+};
+
+const limitTable = (key: StatsTableKey, perPage: number) => {
+    wanted.perPage[key] = perPage;
+    wanted.pages[key] = 1;
+    load([key]);
+};
+
+const pageTable = (key: StatsTableKey, page: number) => {
+    wanted.pages[key] = page;
+    load([key]);
+};
 
 const maxDaily = computed(() =>
-    Math.max(1, ...props.series.map((day) => day.count)),
+    Math.max(1, ...series.value.map((day) => day.count)),
 );
 
 defineOptions({
@@ -268,38 +404,16 @@ defineOptions({
                         `${range}d` === period.period ? 'default' : 'outline'
                     "
                     size="sm"
-                    as-child
+                    @click="setPreset(`${range}d`)"
                 >
-                    <InertiaLink
-                        :href="
-                            stats(link.id, {
-                                query: buildQuery({
-                                    period: { period: `${range}d` },
-                                }),
-                            })
-                        "
-                        preserve-scroll
-                    >
-                        {{ range }} days
-                    </InertiaLink>
+                    {{ range }} days
                 </Button>
                 <Button
                     :variant="period.period === 'all' ? 'default' : 'outline'"
                     size="sm"
-                    as-child
+                    @click="setPreset('all')"
                 >
-                    <InertiaLink
-                        :href="
-                            stats(link.id, {
-                                query: buildQuery({
-                                    period: { period: 'all' },
-                                }),
-                            })
-                        "
-                        preserve-scroll
-                    >
-                        All time
-                    </InertiaLink>
+                    All time
                 </Button>
                 <select
                     aria-label="Custom period"
@@ -316,6 +430,8 @@ defineOptions({
                     v-if="customType === 'day'"
                     type="date"
                     aria-label="Day"
+                    :aria-invalid="errorFor('date')"
+                    :aria-describedby="errorId('date')"
                     class="rounded-md border bg-background px-2 py-1 text-sm"
                     :value="period.date ?? ''"
                     @change="
@@ -329,6 +445,8 @@ defineOptions({
                     v-else-if="customType === 'month'"
                     type="month"
                     aria-label="Month"
+                    :aria-invalid="errorFor('month')"
+                    :aria-describedby="errorId('month')"
                     class="rounded-md border bg-background px-2 py-1 text-sm"
                     :value="period.month ?? ''"
                     @change="
@@ -344,6 +462,8 @@ defineOptions({
                     min="1970"
                     max="9999"
                     aria-label="Year"
+                    :aria-invalid="errorFor('year')"
+                    :aria-describedby="errorId('year')"
                     class="w-24 rounded-md border bg-background px-2 py-1 text-sm"
                     :value="period.year ?? ''"
                     @change="
@@ -360,6 +480,8 @@ defineOptions({
                     <input
                         type="date"
                         aria-label="From"
+                        :aria-invalid="errorFor('from')"
+                        :aria-describedby="errorId('from')"
                         class="rounded-md border bg-background px-2 py-1 text-sm"
                         :value="period.from ?? ''"
                         :max="rangeDraft.to ?? period.to ?? undefined"
@@ -373,6 +495,8 @@ defineOptions({
                     <input
                         type="date"
                         aria-label="To"
+                        :aria-invalid="errorFor('to')"
+                        :aria-describedby="errorId('to')"
                         class="rounded-md border bg-background px-2 py-1 text-sm"
                         :value="period.to ?? ''"
                         :min="rangeDraft.from ?? period.from ?? undefined"
@@ -388,11 +512,12 @@ defineOptions({
         </div>
         <p
             v-for="error in periodErrors"
-            :key="error"
+            :id="`error-${error.key}`"
+            :key="error.key"
             class="text-sm text-destructive"
             role="alert"
         >
-            {{ error }}
+            {{ error.message }}
         </p>
 
         <div class="flex flex-wrap items-end gap-3">
@@ -445,7 +570,10 @@ defineOptions({
             >
         </div>
 
-        <p class="text-3xl font-semibold">
+        <p
+            class="text-3xl font-semibold transition-opacity"
+            :class="{ 'animate-pulse opacity-50': isLoading('summary') }"
+        >
             {{ total }}
             <span class="text-base font-normal text-muted-foreground"
                 >clicks {{ periodLabel }}</span
@@ -458,7 +586,8 @@ defineOptions({
 
         <div
             v-else
-            class="flex h-40 items-end gap-px"
+            class="flex h-40 items-end gap-px transition-opacity"
+            :class="{ 'animate-pulse opacity-50': isLoading('summary') }"
             role="img"
             :aria-label="`Clicks per ${granularity}`"
         >
@@ -474,16 +603,17 @@ defineOptions({
             />
         </div>
 
-        <div class="grid gap-6 md:grid-cols-2">
+        <div class="space-y-6">
             <StatsTable
                 v-for="key in tableKeys"
                 :key="key"
                 :title="tableTitles[key]"
-                :table="props[key]"
-                :sort="sort[key]"
-                @sort="visit({ sort: [key, $event] })"
-                @page="visit({ page: [key, $event] })"
-                @per-page="visit({ perPage: [key, $event] })"
+                :table="tables[key]"
+                :sort="wanted.sort[key]"
+                :loading="isLoading(key)"
+                @sort="sortTable(key, $event)"
+                @page="pageTable(key, $event)"
+                @per-page="limitTable(key, $event)"
             />
         </div>
     </div>

@@ -6,6 +6,7 @@ const props = defineProps<{
     title: string;
     table: StatsTable;
     sort: string;
+    loading?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -43,7 +44,11 @@ const toggle = (key: 'name' | 'count') => {
 </script>
 
 <template>
-    <section>
+    <section
+        class="transition-opacity"
+        :class="{ 'animate-pulse opacity-50': loading }"
+        :aria-busy="loading"
+    >
         <h2 class="mb-2 font-medium">{{ title }}</h2>
         <p v-if="table.rows.length === 0" class="text-sm text-muted-foreground">
             No data.
