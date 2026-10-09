@@ -255,3 +255,36 @@ test('each option list is capped at 200 values independently', function () {
             ->where('options.systems', ['Linux'])
             ->where('options.countries', ['Poland']));
 });
+
+test('period must be one of the allowed values', function () {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'week']))
+        ->assertSessionHasErrors('period');
+});
+
+test('day, month, year and range require their parameters', function (array $query, string $field) {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, ...$query]))
+        ->assertSessionHasErrors($field);
+})->with([
+    'day' => [['period' => 'day'], 'date'],
+    'month' => [['period' => 'month'], 'month'],
+    'year' => [['period' => 'year'], 'year'],
+    'range from' => [['period' => 'range', 'to' => '2026-01-10'], 'from'],
+    'range to' => [['period' => 'range', 'from' => '2026-01-10'], 'to'],
+]);
+
+test('date formats are validated', function (array $query, string $field) {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, ...$query]))
+        ->assertSessionHasErrors($field);
+})->with([
+    'date' => [['period' => 'day', 'date' => '09-10-2026'], 'date'],
+    'month' => [['period' => 'month', 'month' => '2026-13'], 'month'],
+    'year' => [['period' => 'year', 'year' => '26'], 'year'],
+]);
+
+test('range must not be reversed or longer than 5 years', function (string $from, string $to, string $field) {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'range', 'from' => $from, 'to' => $to]))
+        ->assertSessionHasErrors($field);
+})->with([
+    'reversed' => ['2026-02-01', '2026-01-01', 'from'],
+    'too long' => ['2020-01-01', '2026-01-01', 'to'],
+]);
