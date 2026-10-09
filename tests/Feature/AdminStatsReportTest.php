@@ -12,7 +12,10 @@ beforeEach(function () {
 
 function adminReport(?User $user = null, array $query = ['period' => '7d']): array
 {
-    return (new AdminStatsReport)->build($user, AdminStatsRequest::create('/', 'GET', $query));
+    $request = AdminStatsRequest::create('/', 'GET', $query);
+    $request->setUserResolver(fn () => User::factory()->superAdmin()->make());
+
+    return (new AdminStatsReport)->build($user, $request);
 }
 
 test('global report counts users, links and clicks', function () {

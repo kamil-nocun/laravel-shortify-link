@@ -3,7 +3,6 @@ import { Link, usePage } from "@inertiajs/vue3";
 import {
     BookOpen,
     FolderGit2,
-    LayoutGrid,
     Link2,
     Shield,
     Users,
@@ -32,11 +31,6 @@ const page = usePage();
 
 const baseNavItems: NavItem[] = [
     {
-        title: "Dashboard",
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
         title: "My links",
         href: linksIndex(),
         icon: Link2,
@@ -47,13 +41,13 @@ const mainNavItems = computed<NavItem[]>(() => {
     const role = page.props.auth.user.role;
 
     return [
-        ...baseNavItems,
         ...(role === "super_admin"
             ? [{ title: "Admin", href: administratorsIndex(), icon: Shield }]
             : []),
         ...(role === "admin" || role === "super_admin"
             ? [{ title: "Users", href: usersIndex(), icon: Users }]
             : []),
+        ...baseNavItems,
     ];
 });
 

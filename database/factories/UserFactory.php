@@ -73,7 +73,7 @@ class UserFactory extends Factory
      */
     public function blocked(): static
     {
-        return $this->state(['blocked_at' => now(), 'blocked_by' => User::factory()]);
+        return $this->state(['blocked_at' => now()]);
     }
 
     /**

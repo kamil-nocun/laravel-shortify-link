@@ -37,8 +37,8 @@ test('admin routes are forbidden for regular users', function () {
 
 test('admin routes are not forbidden for admins', function (string $state) {
     foreach (adminRoutes() as [$method, $uri]) {
-        if ($state === 'admin' && str_ends_with($uri, '/role')) {
-            continue; // role changes are super admin only (policy)
+        if ($state === 'admin' && (str_ends_with($uri, '/role') || str_starts_with($uri, '/admin/administrators'))) {
+            continue; // role changes and administrator management are super admin only (policy)
         }
 
         expect($this->actingAs(User::factory()->{$state}()->create())->call($method, $uri)->status())->not->toBe(403, "{$method} {$uri} was forbidden");
