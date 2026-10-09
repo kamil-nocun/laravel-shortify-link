@@ -61,6 +61,14 @@ class UserFactory extends Factory
     }
 
     /**
+     * Assign the created user to the given administrator.
+     */
+    public function assignedTo(User $admin): static
+    {
+        return $this->afterCreating(fn (User $user) => $user->assignedAdmins()->attach($admin));
+    }
+
+    /**
      * Indicate that the user is blocked.
      */
     public function blocked(): static

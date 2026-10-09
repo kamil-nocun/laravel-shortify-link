@@ -6,7 +6,6 @@ use App\Http\Requests\Links\StoreLinkRequest;
 use App\Http\Requests\Links\UpdateLinkRequest;
 use App\Models\Link;
 use App\Support\LinkCodeGenerator;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -38,16 +37,7 @@ class LinkController extends Controller
      */
     public function store(StoreLinkRequest $request, LinkCodeGenerator $generator): RedirectResponse
     {
-        $create = fn () => $request->user()->links()->create([
-            ...$request->validated(),
-            'code' => $generator->generate(),
-        ]);
-
-        try {
-            $create();
-        } catch (UniqueConstraintViolationException) {
-            $create();
-        }
+        $generator->createFor($request->user(), $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link created.')]);
 

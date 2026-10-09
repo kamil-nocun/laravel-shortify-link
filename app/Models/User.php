@@ -7,8 +7,11 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -77,5 +80,49 @@ class User extends Authenticatable implements MustVerifyEmail
     public function links(): HasMany
     {
         return $this->hasMany(Link::class);
+    }
+
+    /**
+     * Administrators assigned to this client.
+     *
+     * @return BelongsToMany<User, $this, ClientAdmin>
+     */
+    public function assignedAdmins(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'client_admin', 'client_id', 'admin_id')
+            ->using(ClientAdmin::class)->withTimestamps();
+    }
+
+    /**
+     * Clients assigned to this administrator.
+     *
+     * @return BelongsToMany<User, $this, ClientAdmin>
+     */
+    public function managedClients(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'client_admin', 'admin_id', 'client_id')
+            ->using(ClientAdmin::class)->withTimestamps();
+    }
+
+    /**
+     * Users the given actor may manage: everyone for the super admin, assigned clients for an administrator.
+     *
+     * @param  Builder<User>  $query
+     */
+    #[Scope]
+    protected function visibleTo(Builder $query, User $actor): void
+    {
+        if ($actor->isSuperAdmin()) {
+            return;
+        }
+
+        if (! $actor->isAdmin()) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->where('role', UserRole::User)
+            ->whereHas('assignedAdmins', fn (Builder $query) => $query->whereKey($actor->id));
     }
 }

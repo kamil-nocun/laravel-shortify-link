@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { dashboard } from '@/routes/admin';
 import { disable, enable, stats as linkStats } from '@/routes/admin/links';
+import { create as createLink } from '@/routes/admin/users/links';
 import {
     block,
     destroy,
@@ -80,15 +81,20 @@ const toggleBlock = () =>
 
 type AssignableRole = Exclude<AdminUser['role'], 'super_admin'>;
 
-/** Sends the new role; the select always ends up showing the saved role. */
-const changeRole = (select: HTMLSelectElement) =>
+const targetRole = computed<AssignableRole>(() =>
+    props.user.role === 'admin' ? 'user' : 'admin',
+);
+
+const isRoleOpen = ref(false);
+
+const changeRole = () =>
     router.patch(
         updateRole(props.user.id).url,
-        { role: select.value as AssignableRole },
+        { role: targetRole.value },
         {
             preserveScroll: true,
             onFinish: () => {
-                select.value = props.user.role;
+                isRoleOpen.value = false;
             },
         },
     );
@@ -156,16 +162,31 @@ setLayoutProps({
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                <select
-                    v-if="user.can.changeRole"
-                    aria-label="Role"
-                    class="rounded-md border bg-background px-2 py-1.5 text-sm"
-                    :value="user.role"
-                    @change="changeRole($event.target as HTMLSelectElement)"
-                >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                </select>
+                <Dialog v-if="user.can.changeRole" v-model:open="isRoleOpen">
+                    <DialogTrigger as-child>
+                        <Button variant="outline" size="sm">
+                            Change role to {{ roleLabels[targetRole] }}
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Change role?</DialogTitle>
+                            <DialogDescription>
+                                {{ user.name }} will become
+                                {{ roleLabels[targetRole] }}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter class="gap-2">
+                            <DialogClose as-child>
+                                <Button variant="secondary">Cancel</Button>
+                            </DialogClose>
+                            <Button @click="changeRole"
+                                >Change role to
+                                {{ roleLabels[targetRole] }}</Button
+                            >
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
                 <Button
                     v-if="user.can.block"
                     variant="outline"
@@ -240,7 +261,12 @@ setLayoutProps({
         </p>
         <ClicksChart v-else :series="series" :granularity="granularity" />
 
-        <h2 class="font-medium">Links</h2>
+        <div class="flex items-center justify-between">
+            <h2 class="font-medium">Links</h2>
+            <Button v-if="user.can.createLink" size="sm" as-child>
+                <InertiaLink :href="createLink(user.id)">Add link</InertiaLink>
+            </Button>
+        </div>
 
         <p v-if="links.data.length === 0" class="text-sm text-muted-foreground">
             No data

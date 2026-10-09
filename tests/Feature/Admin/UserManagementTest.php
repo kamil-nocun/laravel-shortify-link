@@ -4,26 +4,30 @@ use App\Enums\UserRole;
 use App\Models\Link;
 use App\Models\LinkClick;
 use App\Models\User;
+use App\Notifications\AccountCreatedNotification;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('admin sees users with counts and capability flags', function () {
-    $admin = User::factory()->admin()->create(['created_at' => now()->subDay()]);
+    $admin = User::factory()->admin()->create();
     $user = User::factory()->create(['name' => 'Zed']);
+    User::factory()->superAdmin()->create();
     Link::factory()->for($user)->count(2)->create();
 
     $this->actingAs($admin)->get(route('admin.users.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/users/Index')
             ->where('search', '')
-            ->has('users.data', 2)
+            ->has('users.data', 1)
             ->where('users.data.0.name', 'Zed')
             ->where('users.data.0.links_count', 2)
-            ->where('users.data.0.can', ['block' => true, 'delete' => true, 'changeRole' => false])
-            ->where('users.data.1.can', ['block' => false, 'delete' => false, 'changeRole' => false]));
+            ->where('users.data.0.can', ['block' => true, 'update' => true, 'createLink' => true, 'delete' => true, 'changeRole' => false]));
 });
 
 test('super admin can change roles in flags', function () {
-    $super = User::factory()->superAdmin()->create(['created_at' => now()->subDay()]);
+    $super = User::factory()->superAdmin()->create();
     User::factory()->create(['name' => 'Zed']);
 
     $this->actingAs($super)->get(route('admin.users.index'))
@@ -58,7 +62,7 @@ test('search treats like wildcards literally', function (string $search, int $ex
 
 test('users are paginated by fifteen', function () {
     $admin = User::factory()->admin()->create();
-    User::factory()->count(15)->create();
+    User::factory()->count(16)->create();
 
     $this->actingAs($admin)->get(route('admin.users.index'))
         ->assertInertia(fn (Assert $page) => $page->has('users.data', 15)->where('users.total', 16));
@@ -200,4 +204,127 @@ test('super admin cannot change another super admin role', function () {
     $this->actingAs(User::factory()->superAdmin()->create())
         ->patch(route('admin.users.role', $other), ['role' => 'user'])->assertForbidden();
     expect($other->fresh()->role)->toBe(UserRole::SuperAdmin);
+});
+
+test('admin edits a user profile and password is optional', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+    $oldHash = $user->password;
+
+    $this->actingAs($admin)->get(route('admin.users.edit', $user))
+        ->assertInertia(fn (Assert $page) => $page->component('admin/users/Edit')->where('user.id', $user->id));
+
+    $this->actingAs($admin)->put(route('admin.users.update', $user), ['name' => 'New', 'email' => 'new@example.com'])
+        ->assertRedirect(route('admin.users.show', $user));
+
+    $user->refresh();
+    expect($user->name)->toBe('New')
+        ->and($user->email)->toBe('new@example.com')
+        ->and($user->email_verified_at)->toBeNull()
+        ->and($user->password)->toBe($oldHash);
+});
+
+test('admin can set a new password for a user', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+
+    $this->actingAs($admin)->put(route('admin.users.update', $user), [
+        'name' => $user->name,
+        'email' => $user->email,
+        'password' => 'new-password-123',
+        'password_confirmation' => 'new-password-123',
+    ])->assertRedirect();
+
+    expect(Hash::check('new-password-123', $user->fresh()->password))->toBeTrue()
+        ->and($user->fresh()->email_verified_at)->not->toBeNull();
+});
+
+test('update validates input and keeps email unique', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+
+    $this->actingAs($admin)->put(route('admin.users.update', $user), ['name' => '', 'email' => $other->email])
+        ->assertSessionHasErrors(['name', 'email']);
+    $this->actingAs($admin)->put(route('admin.users.update', $user), [
+        'name' => 'X', 'email' => $user->email, 'password' => 'new-password-123', 'password_confirmation' => 'nope',
+    ])->assertSessionHasErrors('password');
+});
+
+test('editing is limited by rank', function () {
+    $admin = User::factory()->admin()->create();
+    $target = User::factory()->admin()->create();
+    $payload = ['name' => 'X', 'email' => 'x@example.com'];
+
+    $this->actingAs($admin)->get(route('admin.users.edit', $target))->assertForbidden();
+    $this->actingAs($admin)->put(route('admin.users.update', $target), $payload)->assertForbidden();
+    $this->actingAs(User::factory()->create())->put(route('admin.users.update', $target), $payload)->assertForbidden();
+});
+
+test('admin creates a verified user with an unknown password and e-mails a set-password link', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)->post(route('admin.users.store'), ['name' => 'New', 'email' => 'new@example.com'])
+        ->assertRedirect();
+
+    $user = User::where('email', 'new@example.com')->firstOrFail();
+    expect($user->role)->toBe(UserRole::User)
+        ->and($user->email_verified_at)->not->toBeNull()
+        ->and($user->password)->not->toBeEmpty();
+
+    Notification::assertSentTo($user, AccountCreatedNotification::class, function ($notification) use ($user) {
+        return Password::tokenExists($user, $notification->token);
+    });
+});
+
+test('creating a user validates name and unique email', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+    User::factory()->create(['email' => 'taken@example.com']);
+
+    $this->actingAs($admin)->post(route('admin.users.store'), ['name' => '', 'email' => 'taken@example.com'])
+        ->assertSessionHasErrors(['name', 'email']);
+
+    Notification::assertNothingSent();
+});
+
+test('regular user and guest cannot create users', function () {
+    $this->actingAs(User::factory()->create())->get(route('admin.users.create'))->assertForbidden();
+    $this->post(route('admin.users.store'), ['name' => 'X', 'email' => 'x@example.com'])->assertForbidden();
+    auth()->logout();
+    $this->post(route('admin.users.store'), [])->assertRedirect(route('login'));
+});
+
+test('admin adds a link owned by the user', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+
+    $this->actingAs($admin)->post(route('admin.users.links.store', $user), ['original_url' => 'https://example.com/a', 'title' => 'A', 'is_active' => true])
+        ->assertRedirect(route('admin.users.show', $user));
+
+    $link = $user->links()->firstOrFail();
+    expect($link->original_url)->toBe('https://example.com/a')
+        ->and($link->code)->toMatch('/^[0-9A-Za-z]{6}$/');
+    expect(Link::count())->toBe(1);
+});
+
+test('adding a user link validates the url', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+
+    $this->actingAs($admin)->post(route('admin.users.links.store', $user), ['original_url' => 'not-a-url'])
+        ->assertSessionHasErrors('original_url');
+});
+
+test('link creation for another user follows the role hierarchy', function () {
+    $admin = User::factory()->admin()->create();
+    $otherAdmin = User::factory()->admin()->create();
+    $super = User::factory()->superAdmin()->create();
+    $payload = ['original_url' => 'https://example.com'];
+
+    $this->actingAs($admin)->get(route('admin.users.links.create', $otherAdmin))->assertForbidden();
+    $this->actingAs($admin)->post(route('admin.users.links.store', $otherAdmin), $payload)->assertForbidden();
+    $this->actingAs($super)->post(route('admin.users.links.store', $otherAdmin), $payload)->assertRedirect();
+    $this->actingAs(User::factory()->create())->get(route('admin.users.links.create', $admin))->assertForbidden();
 });

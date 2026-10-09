@@ -77,6 +77,27 @@ class Link extends Model
             ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()));
     }
 
+    /**
+     * Links the given actor may manage, derived from the owners visible to them.
+     *
+     * @param  Builder<Link>  $query
+     */
+    #[Scope]
+    protected function visibleTo(Builder $query, User $actor): void
+    {
+        if ($actor->isSuperAdmin()) {
+            return;
+        }
+
+        if (! $actor->isAdmin()) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->whereHas('user', fn (Builder $query) => $query->visibleTo($actor));
+    }
+
     public function isDisabledByAdmin(): bool
     {
         return $this->disabled_by_admin_at !== null;

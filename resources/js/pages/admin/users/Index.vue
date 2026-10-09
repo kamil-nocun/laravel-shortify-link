@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
-import { watchDebounced } from '@vueuse/core';
-import { ref } from 'vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { dashboard } from '@/routes/admin';
-import { index, show } from '@/routes/admin/users';
-import type { AdminUser, Paginated } from '@/types';
+import { Head, Link as InertiaLink, router } from "@inertiajs/vue3";
+import { watchDebounced } from "@vueuse/core";
+import { ref } from "vue";
+import Heading from "@/components/Heading.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { dashboard } from "@/routes/admin";
+import {
+    block,
+    create,
+    destroy,
+    edit,
+    index,
+    show,
+    unblock,
+} from "@/routes/admin/users";
+import type { AdminUser, Paginated } from "@/types";
 
 const props = defineProps<{ users: Paginated<AdminUser>; search: string }>();
 
@@ -24,17 +32,24 @@ watchDebounced(
     { debounce: 300 },
 );
 
-const roleLabels: Record<AdminUser['role'], string> = {
-    user: 'User',
-    admin: 'Admin',
-    super_admin: 'Super admin',
+const toggleBlock = (user: AdminUser) =>
+    user.blocked_at
+        ? router.delete(unblock(user.id).url, { preserveScroll: true })
+        : router.patch(block(user.id).url, {}, { preserveScroll: true });
+
+const deleteUser = (user: AdminUser) => {
+    if (
+        confirm(`Delete ${user.name}? Their links and statistics are removed.`)
+    ) {
+        router.delete(destroy(user.id).url, { preserveScroll: true });
+    }
 };
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Admin', href: dashboard() },
-            { title: 'Users', href: index() },
+            { title: "Admin", href: dashboard() },
+            { title: "Users", href: index() },
         ],
     },
 });
@@ -44,34 +59,46 @@ defineOptions({
     <Head title="Users" />
 
     <div class="space-y-6 p-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center justify-between">
             <Heading title="Users" description="Manage user accounts" />
-            <Input
-                v-model="search"
-                type="search"
-                aria-label="Search users"
-                placeholder="Search by name or email"
-                class="max-w-xs"
-            />
+            <Button as-child>
+                <InertiaLink :href="create()">Add user</InertiaLink>
+            </Button>
         </div>
 
-        <p v-if="users.data.length === 0" class="text-sm text-muted-foreground">
-            No data
-        </p>
+        <Input
+            v-model="search"
+            type="search"
+            aria-label="Search users"
+            placeholder="Search by name or email"
+            class="max-w-xs"
+        />
 
-        <div v-else class="overflow-x-auto rounded-lg border">
+        <div class="overflow-x-auto rounded-lg border">
             <table class="w-full text-left text-sm">
                 <thead class="bg-muted/50 text-muted-foreground">
                     <tr>
                         <th class="p-3">Name</th>
                         <th class="p-3">Email</th>
-                        <th class="p-3">Role</th>
                         <th class="p-3">Status</th>
                         <th class="p-3">Links</th>
                         <th class="p-3">Registered</th>
+                        <th class="p-3">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <tr v-if="users.data.length === 0" class="border-t">
+                        <td
+                            colspan="6"
+                            class="p-6 text-center text-muted-foreground"
+                        >
+                            {{
+                                search
+                                    ? "No users match your search."
+                                    : "No users yet."
+                            }}
+                        </td>
+                    </tr>
                     <tr
                         v-for="user in users.data"
                         :key="user.id"
@@ -86,7 +113,6 @@ defineOptions({
                             </InertiaLink>
                         </td>
                         <td class="p-3">{{ user.email }}</td>
-                        <td class="p-3">{{ roleLabels[user.role] }}</td>
                         <td class="p-3">
                             <Badge
                                 :variant="
@@ -95,12 +121,47 @@ defineOptions({
                                         : 'secondary'
                                 "
                             >
-                                {{ user.blocked_at ? 'Blocked' : 'Active' }}
+                                {{ user.blocked_at ? "Blocked" : "Active" }}
                             </Badge>
                         </td>
                         <td class="p-3 tabular-nums">{{ user.links_count }}</td>
                         <td class="p-3">
                             {{ new Date(user.created_at).toLocaleDateString() }}
+                        </td>
+                        <td class="p-3">
+                            <div class="flex gap-2">
+                                <Button variant="outline" size="sm" as-child>
+                                    <InertiaLink :href="show(user.id)">
+                                        View
+                                    </InertiaLink>
+                                </Button>
+                                <Button
+                                    v-if="user.can.update"
+                                    variant="outline"
+                                    size="sm"
+                                    as-child
+                                >
+                                    <InertiaLink :href="edit(user.id)">
+                                        Edit
+                                    </InertiaLink>
+                                </Button>
+                                <Button
+                                    v-if="user.can.block"
+                                    variant="outline"
+                                    size="sm"
+                                    @click="toggleBlock(user)"
+                                >
+                                    {{ user.blocked_at ? "Unblock" : "Block" }}
+                                </Button>
+                                <Button
+                                    v-if="user.can.delete"
+                                    variant="destructive"
+                                    size="sm"
+                                    @click="deleteUser(user)"
+                                >
+                                    Delete
+                                </Button>
+                            </div>
                         </td>
                     </tr>
                 </tbody>

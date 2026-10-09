@@ -103,6 +103,8 @@ export type AdminUser = {
     links_count: number;
     can: {
         block: boolean;
+        update: boolean;
+        createLink: boolean;
         delete: boolean;
         changeRole: boolean;
     };

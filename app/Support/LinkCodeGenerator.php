@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Link;
+use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 
 class LinkCodeGenerator
 {
@@ -24,6 +26,22 @@ class LinkCodeGenerator
         } while (Link::where('code', $code)->exists());
 
         return $code;
+    }
+
+    /**
+     * Create a link for the user with a generated code, retrying once on a race-condition collision.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function createFor(User $user, array $attributes): Link
+    {
+        $create = fn () => $user->links()->create([...$attributes, 'code' => $this->generate()]);
+
+        try {
+            return $create();
+        } catch (UniqueConstraintViolationException) {
+            return $create();
+        }
     }
 
     /**
