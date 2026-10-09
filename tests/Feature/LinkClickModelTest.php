@@ -51,3 +51,12 @@ test('clicks are stored in the link_statistics table', function () {
         ->and(Schema::hasTable('link_statistics'))->toBeTrue()
         ->and(Schema::hasTable('link_clicks'))->toBeFalse();
 });
+
+test('the foreign key and index carry the link_statistics prefix', function () {
+    $indexes = collect(Schema::getIndexes('link_statistics'))->pluck('name');
+    $foreignKeys = collect(Schema::getForeignKeys('link_statistics'))->pluck('name');
+
+    expect($indexes)->toContain('link_statistics_link_id_clicked_at_index')
+        ->not->toContain('link_clicks_link_id_clicked_at_index')
+        ->and($foreignKeys->all())->toBe(['link_statistics_link_id_foreign']);
+});

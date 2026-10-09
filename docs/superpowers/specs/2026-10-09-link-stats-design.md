@@ -29,7 +29,7 @@ Data: 2026-10-09
 - Zapisujemy tylko nazwy: `browser`, `os`, `device_type`. Bez wersji i bez surowego User-Agent.
 - Boty (`isBot()`) są zapisywane z `device_type = 'bot'`, a `browser` i `os` jako `null`, żeby właściciel widział ruch botów osobno.
 - Brak User-Agent lub nierozpoznany klient daje `null` we wszystkich trzech polach.
-- Tabela nazywa się `link_statistics` (model nadal `LinkClick`, `$table` ustawione jawnie). Zmiana nazwy z `link_clicks` idzie osobną migracją `rename_link_clicks_to_link_statistics`, bo wcześniejsze migracje są już uruchomione.
+- Tabela nazywa się `link_statistics` (model nadal `LinkClick`, `$table` ustawione jawnie). Zmiana nazwy z `link_clicks` idzie osobną migracją `rename_link_clicks_to_link_statistics`, bo wcześniejsze migracje są już uruchomione, i zmienia też nazwy klucza obcego (`link_statistics_link_id_foreign`) oraz indeksu (`link_statistics_link_id_clicked_at_index`).
 - Kolumny klienta dochodzą osobną migracją `add_client_columns_to_link_clicks_table`, bo pierwotna migracja jest już uruchomiona.
 
 ## Dane
