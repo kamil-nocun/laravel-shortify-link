@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Billing\PackageBilling;
+use App\Billing\StripePackageBilling;
 use App\Models\Link;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
@@ -24,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(PackageBilling::class, StripePackageBilling::class);
     }
 
     /**

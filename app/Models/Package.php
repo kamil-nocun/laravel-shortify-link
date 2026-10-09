@@ -21,6 +21,11 @@ use Illuminate\Support\Carbon;
  * @property int|null $price_quarterly
  * @property int|null $price_yearly
  * @property bool $is_default
+ * @property string|null $stripe_product_id
+ * @property string|null $stripe_price_id_one_time
+ * @property string|null $stripe_price_id_monthly
+ * @property string|null $stripe_price_id_quarterly
+ * @property string|null $stripe_price_id_yearly
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -45,6 +50,11 @@ class Package extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(PackageAssignment::class);
+    }
+
+    public function stripePriceId(BillingPeriod $period): ?string
+    {
+        return $this->{'stripe_price_id_'.$period->value};
     }
 
     public function priceFor(BillingPeriod $period): ?int

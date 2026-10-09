@@ -2,11 +2,23 @@
 
 namespace Tests;
 
+use App\Billing\PackageBilling;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Laravel\Fortify\Features;
+use Tests\Support\FakePackageBilling;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected FakePackageBilling $billing;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->billing = new FakePackageBilling;
+        $this->app->instance(PackageBilling::class, $this->billing);
+    }
+
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void
     {
         if (! Features::enabled($feature)) {

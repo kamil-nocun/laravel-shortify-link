@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Billing\PackageBilling;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePackageRequest;
 use App\Http\Requests\Admin\UpdatePackageRequest;
@@ -12,9 +13,12 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class PackageController extends Controller
 {
+    public function __construct(private readonly PackageBilling $billing) {}
+
     /**
      * List packages with the number of users assigned to each.
      */
@@ -86,6 +90,7 @@ class PackageController extends Controller
 
         $withdrawn = DB::transaction(function () use ($package) {
             Package::whereKey($package->id)->lockForUpdate()->first();
+            $this->retireInStripe($package);
             $package->assignments()->where('expires_at', '<=', now())->delete();
 
             if ($package->assignments()->exists()) {
@@ -117,6 +122,32 @@ class PackageController extends Controller
             }
 
             $package->fill($attributes)->save();
+
+            if (! $package->is_default) {
+                $this->syncWithStripe($package);
+            }
         });
+    }
+
+    private function syncWithStripe(Package $package): void
+    {
+        try {
+            $this->billing->syncPackage($package);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            throw ValidationException::withMessages(['stripe' => __('The package could not be synchronised with Stripe.')]);
+        }
+    }
+
+    private function retireInStripe(Package $package): void
+    {
+        try {
+            $this->billing->retirePackage($package);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            throw ValidationException::withMessages(['package' => __('The package could not be retired in Stripe.')]);
+        }
     }
 }
