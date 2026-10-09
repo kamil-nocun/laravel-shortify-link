@@ -237,7 +237,12 @@ setLayoutProps({
                 class="text-sm"
             >
                 <li v-for="administrator in assignedAdministrators" :key="administrator.id">
-                    {{ administrator.name }}
+                    <InertiaLink
+                        :href="show(administrator.id)"
+                        class="underline-offset-4 hover:underline"
+                    >
+                        {{ administrator.name }}
+                    </InertiaLink>
                     <span class="text-muted-foreground">
                         {{ administrator.email }}
                     </span>
