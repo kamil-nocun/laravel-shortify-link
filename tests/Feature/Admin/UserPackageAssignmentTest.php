@@ -28,23 +28,26 @@ test('cyclic periods store computed expiry and price snapshot', function (Billin
     [BillingPeriod::Yearly, 9900],
 ]);
 
-test('one time assignment requires and stores a manual expiry', function () {
-    $url = route('admin.users.package.update', $this->client);
-    $payload = ['package_id' => $this->package->id, 'billing_period' => 'one_time'];
-
-    $this->actingAs($this->super)->put($url, $payload)->assertSessionHasErrors('expires_at');
-    $this->actingAs($this->super)->put($url, [...$payload, 'expires_at' => now()->addDays(30)->toDateTimeString()])->assertRedirect();
-
-    $assignment = $this->client->packageAssignment()->firstOrFail();
-    expect($assignment->price)->toBe(4900)->and($assignment->expires_at->isSameDay(now()->addDays(30)))->toBeTrue();
-});
-
-test('one time expiry must be after the start', function () {
+test('one time assignment defaults to one calendar month', function () {
     $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
         'package_id' => $this->package->id, 'billing_period' => 'one_time',
-        'starts_at' => now()->addDays(5)->toDateTimeString(), 'expires_at' => now()->addDay()->toDateTimeString(),
-    ])->assertSessionHasErrors('expires_at');
+    ])->assertRedirect();
+
+    $assignment = $this->client->packageAssignment()->firstOrFail();
+    expect($assignment->price)->toBe(4900)
+        ->and($assignment->expires_at->equalTo($assignment->starts_at->copy()->addMonthNoOverflow()))->toBeTrue();
 });
+
+test('manually supplied dates are ignored', function (string $period) {
+    $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
+        'package_id' => $this->package->id, 'billing_period' => $period,
+        'starts_at' => now()->addYear()->toDateTimeString(), 'expires_at' => now()->addDays(3)->toDateTimeString(),
+    ])->assertRedirect();
+
+    $assignment = $this->client->packageAssignment()->firstOrFail();
+    expect($assignment->starts_at->equalTo(now()))->toBeTrue()
+        ->and($assignment->expires_at->equalTo(now()->addMonthNoOverflow()))->toBeTrue();
+})->with(['one_time', 'monthly']);
 
 test('a period without a price is rejected', function () {
     $package = Package::factory()->create(['price_monthly' => 1000]);

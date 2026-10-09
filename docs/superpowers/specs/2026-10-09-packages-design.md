@@ -10,7 +10,7 @@ Wprowadzić mechanizm pakietów, który ogranicza liczbę skróconych linków u�
 - Pakiet przypisuje się do konkretnego użytkownika lub administratora. Jeden pakiet na użytkownika.
 - Konto super administratora nie wymaga pakietu i nie ma limitu.
 - Pakiet ma nazwę, limit linków oraz osobną cenę dla każdego okresu rozliczeniowego.
-- Okresy: jednorazowo (na stały okres z datą wygaśnięcia), miesięcznie, kwartalnie, rocznie. Okres wybiera super administrator przy przypisaniu.
+- Okresy: jednorazowo (ważne 1 miesiąc kalendarzowy, bez odnowienia), miesięcznie, kwartalnie, rocznie. Okres wybiera super administrator przy przypisaniu.
 - Użytkownik bez pakietu lub z wygasłym pakietem korzysta z pakietu domyślnego (flaga `is_default`). Jeśli brak pakietu domyślnego, limit wynosi 0.
 - Po przekroczeniu limitu blokowane jest wyłącznie tworzenie nowych linków. Istniejące linki działają i można nimi zarządzać.
 - Brak automatycznego odnowienia w etapie 1.
@@ -48,7 +48,7 @@ Pusta cena oznacza, że okres jest niedostępny dla pakietu. Pakiet domyślny mo
 | `expires_at` | timestamp | |
 | `created_at`, `updated_at` | timestamps | |
 
-Przypisanie nowego pakietu zastępuje istniejący wiersz użytkownika. Dla okresów cyklicznych `expires_at` = `starts_at` + okres (miesiąc, 3 miesiące, rok). Dla `one_time` super administrator podaje datę wygaśnięcia ręcznie.
+Przypisanie nowego pakietu zastępuje istniejący wiersz użytkownika. `starts_at` to moment przypisania, a `expires_at` = `starts_at` + okres (miesiąc, 3 miesiące, rok); dla `one_time` jest to 1 miesiąc kalendarzowy. Daty nie są edytowalne ręcznie.
 
 ### Enum `BillingPeriod`
 
@@ -76,7 +76,7 @@ Pakiet efektywny użytkownika (`User::package()`):
 ## Frontend (Inertia + Vue)
 
 - `admin/packages/Index|Create|Edit`: lista z limitem i cenami, formularz z czterema polami cen.
-- Strona użytkownika w panelu: karta „Pakiet” widoczna tylko dla super administratora. Formularz: select pakietu, radio okresu (tylko okresy z ceną), data startu (domyślnie dziś), data wygaśnięcia ręczna wyłącznie dla jednorazowego. Dla super administratora jako użytkownika komunikat „bez limitu”.
+- Strona użytkownika w panelu: karta „Pakiet” widoczna tylko dla super administratora. Formularz: select pakietu, radio okresu (tylko okresy z ceną); bez pól dat. Dla super administratora jako użytkownika komunikat „bez limitu”.
 - Lista linków użytkownika: licznik „X z Y linków”; przycisk „Nowy link” wyłączony z podpowiedzią po osiągnięciu limitu.
 - Pozycja menu „Pakiety” tylko dla super administratora.
 - Trasy przez Wayfinder.

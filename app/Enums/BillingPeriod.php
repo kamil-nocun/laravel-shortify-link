@@ -20,13 +20,12 @@ enum BillingPeriod: string
     }
 
     /**
-     * Expiry for a subscription starting now; one-time assignments get a manual date instead.
+     * Expiry of a period starting at the given moment; a one-time period lasts one calendar month.
      */
-    public function expiresAt(CarbonInterface $startsAt): ?CarbonInterface
+    public function expiresAt(CarbonInterface $startsAt): CarbonInterface
     {
         return match ($this) {
-            self::OneTime => null,
-            self::Monthly => $startsAt->copy()->addMonthsNoOverflow(1),
+            self::OneTime, self::Monthly => $startsAt->copy()->addMonthsNoOverflow(1),
             self::Quarterly => $startsAt->copy()->addMonthsNoOverflow(3),
             self::Yearly => $startsAt->copy()->addYearsNoOverflow(1),
         };

@@ -24,13 +24,6 @@ class UpdateUserPackageRequest extends FormRequest
         return [
             'package_id' => ['required', 'uuid', Rule::exists('packages', 'id')->whereNull('deleted_at')],
             'billing_period' => ['required', Rule::enum(BillingPeriod::class)],
-            'starts_at' => ['nullable', 'date'],
-            'expires_at' => [
-                Rule::requiredIf($this->input('billing_period') === BillingPeriod::OneTime->value),
-                'nullable',
-                'date',
-                'after:'.($this->filled('starts_at') ? 'starts_at' : 'now'),
-            ],
         ];
     }
 

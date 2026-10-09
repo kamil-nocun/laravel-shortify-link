@@ -20,7 +20,7 @@ class UserPackageController extends Controller
     public function update(UpdateUserPackageRequest $request, User $user): RedirectResponse
     {
         $period = BillingPeriod::from($request->validated('billing_period'));
-        $startsAt = $request->date('starts_at') ?? now();
+        $startsAt = now();
 
         DB::transaction(function () use ($request, $user, $period, $startsAt) {
             $package = Package::lockForUpdate()->findOrFail($request->validated('package_id'));
@@ -32,7 +32,7 @@ class UserPackageController extends Controller
                 'price' => $package->priceFor($period),
                 'link_limit' => $package->link_limit,
                 'starts_at' => $startsAt,
-                'expires_at' => $period->expiresAt($startsAt) ?? $request->date('expires_at'),
+                'expires_at' => $period->expiresAt($startsAt),
             ]);
         });
 

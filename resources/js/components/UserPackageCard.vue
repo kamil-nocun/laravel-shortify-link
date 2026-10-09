@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3';
 import { computed, watch } from 'vue';
-import DateTimePicker from '@/components/DateTimePicker.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,13 +23,7 @@ const props = defineProps<{
 const form = useForm({
     package_id: props.assignment?.package_id ?? props.packages[0]?.id ?? '',
     billing_period: '' as BillingPeriod | '',
-    starts_at: '',
-    expires_at: '',
-}).transform((data) => ({
-    ...data,
-    starts_at: data.starts_at ? new Date(data.starts_at).toISOString() : null,
-    expires_at: data.expires_at ? new Date(data.expires_at).toISOString() : null,
-}));
+});
 
 const availablePeriods = computed(
     () =>
@@ -128,18 +121,6 @@ const submit = () =>
                     </div>
                     <InputError :message="form.errors.billing_period" />
                 </fieldset>
-
-                <div class="grid gap-2">
-                    <Label for="starts_at">Starts at (default now)</Label>
-                    <DateTimePicker id="starts_at" v-model="form.starts_at" />
-                    <InputError :message="form.errors.starts_at" />
-                </div>
-
-                <div v-if="form.billing_period === 'one_time'" class="grid gap-2">
-                    <Label for="expires_at">Expires at</Label>
-                    <DateTimePicker id="expires_at" v-model="form.expires_at" />
-                    <InputError :message="form.errors.expires_at" />
-                </div>
 
                 <div class="sm:col-span-2">
                     <Button

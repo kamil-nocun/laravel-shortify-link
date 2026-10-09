@@ -14,8 +14,8 @@ test('cyclic billing periods compute expiry without month overflow', function (B
     [BillingPeriod::Yearly, '2027-01-31'],
 ]);
 
-test('one time billing period has no computed expiry', function () {
-    expect(BillingPeriod::OneTime->expiresAt(now()))->toBeNull();
+test('one time billing period defaults to one calendar month', function () {
+    expect(BillingPeriod::OneTime->expiresAt(Carbon::parse('2026-01-31'))->toDateString())->toBe('2026-02-28');
 });
 
 test('billing periods map to package price columns', function () {
