@@ -19,7 +19,11 @@ import {
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 
 /** Value is a local `YYYY-MM-DDTHH:mm` string, or '' when empty. */
 const model = defineModel<string>({ default: '' });

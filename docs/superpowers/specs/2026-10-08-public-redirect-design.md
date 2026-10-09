@@ -10,12 +10,12 @@ Data: 2026-10-08
 
 ## Zakres
 
-| W zakresie | Poza zakresem |
-|---|---|
-| Publiczna trasa `GET /{code}` | Liczniki i statystyki kliknięć |
+| W zakresie                              | Poza zakresem                                  |
+| --------------------------------------- | ---------------------------------------------- |
+| Publiczna trasa `GET /{code}`           | Liczniki i statystyki kliknięć                 |
 | Egzekwowanie `is_active` i `expires_at` | Osobne komunikaty dla wygasłego i nieaktywnego |
-| Strona 404 w Vue | Cache |
-| Testy Pest + jeden test E2E | |
+| Strona 404 w Vue                        | Cache                                          |
+| Testy Pest + jeden test E2E             |                                                |
 
 Spec CRUD linków wyłączył egzekwowanie `is_active` i `expires_at`. Ten spec je wprowadza.
 
@@ -40,6 +40,7 @@ Spec CRUD linków wyłączył egzekwowanie `is_active` i `expires_at`. Ten spec 
 ## Testy
 
 Pest (`LinkRedirectTest`):
+
 - aktywny link: 302 na `original_url`;
 - nieaktywny, wygasły i nieistniejący: 404 ze stroną Inertia `errors/NotFound`;
 - kod z inną wielkością liter: 404;

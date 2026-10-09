@@ -35,42 +35,44 @@
 
 ## Struktura plików
 
-| Plik | Odpowiedzialność |
-|---|---|
-| `app/Enums/UserRole.php` | enum ról z helperami |
-| `app/Models/User.php`, `app/Models/Link.php` | cast roli, `blocked_at`, `disabled_by_admin_at`, scope `active()` |
-| `app/Console/Commands/MakeSuperAdmin.php` | komenda `user:make-super-admin` |
-| `app/Http/Middleware/EnsureUserIsAdmin.php` | alias `admin` |
-| `app/Http/Middleware/EnsureAccountIsNotBlocked.php` | wylogowanie zablokowanych |
-| `app/Policies/UserPolicy.php`, `app/Policies/LinkPolicy.php` | reguły panelu i `toggle` |
-| `app/Support/StatsSeries.php` | wspólny szereg dzienny/miesięczny |
-| `app/Support/AdminStatsReport.php` | statystyki globalne i per użytkownik |
-| `app/Http/Controllers/Admin/*` | kontrolery panelu |
-| `app/Http/Controllers/LinkToggleController.php` | przełącznik `is_active` właściciela |
-| `resources/js/components/ClicksChart.vue` | wspólny wykres słupkowy |
-| `resources/js/pages/admin/Dashboard.vue`, `users/Index.vue`, `users/Show.vue` | strony panelu |
+| Plik                                                                          | Odpowiedzialność                                                  |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `app/Enums/UserRole.php`                                                      | enum ról z helperami                                              |
+| `app/Models/User.php`, `app/Models/Link.php`                                  | cast roli, `blocked_at`, `disabled_by_admin_at`, scope `active()` |
+| `app/Console/Commands/MakeSuperAdmin.php`                                     | komenda `user:make-super-admin`                                   |
+| `app/Http/Middleware/EnsureUserIsAdmin.php`                                   | alias `admin`                                                     |
+| `app/Http/Middleware/EnsureAccountIsNotBlocked.php`                           | wylogowanie zablokowanych                                         |
+| `app/Policies/UserPolicy.php`, `app/Policies/LinkPolicy.php`                  | reguły panelu i `toggle`                                          |
+| `app/Support/StatsSeries.php`                                                 | wspólny szereg dzienny/miesięczny                                 |
+| `app/Support/AdminStatsReport.php`                                            | statystyki globalne i per użytkownik                              |
+| `app/Http/Controllers/Admin/*`                                                | kontrolery panelu                                                 |
+| `app/Http/Controllers/LinkToggleController.php`                               | przełącznik `is_active` właściciela                               |
+| `resources/js/components/ClicksChart.vue`                                     | wspólny wykres słupkowy                                           |
+| `resources/js/pages/admin/Dashboard.vue`, `users/Index.vue`, `users/Show.vue` | strony panelu                                                     |
 
 ---
 
 ### Task 1: Role, migracje, factory, komenda `user:make-super-admin`
 
 **Files:**
+
 - Create: `app/Enums/UserRole.php`, `app/Console/Commands/MakeSuperAdmin.php`, dwie migracje (`add_role_and_blocked_at_to_users_table`, `add_disabled_by_admin_at_to_links_table`; `php artisan make:migration`)
 - Modify: `app/Models/User.php`, `app/Models/Link.php` (PHPDoc, cast), `database/factories/UserFactory.php`, `database/factories/LinkFactory.php`, `resources/js/types/auth.ts`, `resources/js/types/link.ts`
 - Test: `tests/Feature/MakeSuperAdminCommandTest.php`, `tests/Feature/UserRoleTest.php`
 
 **Interfaces:**
+
 - Produces: `enum App\Enums\UserRole: string { case User = 'user'; case Admin = 'admin'; case SuperAdmin = 'super_admin'; public function isAdmin(): bool /* Admin lub SuperAdmin */ }`.
 - Produces na `User`: `role: UserRole`, `blocked_at: ?Carbon`, `isAdmin(): bool`, `isSuperAdmin(): bool`, `isBlocked(): bool`. Na `Link`: `disabled_by_admin_at: ?Carbon`, `isDisabledByAdmin(): bool`.
 - Produces factory: `UserFactory::admin()`, `superAdmin()`, `blocked()`; `LinkFactory::disabledByAdmin()`.
 - Produces TS: `User.role: 'user' | 'admin' | 'super_admin'`, `User.blocked_at`; `Link.disabled_by_admin_at: string | null`.
 
 - [ ] **Step 1: Write failing tests** w `UserRoleTest`: nowy użytkownik ma `role === UserRole::User`; `UserRole::isAdmin()` jest `false` dla `User` i `true` dla `Admin` i `SuperAdmin`; `User::factory()->blocked()->create()->isBlocked()` jest `true`; `Link::factory()->disabledByAdmin()->create()->isDisabledByAdmin()` jest `true`. W `MakeSuperAdminCommandTest` (artisan `expectsQuestion`/`expectsOutputToContain`, `assertExitCode`):
-  - brak konta: komenda pyta o `Name` i `Password` (ukryte), tworzy konto z `role = SuperAdmin` i `email_verified_at` ustawionym, exit 0;
-  - istniejące konto `User` lub `Admin` jest awansowane, bez pytań, hasło i imię niezmienione, exit 0;
-  - gdy `SuperAdmin` już istnieje: exit 1, błąd, dla tego samego i dla innego e-maila, i żadne konto się nie zmienia ani nie powstaje;
-  - ponowne uruchomienie dla e-maila obecnego `SuperAdmin`a: exit 1 (też odmowa), bez zmian;
-  - e-mail niepoprawny albo słabe hasło (`Password::defaults()`): exit 1, bez konta.
+    - brak konta: komenda pyta o `Name` i `Password` (ukryte), tworzy konto z `role = SuperAdmin` i `email_verified_at` ustawionym, exit 0;
+    - istniejące konto `User` lub `Admin` jest awansowane, bez pytań, hasło i imię niezmienione, exit 0;
+    - gdy `SuperAdmin` już istnieje: exit 1, błąd, dla tego samego i dla innego e-maila, i żadne konto się nie zmienia ani nie powstaje;
+    - ponowne uruchomienie dla e-maila obecnego `SuperAdmin`a: exit 1 (też odmowa), bez zmian;
+    - e-mail niepoprawny albo słabe hasło (`Password::defaults()`): exit 1, bez konta.
 - [ ] **Step 2: Run** `php artisan test --compact tests/Feature/UserRoleTest.php tests/Feature/MakeSuperAdminCommandTest.php`. Expected: FAIL (brak klas/kolumn).
 - [ ] **Step 3: Migracje i enum.** Kolumny z Global Constraints; `down()` usuwa je. `UserRole` w `app/Enums`.
 - [ ] **Step 4: Model i factory.** Cast `'role' => UserRole::class` w `casts()`, `'blocked_at' => 'datetime'`, helpery na `User`; `disabled_by_admin_at` cast + `isDisabledByAdmin()` na `Link`; stany factory. Nie dodawaj `role`/`blocked_at` do `#[Fillable]` (mass assignment zabezpieczony; komenda ustawia je jawnie).
@@ -84,19 +86,21 @@
 ### Task 2: Middleware `admin`, `UserPolicy`, `LinkPolicy`
 
 **Files:**
+
 - Create: `app/Http/Middleware/EnsureUserIsAdmin.php`, `app/Policies/UserPolicy.php`
 - Modify: `bootstrap/app.php` (alias `admin`), `app/Policies/LinkPolicy.php`
 - Test: `tests/Feature/UserPolicyTest.php`, `tests/Feature/AdminAccessTest.php`
 
 **Interfaces:**
+
 - Consumes: Task 1 (`UserRole`, `User::isAdmin()`, `isSuperAdmin()`).
 - Produces: middleware alias `admin` (403 dla nie-adminów, w tym `abort(403)` także dla JSON). `UserPolicy`: `block(User $actor, User $target): bool`, `delete(User $actor, User $target): bool`, `changeRole(User $actor, User $target): bool`. `LinkPolicy::view` zwraca `true` także dla `isAdmin()`; `LinkPolicy::toggle(User $user, Link $link): bool` = właściciel **i** `disabled_by_admin_at === null`. `update`/`delete` bez zmian (tylko właściciel).
 
 - [ ] **Step 1: Write failing tests.** `UserPolicyTest` (dataset aktor × cel, `Gate::forUser($actor)->allows('block', $target)`):
-  - `block` i `delete`: `Admin` → `User` tak; `Admin` → `Admin`/`SuperAdmin` nie; `SuperAdmin` → `User`/`Admin` tak; nikt → siebie nie; `User` → ktokolwiek nie.
-  - `changeRole`: tylko `SuperAdmin` wobec `User`/`Admin`; nie wobec siebie; `Admin` nie.
-  - `LinkPolicy`: admin ma `view` cudzego linku, nie ma `update`/`delete`; `toggle` false dla linku z `disabledByAdmin()` i dla nie-właściciela.
-  - `AdminAccessTest`: lista tras `admin.*` z `Route::getRoutes()` (wypełni się w Tasks 6-7; test iteruje po wszystkich trasach o nazwie zaczynającej się od `admin.`): gość → redirect do logowania, `User` → 403, `Admin`/`SuperAdmin` → nie 403. Dodatkowo `$this->get('/admin')` kończy się 403 dla `User` (trasa powstaje w Task 7; do tego czasu test oznacz `->todo()` i zdejmij go w Task 7).
+    - `block` i `delete`: `Admin` → `User` tak; `Admin` → `Admin`/`SuperAdmin` nie; `SuperAdmin` → `User`/`Admin` tak; nikt → siebie nie; `User` → ktokolwiek nie.
+    - `changeRole`: tylko `SuperAdmin` wobec `User`/`Admin`; nie wobec siebie; `Admin` nie.
+    - `LinkPolicy`: admin ma `view` cudzego linku, nie ma `update`/`delete`; `toggle` false dla linku z `disabledByAdmin()` i dla nie-właściciela.
+    - `AdminAccessTest`: lista tras `admin.*` z `Route::getRoutes()` (wypełni się w Tasks 6-7; test iteruje po wszystkich trasach o nazwie zaczynającej się od `admin.`): gość → redirect do logowania, `User` → 403, `Admin`/`SuperAdmin` → nie 403. Dodatkowo `$this->get('/admin')` kończy się 403 dla `User` (trasa powstaje w Task 7; do tego czasu test oznacz `->todo()` i zdejmij go w Task 7).
 - [ ] **Step 2: Run** testy. Expected: FAIL.
 - [ ] **Step 3: Implement** middleware (`handle(Request $request, Closure $next): Response`, `abort_unless($request->user()?->isAdmin(), 403)`), alias w `bootstrap/app.php` (`$middleware->alias(['admin' => EnsureUserIsAdmin::class])`), `UserPolicy` i zmiany `LinkPolicy`. Policy są wykrywane automatycznie (konwencja nazw).
 - [ ] **Step 4: Run** testy. Expected: PASS. Pint.
@@ -107,18 +111,20 @@
 ### Task 3: Blokada konta i rozszerzony `Link::active()`
 
 **Files:**
+
 - Create: `app/Http/Middleware/EnsureAccountIsNotBlocked.php`
 - Modify: `bootstrap/app.php` (dopisać do grupy `web`), `app/Providers/FortifyServiceProvider.php` (`Fortify::authenticateUsing`), `app/Models/Link.php` (scope `active`)
 - Test: `tests/Feature/AccountBlockingTest.php`, rozszerz `tests/Feature/LinkScopeTest.php`, `tests/Feature/LinkRedirectTest.php`
 
 **Interfaces:**
+
 - Consumes: Task 1.
 - Produces: `Link::active()` zwraca tylko linki z `is_active`, niewygasłe, z `disabled_by_admin_at IS NULL` i właścicielem bez `blocked_at` (`whereHas('user', fn ($q) => $q->whereNull('blocked_at'))`).
 
 - [ ] **Step 1: Write failing tests.**
-  - `LinkScopeTest`: dataset `is_active` × `disabled_by_admin_at` × `expires_at` × zablokowany właściciel; tylko kombinacja „wszystko w porządku" zwraca link.
-  - `LinkRedirectTest`: link zablokowany przez admina i link zablokowanego użytkownika dają 404 pod `/{code}` bez kliknięcia w kolejce (`Queue::fake()`, `assertNothingPushed`); po zdjęciu blokady znów redirect.
-  - `AccountBlockingTest`: zalogowany użytkownik, któremu ustawiono `blocked_at`, na następnym żądaniu (`get('/dashboard')` oraz `getJson`) jest wylogowany (`assertGuest()`) i dostaje redirect na `login` (JSON: 401); logowanie zablokowanego (`post('/login')` z poprawnym hasłem) kończy się błędem walidacji `email` i `assertGuest()`; odblokowany loguje się normalnie.
+    - `LinkScopeTest`: dataset `is_active` × `disabled_by_admin_at` × `expires_at` × zablokowany właściciel; tylko kombinacja „wszystko w porządku" zwraca link.
+    - `LinkRedirectTest`: link zablokowany przez admina i link zablokowanego użytkownika dają 404 pod `/{code}` bez kliknięcia w kolejce (`Queue::fake()`, `assertNothingPushed`); po zdjęciu blokady znów redirect.
+    - `AccountBlockingTest`: zalogowany użytkownik, któremu ustawiono `blocked_at`, na następnym żądaniu (`get('/dashboard')` oraz `getJson`) jest wylogowany (`assertGuest()`) i dostaje redirect na `login` (JSON: 401); logowanie zablokowanego (`post('/login')` z poprawnym hasłem) kończy się błędem walidacji `email` i `assertGuest()`; odblokowany loguje się normalnie.
 - [ ] **Step 2: Run** testy. Expected: FAIL.
 - [ ] **Step 3: Implement** scope; middleware (`handle`: gdy `$request->user()?->isBlocked()` → `Auth::logout()`, unieważnij sesję i regeneruj token, JSON → `abort(401)`, inaczej `redirect()->route('login')` z `withErrors(['email' => __('Your account has been blocked.')])`); `Fortify::authenticateUsing` w `FortifyServiceProvider`: znajdź użytkownika po `Fortify::username()`, `Hash::check`, zablokowany lub błędne dane → `null`; zwróć użytkownika (zachowaj throttling). Middleware dopisz do `$middleware->web(append: [...])`.
 - [ ] **Step 4: Run** testy oraz `php artisan test --compact tests/Feature/Auth tests/Feature/LinkRedirectTest.php`. Expected: PASS.
@@ -129,11 +135,13 @@
 ### Task 4: Przełącznik `is_active` dla właściciela
 
 **Files:**
+
 - Create: `app/Http/Controllers/LinkToggleController.php`
 - Modify: `routes/web.php`, `app/Http/Controllers/LinkController.php` (bez zmian logiki; tylko jeśli `index` wymaga pola), `resources/js/pages/links/Index.vue`
 - Test: `tests/Feature/LinkToggleTest.php`
 
 **Interfaces:**
+
 - Consumes: `LinkPolicy::toggle` (Task 2).
 - Produces: trasa `PATCH links/{link}/toggle` (`links.toggle`), akcja invokable `LinkToggleController::__invoke(Link $link): RedirectResponse` (`Gate::authorize('toggle', $link)`, odwraca `is_active`, flash toast, `back()`).
 
@@ -149,11 +157,13 @@
 ### Task 5: `StatsSeries` i `AdminStatsReport`
 
 **Files:**
+
 - Create: `app/Support/StatsSeries.php`, `app/Support/AdminStatsReport.php`, `app/Http/Requests/Admin/AdminStatsRequest.php`
 - Modify: `app/Support/LinkStatsReport.php` (prywatna `series()` zastąpiona wywołaniem `StatsSeries::build`)
 - Test: `tests/Feature/AdminStatsReportTest.php`; `tests/Feature/LinkStatsTest.php` i `LinkStatsDataTest.php` muszą przejść bez edycji.
 
 **Interfaces:**
+
 - Produces: `StatsSeries::build(Collection $perDay, CarbonImmutable $from, CarbonImmutable $to, string $granularity): array` (`list<array{date: string, count: int}>`; ta sama logika co dotychczasowa prywatna `series()`, przeniesiona bez zmian).
 - Produces: `AdminStatsRequest extends LinkStatsRequest` z `authorize(): bool { return true; }` (dostęp chroni middleware `admin`).
 - Produces: `AdminStatsReport::build(?User $user, LinkStatsRequest $request): array` z kluczami: `period`, `granularity`, `total` (kliknięcia w okresie), `series`, `counters` (`array{users?: int, links: int, activeLinks: int, disabledLinks: int, clicks: int}`; `users` tylko dla widoku globalnego, `clicks` to suma kliknięć w okresie dla zakresu), `topLinks` (`list<array{id: string, title: ?string, code: string, clicks: int}>`, max 10), `topUsers` (`list<array{id: string, name: string, email: string, clicks: int}>`, max 10; pusty dla `$user !== null`). `disabledLinks` = linki nieaktywne wg `active()` (wszystkie − aktywne). Okres rozwiązuje `StatsPeriod::resolve` jak w `LinkStatsReport`; dla `period=all` pierwszy klik z zakresu.
@@ -170,11 +180,13 @@
 ### Task 6: Zarządzanie użytkownikami (backend)
 
 **Files:**
+
 - Create: `app/Http/Controllers/Admin/UserController.php`, `UserBlockController.php`, `UserRoleController.php`, `app/Http/Requests/Admin/UpdateUserRoleRequest.php`
 - Modify: `routes/web.php`
 - Test: `tests/Feature/Admin/UserManagementTest.php`
 
 **Interfaces:**
+
 - Consumes: `UserPolicy` (Task 2), `AdminStatsReport` (Task 5), `AdminStatsRequest`.
 - Produces trasy (grupa `auth`, `verified`, `admin`, prefiks `admin`, nazwa `admin.`): `admin.users.index`, `admin.users.show`, `admin.users.destroy`, `admin.users.block` (`PATCH`), `admin.users.unblock` (`DELETE admin/users/{user}/block`), `admin.users.role` (`PATCH`).
 - Props `admin/users/Index`: `users` (paginator 15: `id`, `name`, `email`, `role`, `blocked_at`, `created_at`, `links_count`, `can: {block: bool, delete: bool, changeRole: bool}`), `search: string`. Props `admin/users/Show`: `user` (jak wyżej, z `can`), `links` (paginator 15: model linku + `clicks_count`), plus klucze z `AdminStatsReport::build($user, $request)`.
@@ -191,11 +203,13 @@
 ### Task 7: Moderacja linków, statystyki linku i dashboard (backend)
 
 **Files:**
+
 - Create: `app/Http/Controllers/Admin/DashboardController.php`, `LinkDisableController.php`, `LinkStatsController.php`
 - Modify: `routes/web.php`, `app/Http/Controllers/LinkStatsController.php` (nowe propsy)
 - Test: `tests/Feature/Admin/LinkModerationTest.php`, `tests/Feature/Admin/AdminDashboardTest.php`; zdejmij `todo` z `AdminAccessTest`.
 
 **Interfaces:**
+
 - Consumes: `AdminStatsReport`, `LinkStatsReport`, `LinkStatsRequest`, `LinkPolicy::view` (admin).
 - Produces trasy: `admin.dashboard` (`GET admin`), `admin.links.disable` (`PATCH`), `admin.links.enable` (`DELETE admin/links/{link}/disable`), `admin.links.stats` (`GET admin/links/{link}/stats`), `admin.links.stats.data`.
 - `admin/Dashboard` props: wynik `AdminStatsReport::build(null, $request)`. `Admin\LinkStatsController` zwraca `Inertia::render('links/Stats', [...])` z tymi samymi propsami co `LinkStatsController` plus `dataUrl: string` (route `admin.links.stats.data`, bez query) i `backUrl: string` (route `admin.users.show` właściciela). Istniejący `LinkStatsController` dostaje `dataUrl` (route `links.stats.data`) i `backUrl` (route `links.index`). `data()` w obu zwraca JSON jak dotąd.
@@ -212,10 +226,12 @@
 ### Task 8: Frontend panelu
 
 **Files:**
+
 - Create: `resources/js/components/ClicksChart.vue`, `resources/js/pages/admin/Dashboard.vue`, `resources/js/pages/admin/users/Index.vue`, `resources/js/pages/admin/users/Show.vue`
 - Modify: `resources/js/pages/links/Stats.vue`, `resources/js/components/AppSidebar.vue`, `resources/js/types/link.ts` (typy admina)
 
 **Interfaces:**
+
 - Consumes: propsy z Tasks 6-7 (kształty w ich blokach Interfaces); Wayfinder `@/routes/admin`, `@/routes/admin/users`, `@/routes/admin/links` po `php artisan wayfinder:generate`.
 - Produces: `ClicksChart.vue` z propsami `{ series: DailyClicks[]; granularity: 'day' | 'month'; loading?: boolean }` (markup słupków wyciągnięty 1:1 ze `Stats.vue`, linie ok. 411-415 i 628-645, razem z `role="img"` i `aria-label`).
 

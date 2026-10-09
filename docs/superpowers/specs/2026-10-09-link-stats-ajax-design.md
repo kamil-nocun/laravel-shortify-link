@@ -17,8 +17,8 @@ Zmiana filtra, okresu, sortowania, strony lub limitu tabeli pobiera dane przez A
 
 - Obliczenia przechodzą z `LinkStatsController` do `app/Support/LinkStatsReport`. Metoda `build(Link $link, LinkStatsRequest $request, ?array $sections = null): array` zwraca pakiet danych o kształcie propsów strony (poniżej), bez klucza `link`. Klasa nie jest `final`.
 - Trasy (w grupie `auth` + `verified`, przed `Route::resource`):
-  - `GET links/{link}/stats` (`links.stats`) renderuje `links/Stats` z `link` i pełnym pakietem. Query string jest nadal honorowany (to samo `LinkStatsRequest`), ale interfejs go nie tworzy.
-  - `GET links/{link}/stats/data` (`links.stats.data`) zwraca pakiet jako JSON.
+    - `GET links/{link}/stats` (`links.stats`) renderuje `links/Stats` z `link` i pełnym pakietem. Query string jest nadal honorowany (to samo `LinkStatsRequest`), ale interfejs go nie tworzy.
+    - `GET links/{link}/stats/data` (`links.stats.data`) zwraca pakiet jako JSON.
 - Pakiet (identyczny w obu trasach): `period`, `granularity`, `series`, `total`, `filters`, `options`, `sort`, `countries`, `cities`, `browsers`, `systems`, `devices` w kształtach z poprzednich specyfikacji.
 - Parametr `sections[]` (tylko trasa danych) ∈ `summary` (`period`, `granularity`, `series`, `total`, `filters`, `sort`), `options`, `countries`, `cities`, `browsers`, `systems`, `devices`. Endpoint liczy i zwraca tylko żądane sekcje. Brak parametru = wszystkie. Nazwa spoza listy to błąd walidacji. Sekcja tabeli zwraca tylko klucz tej tabeli (bez `sort`). Klient trzyma własny stan sortowania, więc `sort` jest tylko echem w `summary`.
 - Odpowiedzi JSON: błąd walidacji = 422 z `errors`; brak uprawnień (cudzy link) = 403 JSON, a nie redirect z toastem. Obecna obsługa `AccessDeniedHttpException` dla tras `links.*` (redirect na `links.index` z toastem) ma dotyczyć tylko żądań, które nie oczekują JSON-a. Gość dostaje 401 JSON.
@@ -28,9 +28,9 @@ Zmiana filtra, okresu, sortowania, strony lub limitu tabeli pobiera dane przez A
 
 - Stan w komponencie: okres (z `date`/`month`/`year`/`from`/`to`), filtry, sortowania i limity tabel, strony tabel. Dane początkowe pochodzą z propsów strony (bez dodatkowego żądania przy ładowaniu).
 - Funkcja `load(sections?)` buduje zapytanie z całego stanu i woła `useHttp('get', <links.stats.data>, () => query)`.
-  - Zmiana okresu lub filtra: wszystkie sekcje, strony tabel wracają do 1, limity zostają.
-  - Zmiana sortowania lub limitu tabeli: tylko ta tabela (`sections[]=<tabela>`), strona tej tabeli wraca do 1.
-  - Zmiana strony tabeli: tylko ta tabela.
+    - Zmiana okresu lub filtra: wszystkie sekcje, strony tabel wracają do 1, limity zostają.
+    - Zmiana sortowania lub limitu tabeli: tylko ta tabela (`sections[]=<tabela>`), strona tej tabeli wraca do 1.
+    - Zmiana strony tabeli: tylko ta tabela.
 - Poprzednie żądanie w locie jest anulowane przez nowe. Odpowiedź starszego żądania nigdy nie nadpisuje nowszych danych.
 - Odpowiedź scala się do lokalnego stanu danych po kluczach sekcji.
 - Ładowanie: sekcja w trakcie pobierania jest przygaszona lub ma szkielet (animowany placeholder), bez migania pustym stanem.
@@ -40,15 +40,15 @@ Zmiana filtra, okresu, sortowania, strony lub limitu tabeli pobiera dane przez A
 
 ## Przypadki brzegowe (każdy ma test)
 
-| # | Sytuacja | Oczekiwane |
-|---|---|---|
-| 22 | Wiele szybkich zmian pod rząd | Widoczny wynik ostatniej zmiany, poprzednie żądania anulowane |
-| 23 | Zły parametr w żądaniu danych | 422 JSON z `errors`, komunikat przy kontrolce, poprzednie dane zostają |
-| 24 | Cudzy link w żądaniu danych | 403 JSON, bez redirectu |
-| 25 | Nieznana nazwa w `sections[]` | 422 |
-| 26 | Żądanie tylko jednej tabeli | Odpowiedź ma tylko klucz tej tabeli; zapytania tylko dla niej |
-| 27 | Filtr, okres, sortowanie, strona | `page.url()` bez query stringa |
-| 28 | F5 po zmianach | Stan domyślny, strona się ładuje bez błędu |
+| #   | Sytuacja                         | Oczekiwane                                                             |
+| --- | -------------------------------- | ---------------------------------------------------------------------- |
+| 22  | Wiele szybkich zmian pod rząd    | Widoczny wynik ostatniej zmiany, poprzednie żądania anulowane          |
+| 23  | Zły parametr w żądaniu danych    | 422 JSON z `errors`, komunikat przy kontrolce, poprzednie dane zostają |
+| 24  | Cudzy link w żądaniu danych      | 403 JSON, bez redirectu                                                |
+| 25  | Nieznana nazwa w `sections[]`    | 422                                                                    |
+| 26  | Żądanie tylko jednej tabeli      | Odpowiedź ma tylko klucz tej tabeli; zapytania tylko dla niej          |
+| 27  | Filtr, okres, sortowanie, strona | `page.url()` bez query stringa                                         |
+| 28  | F5 po zmianach                   | Stan domyślny, strona się ładuje bez błędu                             |
 
 ## Testy
 

@@ -2,7 +2,8 @@ import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 
 const password = 'password123';
-const run = (code: string) => execFileSync('php', ['artisan', 'tinker', '--execute', code]).toString();
+const run = (code: string) =>
+    execFileSync('php', ['artisan', 'tinker', '--execute', code]).toString();
 
 const userEmail = `e2e-${Date.now()}@example.com`;
 const otherEmail = `e2e-other-${Date.now()}@example.com`;
@@ -12,7 +13,9 @@ const storageState = `test-results/auth-${Date.now()}.json`;
 test.use({ storageState });
 
 test.beforeAll(async ({ browser }) => {
-    run(`App\\Models\\User::factory()->create(["email"=>"${userEmail}","password"=>bcrypt("${password}")]);`);
+    run(
+        `App\\Models\\User::factory()->create(["email"=>"${userEmail}","password"=>bcrypt("${password}")]);`,
+    );
 
     const context = await browser.newContext({ storageState: undefined });
     const page = await context.newPage();
@@ -26,27 +29,41 @@ test.beforeAll(async ({ browser }) => {
 });
 
 test.afterAll(() => {
-    run(`App\\Models\\User::whereIn("email",["${userEmail}","${otherEmail}"])->delete();`);
+    run(
+        `App\\Models\\User::whereIn("email",["${userEmail}","${otherEmail}"])->delete();`,
+    );
 });
 
 test.afterEach(() => {
-    run(`App\\Models\\User::where("email","${userEmail}")->first()->links()->delete();`);
+    run(
+        `App\\Models\\User::where("email","${userEmail}")->first()->links()->delete();`,
+    );
 });
 
 test('guest is redirected to login', async ({ browser }) => {
-    const page = await (await browser.newContext({ storageState: undefined })).newPage();
+    const page = await (
+        await browser.newContext({ storageState: undefined })
+    ).newPage();
     await page.goto('/links');
     await expect(page).toHaveURL(/login/);
 });
 
-test('create form requires target URL with a friendly name', async ({ page }) => {
+test('create form requires target URL with a friendly name', async ({
+    page,
+}) => {
     await page.goto('/links/create');
-    await page.locator('form').evaluate((form: HTMLFormElement) => (form.noValidate = true));
+    await page
+        .locator('form')
+        .evaluate((form: HTMLFormElement) => (form.noValidate = true));
     await page.getByRole('button', { name: 'Create link' }).click();
-    await expect(page.getByText('The target URL field is required.')).toBeVisible();
+    await expect(
+        page.getByText('The target URL field is required.'),
+    ).toBeVisible();
 });
 
-test('create form rejects non-http schemes and past expiry', async ({ page }) => {
+test('create form rejects non-http schemes and past expiry', async ({
+    page,
+}) => {
     await page.goto('/links/create');
     await page.getByLabel('Target URL').fill('ftp://example.com/file');
     await page.getByRole('button', { name: 'Create link' }).click();
@@ -55,24 +72,36 @@ test('create form rejects non-http schemes and past expiry', async ({ page }) =>
     await page.getByLabel('Target URL').fill('https://example.com');
     await page.getByLabel('Expires at').click();
     await page.getByRole('button', { name: 'Previous month' }).click();
-    await page.locator('[data-reka-calendar-cell-trigger]:not([data-outside-view])').first().click();
+    await page
+        .locator('[data-reka-calendar-cell-trigger]:not([data-outside-view])')
+        .first()
+        .click();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Create link' }).click();
-    await expect(page.getByText('The expiry date field must be a date after now')).toBeVisible();
+    await expect(
+        page.getByText('The expiry date field must be a date after now'),
+    ).toBeVisible();
 });
 
-test('expires at is picked from a calendar and shown in the list', async ({ page }) => {
+test('expires at is picked from a calendar and shown in the list', async ({
+    page,
+}) => {
     await page.goto('/links/create');
     await page.getByLabel('Target URL').fill('https://example.com/cal');
     await page.getByLabel('Title').fill('E2E calendar');
     await page.getByLabel('Expires at').click();
     await page.getByRole('button', { name: 'Next month' }).click();
-    await page.locator('[data-reka-calendar-cell-trigger]:not([data-outside-view])').first().click();
+    await page
+        .locator('[data-reka-calendar-cell-trigger]:not([data-outside-view])')
+        .first()
+        .click();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Create link' }).click();
 
     await expect(page).toHaveURL(/\/links$/);
-    await expect(page.getByRole('row', { name: /E2E calendar/ })).not.toContainText('—');
+    await expect(
+        page.getByRole('row', { name: /E2E calendar/ }),
+    ).not.toContainText('—');
 });
 
 test('create, edit and delete a link', async ({ page }) => {
@@ -99,7 +128,10 @@ test('create, edit and delete a link', async ({ page }) => {
     await expect(renamed).toContainText(shortUrl);
 
     await renamed.getByRole('button', { name: 'Delete' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
+    await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Delete', exact: true })
+        .click();
     await expect(page.getByText('You have no links yet.')).toBeVisible();
 });
 

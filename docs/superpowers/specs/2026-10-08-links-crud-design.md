@@ -11,14 +11,14 @@ Data: 2026-10-08
 
 ## Zakres
 
-| W zakresie | Poza zakresem |
-|---|---|
-| Tabela `links` | Publiczny redirect po kodzie |
-| Model `Link` + factory + seeder | Liczniki i statystyki kliknięć |
-| CRUD w panelu (Inertia/Vue) | Egzekwowanie `is_active` i `expires_at` przy redirectcie (pola tylko zapisujemy i edytujemy) |
-| Generator kodu | |
-| Autoryzacja właściciela | |
-| Testy | |
+| W zakresie                      | Poza zakresem                                                                                |
+| ------------------------------- | -------------------------------------------------------------------------------------------- |
+| Tabela `links`                  | Publiczny redirect po kodzie                                                                 |
+| Model `Link` + factory + seeder | Liczniki i statystyki kliknięć                                                               |
+| CRUD w panelu (Inertia/Vue)     | Egzekwowanie `is_active` i `expires_at` przy redirectcie (pola tylko zapisujemy i edytujemy) |
+| Generator kodu                  |                                                                                              |
+| Autoryzacja właściciela         |                                                                                              |
+| Testy                           |                                                                                              |
 
 ## Założenia
 
@@ -29,16 +29,16 @@ Data: 2026-10-08
 
 ## Dane: tabela `links`
 
-| Kolumna | Typ | Uwagi |
-|---|---|---|
-| `id` | UUID, PK | |
-| `user_id` | UUID, FK → `users.id` | `cascadeOnDelete` |
-| `title` | string(255), nullable | etykieta w panelu |
-| `original_url` | string(2048) | adres docelowy |
-| `code` | string, unique | generowany, niezmienny po utworzeniu |
-| `is_active` | boolean | domyślnie `true` |
-| `expires_at` | timestamp, nullable | |
-| `created_at`, `updated_at` | timestamps | |
+| Kolumna                    | Typ                   | Uwagi                                |
+| -------------------------- | --------------------- | ------------------------------------ |
+| `id`                       | UUID, PK              |                                      |
+| `user_id`                  | UUID, FK → `users.id` | `cascadeOnDelete`                    |
+| `title`                    | string(255), nullable | etykieta w panelu                    |
+| `original_url`             | string(2048)          | adres docelowy                       |
+| `code`                     | string, unique        | generowany, niezmienny po utworzeniu |
+| `is_active`                | boolean               | domyślnie `true`                     |
+| `expires_at`               | timestamp, nullable   |                                      |
+| `created_at`, `updated_at` | timestamps            |                                      |
 
 ### Pełny adres skróconego linku
 
@@ -100,13 +100,13 @@ Jedna mała klasa: `App\Support\LinkCodeGenerator`. Jej jedyne zadanie to zwróc
 
 ### Walidacja (`StoreLinkRequest` / `UpdateLinkRequest`)
 
-| Pole | Reguła |
-|---|---|
+| Pole           | Reguła                                         |
+| -------------- | ---------------------------------------------- |
 | `original_url` | required, `url` (`http` lub `https`), max 2048 |
-| `title` | nullable, string, max 255 |
-| `is_active` | boolean |
-| `expires_at` | nullable, date, po bieżącej chwili |
-| `code` | **nie jest przyjmowany z wejścia** |
+| `title`        | nullable, string, max 255                      |
+| `is_active`    | boolean                                        |
+| `expires_at`   | nullable, date, po bieżącej chwili             |
+| `code`         | **nie jest przyjmowany z wejścia**             |
 
 ### Autoryzacja (`LinkPolicy`)
 
@@ -138,40 +138,46 @@ Jedna mała klasa: `App\Support\LinkCodeGenerator`. Jej jedyne zadanie to zwróc
 
 ## Obsługa błędów
 
-| Sytuacja | Efekt |
-|---|---|
-| Błąd walidacji | Standardowo przez Inertia z powrotem do formularza |
+| Sytuacja                                             | Efekt                                                                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Błąd walidacji                                       | Standardowo przez Inertia z powrotem do formularza                                                                              |
 | Cudzy link (dowolna akcja: edycja, zapis, usunięcie) | Przekierowanie na listę linków (`links.index`) z ogólnym komunikatem błędu (toast), bez 403 i bez ujawniania, czy link istnieje |
-| Gość | Przekierowanie na login (istniejący middleware `auth`) |
+| Gość                                                 | Przekierowanie na login (istniejący middleware `auth`)                                                                          |
 
 ## Testy (Pest, feature)
 
 **Właściciel**
+
 - Tworzenie, edycja, usuwanie.
 - Lista zawiera tylko własne linki.
 
 **Dostęp**
+
 - Cudzy link: edycja (`GET`), aktualizacja i usunięcie przekierowują na `links.index`; link pozostaje bez zmian.
 - Gość jest przekierowany na login dla tras `links.*`.
 
 **Walidacja**
+
 - Niepoprawny URL.
 - Adres docelowy inny niż `http` lub `https` (`javascript:`, `ftp:`).
 - Za długi URL lub tytuł.
 - `expires_at` w przeszłości.
 
 **Kod**
+
 - Długość startowa 6.
 - Alfabet `0-9A-Za-z`.
 - Unikalność.
 - Niezmienność po update.
 
 **Pełny adres**
+
 - `short_url` = adres aplikacji + `/` + `code`, ze schematem z `APP_URL`.
 - Lista i strona edycji przekazują `short_url` do frontendu.
 - Tabela `links` nie ma kolumny na ten adres.
 
 **Generator**
+
 - Skok na długość 7, gdy wolne kombinacje dla 6 spadną do progu 1%. Próg i/lub liczność wstrzyknięte w teście, bez tworzenia miliardów rekordów.
 - Rozróżnianie wielkości liter.
 

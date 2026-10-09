@@ -55,36 +55,36 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 
 ## Przypadki brzegowe (każdy ma test w wymienionym zadaniu)
 
-| # | Sytuacja | Oczekiwane | Zadanie |
-|---|---|---|---|
-| 1 | Link usunięty przed wykonaniem joba | Job kończy się bez błędu | 3 |
-| 2 | Brak pliku `.mmdb` | Redirect działa, geo `null` | 2 |
-| 3 | Dzień bez kliknięć | Jest w `daily` z zerem | 5 |
-| 4 | Kliknięcia starsze niż zakres / cudzego linku | Nie wchodzą do sum | 5 |
-| 5 | Geo `null` w tabelach | Etykieta `Unknown` | 5 |
-| 6 | Brak lub pusty User-Agent | Trzy pola klienta `null`, klik zapisany | 8, 9 |
-| 7 | Bot | `device_type = 'bot'`, `browser`/`os` `null` | 8 |
-| 8 | Klient `null` w tabelach | Etykieta `Unknown` | 10 |
-| 9 | Filtr `Unknown` | Zwraca kliknięcia z `null` w tej kolumnie | 11 |
-| 10 | Filtr miasta | Działa po samej nazwie miasta, nie po `City, Country` | 11 |
-| 11 | Filtr cudzego linku lub spoza zakresu | Nie ujawnia cudzych kliknięć, `options` tylko z tego linku i zakresu | 11 |
-| 12 | `period=all` bez kliknięć | Pusty zakres, `total` = 0, `series` puste | 13, 14 |
-| 13 | `period=day` bez `date` lub zły format | Błąd walidacji | 13 |
-| 14 | `range` z `from > to` lub dłuższy niż 5 lat | Błąd walidacji | 13 |
-| 15 | Zakres dłuższy niż 92 dni, `year`, `all` | `granularity = month` | 13 |
-| 16 | Zakres w przyszłości | Zera, bez błędu | 14 |
-| 17 | Ostatnia strona niepełna, strona poza zakresem | Ostatnia strona z resztą wierszy | 15 |
-| 18 | `per_page` spoza listy, zła `sort`, `page` < 1 | Błąd walidacji | 15 |
-| 19 | Sortowanie po nazwie z `Unknown` | `Unknown` sortowane jak nazwa | 15 |
-| 20 | Remisy w liczbie kliknięć | Ta sama kolejność na kolejnych stronach | 15 |
-| 21 | Zmiana okresu, filtra lub sortowania | Strony wracają do 1, limity zostają | 16 |
-| 22 | Wiele szybkich zmian pod rząd | Widoczny wynik ostatniej zmiany, poprzednie żądania anulowane | 18 |
-| 23 | Zły parametr w żądaniu danych | 422 JSON z `errors`, komunikat przy kontrolce, poprzednie dane zostają | 17, 18 |
-| 24 | Cudzy link w żądaniu danych | 403 JSON, bez redirectu | 17 |
-| 25 | Nieznana nazwa w `sections[]` | 422 | 17 |
-| 26 | Żądanie tylko jednej tabeli | Odpowiedź ma tylko klucz tej tabeli; zapytania tylko dla niej | 17 |
-| 27 | Filtr, okres, sortowanie, strona | `page.url()` bez query stringa | 18 |
-| 28 | F5 po zmianach | Stan domyślny, strona się ładuje bez błędu | 18 |
+| #   | Sytuacja                                       | Oczekiwane                                                             | Zadanie |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------------- | ------- |
+| 1   | Link usunięty przed wykonaniem joba            | Job kończy się bez błędu                                               | 3       |
+| 2   | Brak pliku `.mmdb`                             | Redirect działa, geo `null`                                            | 2       |
+| 3   | Dzień bez kliknięć                             | Jest w `daily` z zerem                                                 | 5       |
+| 4   | Kliknięcia starsze niż zakres / cudzego linku  | Nie wchodzą do sum                                                     | 5       |
+| 5   | Geo `null` w tabelach                          | Etykieta `Unknown`                                                     | 5       |
+| 6   | Brak lub pusty User-Agent                      | Trzy pola klienta `null`, klik zapisany                                | 8, 9    |
+| 7   | Bot                                            | `device_type = 'bot'`, `browser`/`os` `null`                           | 8       |
+| 8   | Klient `null` w tabelach                       | Etykieta `Unknown`                                                     | 10      |
+| 9   | Filtr `Unknown`                                | Zwraca kliknięcia z `null` w tej kolumnie                              | 11      |
+| 10  | Filtr miasta                                   | Działa po samej nazwie miasta, nie po `City, Country`                  | 11      |
+| 11  | Filtr cudzego linku lub spoza zakresu          | Nie ujawnia cudzych kliknięć, `options` tylko z tego linku i zakresu   | 11      |
+| 12  | `period=all` bez kliknięć                      | Pusty zakres, `total` = 0, `series` puste                              | 13, 14  |
+| 13  | `period=day` bez `date` lub zły format         | Błąd walidacji                                                         | 13      |
+| 14  | `range` z `from > to` lub dłuższy niż 5 lat    | Błąd walidacji                                                         | 13      |
+| 15  | Zakres dłuższy niż 92 dni, `year`, `all`       | `granularity = month`                                                  | 13      |
+| 16  | Zakres w przyszłości                           | Zera, bez błędu                                                        | 14      |
+| 17  | Ostatnia strona niepełna, strona poza zakresem | Ostatnia strona z resztą wierszy                                       | 15      |
+| 18  | `per_page` spoza listy, zła `sort`, `page` < 1 | Błąd walidacji                                                         | 15      |
+| 19  | Sortowanie po nazwie z `Unknown`               | `Unknown` sortowane jak nazwa                                          | 15      |
+| 20  | Remisy w liczbie kliknięć                      | Ta sama kolejność na kolejnych stronach                                | 15      |
+| 21  | Zmiana okresu, filtra lub sortowania           | Strony wracają do 1, limity zostają                                    | 16      |
+| 22  | Wiele szybkich zmian pod rząd                  | Widoczny wynik ostatniej zmiany, poprzednie żądania anulowane          | 18      |
+| 23  | Zły parametr w żądaniu danych                  | 422 JSON z `errors`, komunikat przy kontrolce, poprzednie dane zostają | 17, 18  |
+| 24  | Cudzy link w żądaniu danych                    | 403 JSON, bez redirectu                                                | 17      |
+| 25  | Nieznana nazwa w `sections[]`                  | 422                                                                    | 17      |
+| 26  | Żądanie tylko jednej tabeli                    | Odpowiedź ma tylko klucz tej tabeli; zapytania tylko dla niej          | 17      |
+| 27  | Filtr, okres, sortowanie, strona               | `page.url()` bez query stringa                                         | 18      |
+| 28  | F5 po zmianach                                 | Stan domyślny, strona się ładuje bez błędu                             | 18      |
 
 ---
 
@@ -93,6 +93,7 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 **Po co:** miejsce na kliknięcia. Reszta zależy od tego modelu.
 
 **Pliki**
+
 - Nowe: migracja `create_link_clicks_table`, `app/Models/LinkClick.php`, `database/factories/LinkClickFactory.php`, `tests/Feature/LinkClickModelTest.php`
 - Zmiana: `app/Models/Link.php`, `.gitignore`, `composer.json`, `composer.lock`
 
@@ -101,10 +102,10 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 - [ ] **1.1** Zainstaluj: `composer require geoip2/geoip2 --no-interaction`
 - [ ] **1.2** Dopisz `/storage/app/geoip` do `.gitignore`
 - [ ] **1.3** Napisz test `tests/Feature/LinkClickModelTest.php`:
-  - `link has many clicks`
-  - `clicks are deleted with their link` (po `$link->delete()` → `LinkClick::count()` = 0)
-  - `clicked_at is cast to datetime` (instancja `Carbon`)
-  - `country_code, country and city may be null`
+    - `link has many clicks`
+    - `clicks are deleted with their link` (po `$link->delete()` → `LinkClick::count()` = 0)
+    - `clicked_at is cast to datetime` (instancja `Carbon`)
+    - `country_code, country and city may be null`
 - [ ] **1.4** Uruchom: `php artisan test --compact tests/Feature/LinkClickModelTest.php`. Oczekiwane: **FAIL** (brak klasy)
 - [ ] **1.5** Wygeneruj: `php artisan make:model LinkClick -mf --no-interaction`
 - [ ] **1.6** Migracja: kolumny ze specu; `foreignUuid('link_id')->constrained()->cascadeOnDelete()`; indeks `(link_id, clicked_at)`
@@ -123,6 +124,7 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 **Po co:** zamiana IP na kraj i miasto, odporna na błędy.
 
 **Pliki**
+
 - Nowe: `app/Support/GeoLocator.php`, `tests/Unit/GeoLocatorTest.php`
 - Zmiana: `config/services.php`, `.env.example`
 
@@ -130,15 +132,15 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 
 - [ ] **2.1** Config: `services.geoip.database` = `env('GEOIP_DATABASE', storage_path('app/geoip/GeoLite2-City.mmdb'))`. Dopisz `GEOIP_DATABASE=` do `.env.example`
 - [ ] **2.2** Napisz test `tests/Unit/GeoLocatorTest.php`:
-  - `returns nulls when the database file is missing` (`locate('8.8.8.8')` → trzy `null`)
-  - `returns nulls for an invalid ip` (`locate('not-an-ip')`)
+    - `returns nulls when the database file is missing` (`locate('8.8.8.8')` → trzy `null`)
+    - `returns nulls for an invalid ip` (`locate('not-an-ip')`)
 - [ ] **2.3** Uruchom: `php artisan test --compact tests/Unit/GeoLocatorTest.php`. Oczekiwane: **FAIL**
 - [ ] **2.4** Zaimplementuj `locate`:
-  - brak pliku → trzy `null`
-  - inaczej `GeoIp2\Database\Reader` + `->city($ip)`
-  - `AddressNotFoundException` i `InvalidArgumentException` → trzy `null`
-  - mapowanie: `country->isoCode`, `country->name`, `city->name`
-  - Reader tworzony leniwie, trzymany we właściwości
+    - brak pliku → trzy `null`
+    - inaczej `GeoIp2\Database\Reader` + `->city($ip)`
+    - `AddressNotFoundException` i `InvalidArgumentException` → trzy `null`
+    - mapowanie: `country->isoCode`, `country->name`, `city->name`
+    - Reader tworzony leniwie, trzymany we właściwości
 - [ ] **2.5** Uruchom test. Oczekiwane: **PASS**
 - [ ] **2.6** Pint, potem commit: `Add GeoLocator wrapping MaxMind GeoLite2`
 
@@ -151,16 +153,17 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 **Po co:** zapis kliknięcia poza ścieżką redirectu.
 
 **Pliki**
+
 - Nowe: `app/Jobs/RecordLinkClick.php` (`php artisan make:job RecordLinkClick --no-interaction`), `tests/Feature/RecordLinkClickTest.php`
 
 **Bierze:** `GeoLocator::locate`, `LinkClick`.
 **Daje dalej:** `RecordLinkClick::__construct(public string $linkId, public string $ip, public CarbonInterface $clickedAt)`, `ShouldQueue`, `handle(GeoLocator $geoLocator): void`.
 
 - [ ] **3.1** Napisz testy (fake `GeoLocator` zbindowany w kontenerze przez Mockery, wywołanie `RecordLinkClick::dispatchSync(...)`):
-  - `records a click with country and city` (jeden `LinkClick` z `PL`/`Poland`/`Warsaw`; `clicked_at` = przekazany czas, nie `now()`)
-  - `records a click with null geo when lookup finds nothing`
-  - `does nothing when the link no longer exists` (losowy UUID, brak wyjątku, `LinkClick::count()` = 0) → przypadek #1
-  - `does not persist the ip` (atrybuty `LinkClick` nie zawierają `ip`)
+    - `records a click with country and city` (jeden `LinkClick` z `PL`/`Poland`/`Warsaw`; `clicked_at` = przekazany czas, nie `now()`)
+    - `records a click with null geo when lookup finds nothing`
+    - `does nothing when the link no longer exists` (losowy UUID, brak wyjątku, `LinkClick::count()` = 0) → przypadek #1
+    - `does not persist the ip` (atrybuty `LinkClick` nie zawierają `ip`)
 - [ ] **3.2** Uruchom: `php artisan test --compact tests/Feature/RecordLinkClickTest.php`. Oczekiwane: **FAIL**
 - [ ] **3.3** Zaimplementuj `handle`: `Link::find($this->linkId)`; brak → `return`; inaczej `$link->clicks()->create([...geo, 'clicked_at' => $this->clickedAt])`
 - [ ] **3.4** Uruchom test. Oczekiwane: **PASS**
@@ -175,13 +178,14 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 **Po co:** podpięcie zapisu pod prawdziwe kliknięcie.
 
 **Pliki**
+
 - Zmiana: `app/Http/Controllers/RedirectLinkController.php`, `tests/Feature/LinkRedirectTest.php`
 
 **Bierze:** `RecordLinkClick::__construct(string $linkId, string $ip, CarbonInterface $clickedAt)`.
 
 - [ ] **4.1** Dopisz testy w `LinkRedirectTest`:
-  - `successful redirect dispatches RecordLinkClick` (`Queue::fake()`, `Queue::assertPushed(RecordLinkClick::class, fn ($job) => $job->linkId === $link->id)`)
-  - `refused redirects dispatch nothing` (dataset: nieaktywny, wygasły, nieznany; `Queue::assertNothingPushed()`)
+    - `successful redirect dispatches RecordLinkClick` (`Queue::fake()`, `Queue::assertPushed(RecordLinkClick::class, fn ($job) => $job->linkId === $link->id)`)
+    - `refused redirects dispatch nothing` (dataset: nieaktywny, wygasły, nieznany; `Queue::assertNothingPushed()`)
 - [ ] **4.2** Uruchom: `php artisan test --compact tests/Feature/LinkRedirectTest.php`. Oczekiwane: nowe testy **FAIL**
 - [ ] **4.3** Kontroler: `__invoke(Request $request, string $code)`; po `firstOrFail()` → `RecordLinkClick::dispatch($link->id, $request->ip(), now())`; dalej bez zmian
 - [ ] **4.4** Uruchom cały plik. Oczekiwane: **PASS**, także stare testy. Sprawdź `QUEUE_CONNECTION` w `phpunit.xml`; przy `sync` job wykona się z geo `null`, to w porządku
@@ -196,6 +200,7 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 **Po co:** dane dla widoku, z autoryzacją.
 
 **Pliki**
+
 - Nowe: `app/Http/Controllers/LinkStatsController.php`, `app/Http/Requests/Links/LinkStatsRequest.php`, `tests/Feature/LinkStatsTest.php`
 - Zmiana: `app/Policies/LinkPolicy.php` (metoda `view`, warunek właściciela jak w `update`), `routes/web.php`, `app/Http/Controllers/LinkController.php` (`index` → `withCount('clicks')`), `tests/Feature/LinkCrudTest.php`
 
@@ -203,35 +208,35 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 
 **Daje dalej (props strony `links/Stats`):**
 
-| Prop | Typ |
-|---|---|
-| `link` | `Link` |
-| `days` | `int` |
-| `total` | `int` |
-| `daily` | `list<array{date: string, count: int}>`: dokładnie `days` pozycji, rosnąco, ostatnia = dziś |
-| `countries` | `list<array{name: string, count: int}>`: top 10, malejąco |
-| `cities` | j.w., nazwa jako `City, Country` |
+| Prop        | Typ                                                                                         |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `link`      | `Link`                                                                                      |
+| `days`      | `int`                                                                                       |
+| `total`     | `int`                                                                                       |
+| `daily`     | `list<array{date: string, count: int}>`: dokładnie `days` pozycji, rosnąco, ostatnia = dziś |
+| `countries` | `list<array{name: string, count: int}>`: top 10, malejąco                                   |
+| `cities`    | j.w., nazwa jako `City, Country`                                                            |
 
 Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 
 - [ ] **5.1** Napisz testy w `LinkStatsTest`:
-  - `owner sees stats with total, daily series, countries and cities`
-  - `days defaults to 30`
-  - `daily contains every day of the range with zeros` → #3
-  - `clicks older than the range and clicks of other links are excluded` → #4
-  - `null geo is shown as Unknown` → #5
-  - `invalid days value fails validation` (`days=5` → `assertSessionHasErrors('days')`)
-  - `other users cannot see stats` (403)
-  - `guests are redirected to login`
+    - `owner sees stats with total, daily series, countries and cities`
+    - `days defaults to 30`
+    - `daily contains every day of the range with zeros` → #3
+    - `clicks older than the range and clicks of other links are excluded` → #4
+    - `null geo is shown as Unknown` → #5
+    - `invalid days value fails validation` (`days=5` → `assertSessionHasErrors('days')`)
+    - `other users cannot see stats` (403)
+    - `guests are redirected to login`
 - [ ] **5.2** W `LinkCrudTest` dodaj `index exposes clicks_count`
 - [ ] **5.3** Uruchom: `php artisan test --compact tests/Feature/LinkStatsTest.php`. Oczekiwane: **FAIL**
 - [ ] **5.4** `LinkStatsRequest`: `days` → `['sometimes', 'integer', Rule::in([7, 30, 90])]`; metoda `days(): int` (wartość lub 30)
 - [ ] **5.5** Kontroler:
-  - `Gate::authorize('view', $link)`
-  - początek zakresu: `now()->subDays($days - 1)->startOfDay()`
-  - dzienne: `selectRaw('DATE(clicked_at) as date, count(*) as count')->groupBy('date')`
-  - kraje i miasta: `groupBy` + `orderByDesc('count')->limit(10)`
-  - `daily` uzupełnione zerami w PHP; `total` = suma `daily`
+    - `Gate::authorize('view', $link)`
+    - początek zakresu: `now()->subDays($days - 1)->startOfDay()`
+    - dzienne: `selectRaw('DATE(clicked_at) as date, count(*) as count')->groupBy('date')`
+    - kraje i miasta: `groupBy` + `orderByDesc('count')->limit(10)`
+    - `daily` uzupełnione zerami w PHP; `total` = suma `daily`
 - [ ] **5.6** Uruchom `LinkStatsTest` i `LinkCrudTest`. Oczekiwane: **PASS**
 - [ ] **5.7** Pint, potem commit: `Add link stats endpoint with 7/30/90 day filter`
 
@@ -244,6 +249,7 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 **Po co:** użytkownik widzi dane.
 
 **Pliki**
+
 - Nowe: `resources/js/pages/links/Stats.vue`, `tests/e2e/stats.spec.ts`
 - Zmiana: `resources/js/pages/links/Index.vue`
 
@@ -251,13 +257,13 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 
 - [ ] **6.1** Napisz `tests/e2e/stats.spec.ts` (wzór: `tests/e2e/links.spec.ts`): użytkownik z linkiem i kliknięciami otwiera statystyki z listy, widzi sumę, przełącza na 7 dni (URL zawiera `days=7`)
 - [ ] **6.2** Zbuduj `Stats.vue`:
-  - typowane propsy
-  - przełącznik 7/30/90 jako `Link` z `preserveState`
-  - suma `total`
-  - wykres słupkowy w CSS/SVG (wysokość względem maksimum)
-  - pusty stan przy `total` = 0
-  - dwie tabele: kraje, miasta
-  - styl i komponenty jak w `Index.vue`
+    - typowane propsy
+    - przełącznik 7/30/90 jako `Link` z `preserveState`
+    - suma `total`
+    - wykres słupkowy w CSS/SVG (wysokość względem maksimum)
+    - pusty stan przy `total` = 0
+    - dwie tabele: kraje, miasta
+    - styl i komponenty jak w `Index.vue`
 - [ ] **6.3** `Index.vue`: kolumna `Clicks` z `clicks_count` i link do `links.stats`
 - [ ] **6.4** Zbuduj front: `npm run build`
 - [ ] **6.5** Uruchom: `npx playwright test tests/e2e/stats.spec.ts`. Oczekiwane: **PASS**
@@ -283,6 +289,7 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 **Po co:** dane o kliencie i jedno miejsce, które zamienia User-Agent na trzy nazwy.
 
 **Pliki**
+
 - Nowe: migracja `add_client_columns_to_link_clicks_table`, `app/Support/ClientDetector.php`, `tests/Unit/ClientDetectorTest.php`
 - Zmiana: `composer.json`, `composer.lock`, `app/Models/LinkClick.php`, `database/factories/LinkClickFactory.php`, `tests/Feature/LinkClickModelTest.php`
 
@@ -290,10 +297,10 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 
 - [ ] **8.1** Zainstaluj: `composer require matomo/device-detector --no-interaction`
 - [ ] **8.2** Napisz test `tests/Unit/ClientDetectorTest.php` (`uses(TestCase::class)` nie jest potrzebne, klasa nie używa kontenera):
-  - `detects browser, os and device type of a desktop browser` (Chrome na Windows → `Chrome` / `Windows` / `desktop`)
-  - `detects a smartphone` (iPhone Safari → `Mobile Safari` lub `Safari`, `iOS`, `smartphone`; asercja na `os` i `device_type` oraz `browser` niepusty)
-  - `marks bots as bot without browser and os` (np. `Googlebot` → `null` / `null` / `bot`) → #7
-  - `returns nulls for a missing or empty user agent` (`null` i `''`) → #6
+    - `detects browser, os and device type of a desktop browser` (Chrome na Windows → `Chrome` / `Windows` / `desktop`)
+    - `detects a smartphone` (iPhone Safari → `Mobile Safari` lub `Safari`, `iOS`, `smartphone`; asercja na `os` i `device_type` oraz `browser` niepusty)
+    - `marks bots as bot without browser and os` (np. `Googlebot` → `null` / `null` / `bot`) → #7
+    - `returns nulls for a missing or empty user agent` (`null` i `''`) → #6
 - [ ] **8.3** Uruchom: `php artisan test --compact tests/Unit/ClientDetectorTest.php`. Oczekiwane: **FAIL**
 - [ ] **8.4** Zaimplementuj `detect`: `null` lub pusty (po `trim`) → trzy `null`; inaczej `DeviceDetector($userAgent)` + `parse()`; `isBot()` → `['browser' => null, 'os' => null, 'device_type' => 'bot']`; wpp `getClient('name')`, `getOs('name')`, `getDeviceName()`; wartość nierozpoznana (`UNK`, pusty string, tablica) mapuj na `null`
 - [ ] **8.5** Uruchom test. Oczekiwane: **PASS**
@@ -312,15 +319,16 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 **Po co:** zapis klienta przy każdym kliknięciu.
 
 **Pliki**
+
 - Zmiana: `app/Jobs/RecordLinkClick.php`, `app/Http/Controllers/RedirectLinkController.php`, `tests/Feature/RecordLinkClickTest.php`, `tests/Feature/LinkRedirectTest.php`
 
 **Bierze:** `ClientDetector::detect(?string): array`.
 **Daje dalej:** `RecordLinkClick::__construct(public string $linkId, public string $ip, public CarbonInterface $clickedAt, public ?string $userAgent = null)`.
 
 - [ ] **9.1** Dopisz testy w `RecordLinkClickTest` (fake `ClientDetector` zbindowany w kontenerze):
-  - `records browser, os and device type of the client`
-  - `records null client fields when there is no user agent` → #6
-  - `does not persist the user agent` (atrybuty `LinkClick` nie zawierają surowego UA)
+    - `records browser, os and device type of the client`
+    - `records null client fields when there is no user agent` → #6
+    - `does not persist the user agent` (atrybuty `LinkClick` nie zawierają surowego UA)
 - [ ] **9.2** W `LinkRedirectTest` dopisz `redirect passes the user agent to the job` (`Queue::fake()`, żądanie z nagłówkiem `User-Agent`, `Queue::assertPushed(... fn ($job) => $job->userAgent === '...')`)
 - [ ] **9.3** Uruchom oba pliki. Oczekiwane: nowe testy **FAIL**
 - [ ] **9.4** Job: dodaj parametr `userAgent`; w `handle(GeoLocator $geoLocator, ClientDetector $clientDetector)` dołącz `...$clientDetector->detect($this->userAgent)` do `create`
@@ -337,16 +345,17 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 **Po co:** właściciel widzi przeglądarki, systemy i urządzenia.
 
 **Pliki**
+
 - Zmiana: `app/Http/Controllers/LinkStatsController.php`, `resources/js/pages/links/Stats.vue`, `tests/Feature/LinkStatsTest.php`, `tests/e2e/stats.spec.ts`
 
 **Bierze:** pola `browser`, `os`, `device_type` z zadania 8; format `StatsRow` z zadania 5.
 **Daje:** nowe propsy `links/Stats`: `browsers`, `systems`, `devices`, każdy `list<array{name: string, count: int}>`, top 10, malejąco, `null` → `Unknown`.
 
 - [ ] **10.1** Dopisz testy w `LinkStatsTest`:
-  - `browsers, systems and devices are counted and ordered` (kilka kliknięć z różnymi wartościami)
-  - `null client fields are shown as Unknown` → #8
-  - `client tables are capped at the top 10`
-  - `client stats respect the range and the link` (poza zakresem i cudzy link niewliczone)
+    - `browsers, systems and devices are counted and ordered` (kilka kliknięć z różnymi wartościami)
+    - `null client fields are shown as Unknown` → #8
+    - `client tables are capped at the top 10`
+    - `client stats respect the range and the link` (poza zakresem i cudzy link niewliczone)
 - [ ] **10.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsTest.php`. Oczekiwane: nowe testy **FAIL**
 - [ ] **10.3** Kontroler: wydziel prywatną metodę `topBy(string $column): Collection` (zapytanie `groupBy` + `orderByDesc('total')` + `limit(10)`, `null` → `Unknown`) i użyj jej dla `browsers` (`browser`), `systems` (`os`), `devices` (`device_type`). Kraje zostają bez zmian (inna etykieta nie jest potrzebna)
 - [ ] **10.4** Uruchom `LinkStatsTest`. Oczekiwane: **PASS**
@@ -364,27 +373,28 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 **Po co:** zawężanie wszystkich statystyk linku po kraju, mieście, przeglądarce, systemie i urządzeniu.
 
 **Pliki**
+
 - Zmiana: `app/Http/Requests/Links/LinkStatsRequest.php`, `app/Http/Controllers/LinkStatsController.php`, `tests/Feature/LinkStatsTest.php`
 
 **Bierze:** zapytanie bazowe `$clicks` i metodę `topBy` z zadania 10.
 **Daje dalej (nowe propsy `links/Stats`):**
 
-| Prop | Typ |
-|---|---|
-| `filters` | `array{country: ?string, city: ?string, browser: ?string, os: ?string, device_type: ?string}` |
+| Prop      | Typ                                                                                                                                                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `filters` | `array{country: ?string, city: ?string, browser: ?string, os: ?string, device_type: ?string}`                                                                                  |
 | `options` | `array{countries: list<string>, cities: list<string>, browsers: list<string>, systems: list<string>, devices: list<string>}`, sortowane rosnąco, `Unknown` na końcu, limit 200 |
 
 Mapowanie pól: `country` → kolumna `country`, `city` → `city`, `browser` → `browser`, `os` → `os`, `device_type` → `device_type`. Klucze `options` odpowiadają polom w liczbie mnogiej (`countries`, `cities`, `browsers`, `systems`, `devices`).
 
 - [ ] **11.1** Dopisz testy w `LinkStatsTest`:
-  - `each filter narrows the total and the tables` (dataset: pięć pól, kliknięcia z różnymi wartościami)
-  - `filters combine with AND`
-  - `the Unknown filter matches clicks with null values` → #9
-  - `the city filter matches the plain city name` (np. `Warsaw` zawęża, a `Warsaw, Poland` nie) → #10
-  - `options list the distinct values of the link within the range` (poza zakresem i cudzy link niewliczone, `Unknown` na końcu) → #11
-  - `options do not depend on the other filters`
-  - `filters echo the current values and default to null`
-  - `a filter value longer than 255 characters fails validation`
+    - `each filter narrows the total and the tables` (dataset: pięć pól, kliknięcia z różnymi wartościami)
+    - `filters combine with AND`
+    - `the Unknown filter matches clicks with null values` → #9
+    - `the city filter matches the plain city name` (np. `Warsaw` zawęża, a `Warsaw, Poland` nie) → #10
+    - `options list the distinct values of the link within the range` (poza zakresem i cudzy link niewliczone, `Unknown` na końcu) → #11
+    - `options do not depend on the other filters`
+    - `filters echo the current values and default to null`
+    - `a filter value longer than 255 characters fails validation`
 - [ ] **11.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsTest.php`. Oczekiwane: nowe testy **FAIL**
 - [ ] **11.3** `LinkStatsRequest`: reguły `nullable|string|max:255` dla pięciu pól; metoda `filters(): array` zwracająca pięć kluczy (brak lub pusty string → `null`)
 - [ ] **11.4** Kontroler: zmapuj niepuste filtry na `where` (`Unknown` → `whereNull`) i dołóż je do `$clicks`, tak by objęły `daily`, `topBy` i miasta. Do `options` użyj osobnej bazy zapytania z samym zakresem dni (bez filtrów): `select($column)->distinct()->orderBy($column)->limit(200)`, `null` zamienione na `Unknown` i przeniesione na koniec
@@ -400,6 +410,7 @@ Mapowanie pól: `country` → kolumna `country`, `city` → `city`, `browser` �
 **Po co:** użytkownik ustawia filtry na stronie statystyk.
 
 **Pliki**
+
 - Zmiana: `resources/js/pages/links/Stats.vue`, `tests/e2e/stats.spec.ts`
 
 **Bierze:** propsy `filters` i `options` z zadania 11; trasa `stats` z Wayfinder.
@@ -419,10 +430,12 @@ Mapowanie pól: `country` → kolumna `country`, `city` → `city`, `browser` �
 **Po co:** jedno miejsce, które zamienia parametry URL na zakres dat i ziarnistość wykresu.
 
 **Pliki**
+
 - Nowe: `app/Support/StatsPeriod.php`, `tests/Unit/StatsPeriodTest.php`
 - Zmiana: `app/Http/Requests/Links/LinkStatsRequest.php`, `tests/Feature/LinkStatsTest.php` (tylko testy walidacji)
 
 **Daje dalej:**
+
 - `StatsPeriod::resolve(array $input, ?CarbonInterface $firstClick, CarbonInterface $now): self`. `$input` ma kształt `array{period: string, date: ?string, month: ?string, year: ?string, from: ?string, to: ?string}`. Klasa **nie** jest `final`, nie używa kontenera, czas dostaje w argumencie.
 - Właściwości publiczne readonly: `?CarbonImmutable $from` (`null` = pusty zakres, tylko `all` bez kliknięć), `CarbonImmutable $to`, `string $granularity` (`'day'|'month'`).
 - `LinkStatsRequest::period(): array` zwraca `$input` powyżej (brak parametru → `null`, `period` domyślnie `30d`). Stała `LinkStatsRequest::PERIODS = ['7d', '30d', '90d', 'all', 'day', 'month', 'year', 'range']`.
@@ -430,20 +443,20 @@ Mapowanie pól: `country` → kolumna `country`, `city` → `city`, `browser` �
 Reguły zakresu (spec, sekcja "Okres"): presety = ostatnie N dni włącznie z dzisiejszym od początku dnia; `all` = od `$firstClick` (początek dnia) do `$now`; `day`/`month`/`year` = cały dzień/miesiąc/rok; `range` = od początku `from` do końca `to`. Koniec zakresu = `min(koniec, $now)`. `granularity = 'month'` gdy zakres ma więcej niż 92 dni lub `period` to `year`/`all`, inaczej `'day'`.
 
 - [ ] **13.1** Napisz `tests/Unit/StatsPeriodTest.php` (stały `$now`, np. `2026-10-09 12:00`):
-  - `presets cover the last N days including today` (`30d` → `from` = `2026-09-10 00:00`, `to` = `$now`, `day`)
-  - `all starts at the first click` oraz `all without clicks is empty` (`from` = `null`) → #12
-  - `day, month and year cover the whole unit` (np. `month=2026-02` → `2026-02-01 00:00` … `2026-02-28 23:59:59`)
-  - `the end never goes past now` (`month=2026-10` → `to` = `$now`) → #16
-  - `range runs from the start of from to the end of to`
-  - `granularity is month above 92 days and for year and all` (zakres 92 dni → `day`, 93 → `month`) → #15
+    - `presets cover the last N days including today` (`30d` → `from` = `2026-09-10 00:00`, `to` = `$now`, `day`)
+    - `all starts at the first click` oraz `all without clicks is empty` (`from` = `null`) → #12
+    - `day, month and year cover the whole unit` (np. `month=2026-02` → `2026-02-01 00:00` … `2026-02-28 23:59:59`)
+    - `the end never goes past now` (`month=2026-10` → `to` = `$now`) → #16
+    - `range runs from the start of from to the end of to`
+    - `granularity is month above 92 days and for year and all` (zakres 92 dni → `day`, 93 → `month`) → #15
 - [ ] **13.2** Uruchom: `php artisan test --compact tests/Unit/StatsPeriodTest.php`. Oczekiwane: **FAIL**
 - [ ] **13.3** Zaimplementuj `StatsPeriod::resolve` w `app/Support/StatsPeriod.php`
 - [ ] **13.4** Uruchom test. Oczekiwane: **PASS**
 - [ ] **13.5** Dopisz testy walidacji w `LinkStatsTest` (każdy: `assertSessionHasErrors('<pole>')`):
-  - `period must be one of the allowed values` (`period=week` → `period`)
-  - `day, month, year and range require their parameters` (dataset: `period=day` bez `date`, `month` bez `month`, `year` bez `year`, `range` bez `from`/`to`) → #13
-  - `date formats are validated` (`date=09-10-2026`, `month=2026-13`, `year=26`) → #13
-  - `range must not be reversed or longer than 5 years` (`from > to`, `from=2020-01-01&to=2026-01-01`) → #14
+    - `period must be one of the allowed values` (`period=week` → `period`)
+    - `day, month, year and range require their parameters` (dataset: `period=day` bez `date`, `month` bez `month`, `year` bez `year`, `range` bez `from`/`to`) → #13
+    - `date formats are validated` (`date=09-10-2026`, `month=2026-13`, `year=26`) → #13
+    - `range must not be reversed or longer than 5 years` (`from > to`, `from=2020-01-01&to=2026-01-01`) → #14
 - [ ] **13.6** Uruchom `LinkStatsTest` (nowe testy **FAIL**; stare nadal `days`, dotykamy ich w zadaniu 14)
 - [ ] **13.7** `LinkStatsRequest`: reguły `period` (`sometimes`, `Rule::in(PERIODS)`), `date` (`required_if:period,day`, `date_format:Y-m-d`), `month` (`required_if:period,month`, `date_format:Y-m`), `year` (`required_if:period,year`, `digits:4`), `from`/`to` (`required_if:period,range`, `date_format:Y-m-d`; `from` → `before_or_equal:to`; reguła-domknięcie na `to`: najwyżej 5 lat od `from`). Dopisz `period()`. **Nie usuwaj jeszcze** `days()`, kontroler z niego korzysta do zadania 14
 - [ ] **13.8** Uruchom oba pliki. Oczekiwane: **PASS** nowe testy walidacji i jednostkowe; reszta bez regresji
@@ -458,28 +471,29 @@ Reguły zakresu (spec, sekcja "Okres"): presety = ostatnie N dni włącznie z dz
 **Po co:** wszystkie liczby na stronie liczone dla wybranego okresu.
 
 **Pliki**
+
 - Zmiana: `app/Http/Controllers/LinkStatsController.php`, `app/Http/Requests/Links/LinkStatsRequest.php` (usunięcie `days()` i reguły `days`), `tests/Feature/LinkStatsTest.php`
 
 **Bierze:** `StatsPeriod::resolve`, `LinkStatsRequest::period()`.
 **Daje dalej (propsy `links/Stats`):**
 
-| Prop | Typ |
-|---|---|
-| `period` | echo z `LinkStatsRequest::period()` (`period` zawsze ustawiony) |
-| `granularity` | `'day'\|'month'` |
-| `series` | `list<array{date: string, count: int}>`: `date` = `Y-m-d` (`day`) lub `Y-m` (`month`), rosnąco, bez dziur |
-| `total` | suma `series` |
+| Prop          | Typ                                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------------------- |
+| `period`      | echo z `LinkStatsRequest::period()` (`period` zawsze ustawiony)                                           |
+| `granularity` | `'day'\|'month'`                                                                                          |
+| `series`      | `list<array{date: string, count: int}>`: `date` = `Y-m-d` (`day`) lub `Y-m` (`month`), rosnąco, bez dziur |
+| `total`       | suma `series`                                                                                             |
 
 Znikają propsy `days` i `daily`. `inRange` filtruje `clicked_at >= from` i `<= to` (puste `from` → zawsze zero wyników), więc obejmuje też `options`.
 
 - [ ] **14.1** Przepisz istniejące testy z `days` na `period` (`days=7` → `period=7d`, `days=5` → `period=week`, `daily` → `series`) i dopisz:
-  - `period defaults to 30d`
-  - `day, month, year and range limit the clicks` (kliknięcia na granicach: `00:00:00` i `23:59:59` wchodzą, sekunda obok nie)
-  - `all covers every click of the link and ignores other links`
-  - `all without clicks returns an empty series and zero total` → #12
-  - `series is monthly above 92 days and for year and all` (`granularity`, klucze `Y-m`, zera dla miesięcy bez kliknięć) → #15
-  - `a range in the future returns zeros` → #16
-  - `period applies to totals, tables and options`
+    - `period defaults to 30d`
+    - `day, month, year and range limit the clicks` (kliknięcia na granicach: `00:00:00` i `23:59:59` wchodzą, sekunda obok nie)
+    - `all covers every click of the link and ignores other links`
+    - `all without clicks returns an empty series and zero total` → #12
+    - `series is monthly above 92 days and for year and all` (`granularity`, klucze `Y-m`, zera dla miesięcy bez kliknięć) → #15
+    - `a range in the future returns zeros` → #16
+    - `period applies to totals, tables and options`
 - [ ] **14.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsTest.php`. Oczekiwane: **FAIL**
 - [ ] **14.3** Kontroler: `$period = StatsPeriod::resolve($request->period(), $link->clicks()->min('clicked_at') ... , now())`; `inRange` używa `from`/`to`. Seria: zapytanie dalej grupuje po `DATE(clicked_at)` (działa na każdym sterowniku); dla `month` dni sumuj do `Y-m` w PHP. Uzupełnij zerami od `from` do `to` w kroku `granularity`. Usuń `days()` i regułę `days` z `LinkStatsRequest`
 - [ ] **14.4** Uruchom `LinkStatsTest`. Oczekiwane: **PASS**
@@ -495,23 +509,25 @@ Znikają propsy `days` i `daily`. `inRange` filtruje `clicked_at >= from` i `<= 
 **Po co:** wszystkie wiersze tabel dostępne stronami, z wyborem limitu i sortowania.
 
 **Pliki**
+
 - Zmiana: `app/Http/Requests/Links/LinkStatsRequest.php`, `app/Http/Controllers/LinkStatsController.php`, `tests/Feature/LinkStatsTest.php`
 
 **Daje dalej:**
+
 - `LinkStatsRequest::TABLES = ['countries', 'cities', 'browsers', 'systems', 'devices']`, `LinkStatsRequest::PER_PAGE = [10, 25, 50, 100]`, `LinkStatsRequest::SORTS = ['count_desc', 'count_asc', 'name_asc', 'name_desc']`.
 - `LinkStatsRequest::sort(string $table): string` (domyślnie `count_desc`), `perPage(string $table): int` (domyślnie `10`), `page(string $table): int` (domyślnie `1`).
 - Parametry URL: `sort[<tabela>]`, `<tabela>_per_page`, `<tabela>_page`.
 - Propsy: każda z `countries`, `cities`, `browsers`, `systems`, `devices` ma kształt `array{rows: list<array{name: string, count: int}>, page: int, lastPage: int, total: int, perPage: int}` (zastępuje płaską listę). Nowy prop `sort`: `array<string, string>` z wartością dla wszystkich pięciu tabel.
 
 - [ ] **15.1** Przepisz testy tabel z zadań 5, 10 i 11 na nowy kształt (`countries` → `countries.rows`, limit „top 10” → `perPage` = 10 i `total`) i dopisz:
-  - `each per page value changes rows and lastPage` (dataset `10|25|50|100`, 30 różnych miast)
-  - `the last page holds the remainder` oraz `a page past the end returns the last page` → #17
-  - `table pages and per page are independent` (`countries_page=2` nie rusza `cities`)
-  - `rows are sorted by <variant>` (dataset 4 wartości `sort`, w tym `Unknown` sortowane po nazwie) → #19
-  - `ties keep the same order across pages` (30 wierszy po 1 kliknięciu, strona 1 + 2 + 3 = pełna lista bez powtórek) → #20
-  - `sort echoes the current values and defaults to count_desc`
-  - `invalid sort, per page or page fails validation` (`sort[countries]=x`, `countries_per_page=7`, `countries_page=0`, `countries_page=abc`) → #18
-  - `pagination respects period and filters` (`total` tabeli odpowiada zawężonym danym)
+    - `each per page value changes rows and lastPage` (dataset `10|25|50|100`, 30 różnych miast)
+    - `the last page holds the remainder` oraz `a page past the end returns the last page` → #17
+    - `table pages and per page are independent` (`countries_page=2` nie rusza `cities`)
+    - `rows are sorted by <variant>` (dataset 4 wartości `sort`, w tym `Unknown` sortowane po nazwie) → #19
+    - `ties keep the same order across pages` (30 wierszy po 1 kliknięciu, strona 1 + 2 + 3 = pełna lista bez powtórek) → #20
+    - `sort echoes the current values and defaults to count_desc`
+    - `invalid sort, per page or page fails validation` (`sort[countries]=x`, `countries_per_page=7`, `countries_page=0`, `countries_page=abc`) → #18
+    - `pagination respects period and filters` (`total` tabeli odpowiada zawężonym danym)
 - [ ] **15.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsTest.php`. Oczekiwane: nowe testy **FAIL**
 - [ ] **15.3** `LinkStatsRequest`: reguły dla `sort.<tabela>` (`Rule::in(SORTS)`), `<tabela>_per_page` (`Rule::in(PER_PAGE)`), `<tabela>_page` (`integer`, `min:1`) generowane z `TABLES`; metody `sort`, `perPage`, `page`
 - [ ] **15.4** Kontroler: zastąp `topBy` metodą `table(Closure $clicks, string $table, string $column, LinkStatsRequest $request): array`, a miasta niech używają tej samej ścieżki (grupowanie `city, country`, etykieta `City, Country`). Sortowanie po nazwie: `orderByRaw("COALESCE(<kolumna>, 'Unknown') <kierunek>")`, dla miast potem `country`; zawsze wtórne sortowanie po nazwie rosnąco (deterministyczne strony). Paginacja: `paginate($perPage, page: <strona przycięta do lastPage>, pageName: "{$table}_page")`. Sortuj po kolumnie z białej listy, nigdy po surowym wejściu
@@ -527,16 +543,17 @@ Znikają propsy `days` i `daily`. `inRange` filtruje `clicked_at >= from` i `<= 
 **Po co:** użytkownik steruje okresem i tabelami na stronie statystyk.
 
 **Pliki**
+
 - Nowe: `resources/js/components/StatsTable.vue`
 - Zmiana: `resources/js/pages/links/Stats.vue`, typy w `resources/js/types` (`StatsPeriod`, `StatsTableData`, `StatsSorts`), `tests/e2e/stats.spec.ts`
 
 **Bierze:** propsy z zadań 14 i 15; trasa `stats` z Wayfinder (bez zmian).
 
 - [ ] **16.1** Dopisz do `stats.spec.ts` (seed przez factory: 25 linków-klików z różnych miast, kliknięcia z różnych miesięcy i lat):
-  - zmiana okresu: „All time” zmienia sumę; `Month` + wybór miesiąca zawęża sumę, URL ma `period=month&month=...`; `Range` z dwiema datami zawęża sumę
-  - sortowanie: klik nagłówka „Name” w tabeli Cities zmienia kolejność wierszy, drugi klik ją odwraca; URL ma `sort[cities]=name_asc` (zakodowane)
-  - paginacja: „Page 1 of 3”, „Next” pokazuje „Page 2 of 3”; zmiana „Rows” na 50 daje „Page 1 of 1” i znikają przyciski Previous/Next
-  - reset: zmiana okresu lub sortowania wraca na „Page 1”, ale zachowuje wybrany limit → #21
+    - zmiana okresu: „All time” zmienia sumę; `Month` + wybór miesiąca zawęża sumę, URL ma `period=month&month=...`; `Range` z dwiema datami zawęża sumę
+    - sortowanie: klik nagłówka „Name” w tabeli Cities zmienia kolejność wierszy, drugi klik ją odwraca; URL ma `sort[cities]=name_asc` (zakodowane)
+    - paginacja: „Page 1 of 3”, „Next” pokazuje „Page 2 of 3”; zmiana „Rows” na 50 daje „Page 1 of 1” i znikają przyciski Previous/Next
+    - reset: zmiana okresu lub sortowania wraca na „Page 1”, ale zachowuje wybrany limit → #21
 - [ ] **16.2** Uruchom: `npx playwright test tests/e2e/stats.spec.ts`. Oczekiwane: nowe przepływy **FAIL**
 - [ ] **16.3** `StatsTable.vue`: propsy `title`, `table: StatsTableData`, `sort: string`; emituje `sort(value)`, `page(n)`, `perPage(n)`. Nagłówki „Name” i „Clicks” z strzałką kierunku (klik przełącza asc/desc), pod tabelą select „Rows” (10/25/50/100, widoczny zawsze), Previous/Next (ukryte przy jednej stronie) i „Page X of Y (N rows)”
 - [ ] **16.4** `Stats.vue`: selektor okresu (presety 7/30/90 i „All time”, select `Day | Month | Year | Range` z natywnymi `<input type="date|month">`, polem roku i dwoma polami `date`); jedna funkcja `visit(overrides)` składa całe zapytanie (okres, filtry, sortowania, limity, strony), `preserveState`, `preserveScroll`. Zmiana okresu, filtra lub sortowania zeruje strony wszystkich tabel, zmiana limitu zeruje stronę tej tabeli. Pięć sekcji używa `StatsTable`. Tooltip wykresu przy `granularity = 'month'` pokazuje `Y-m`
@@ -552,26 +569,28 @@ Znikają propsy `days` i `daily`. `inRange` filtruje `clicked_at >= from` i `<= 
 **Po co:** jedno źródło danych statystyk dla strony i dla żądań AJAX, z możliwością policzenia tylko wybranych sekcji.
 
 **Pliki**
+
 - Nowe: `app/Support/LinkStatsReport.php`, `tests/Feature/LinkStatsDataTest.php`
 - Zmiana: `app/Http/Controllers/LinkStatsController.php`, `app/Http/Requests/Links/LinkStatsRequest.php`, `routes/web.php`
 
 **Trasa:** `Route::get('links/{link}/stats/data', [LinkStatsController::class, 'data'])->name('links.stats.data')` w grupie `auth`+`verified`, **przed** `Route::resource`. Dotychczasowa `links.stats` dalej jest invokable, więc przy dodaniu drugiej trasy zostaw `__invoke` i dopisz metodę `data`. Po zmianach: `php artisan wayfinder:generate`.
 
 **Daje dalej:**
+
 - `LinkStatsReport::build(Link $link, LinkStatsRequest $request, ?array $sections = null): array` o kształcie propsów z zadań 14–15 bez klucza `link`. Klasa **nie** jest `final`. `$sections` ma elementy z `LinkStatsRequest::SECTIONS = ['summary', 'options', 'countries', 'cities', 'browsers', 'systems', 'devices']`; `null` = wszystkie.
 - Zawartość sekcji: `summary` → `period`, `granularity`, `series`, `total`, `filters`, `sort`; `options` → `options`; każda tabela → tylko klucz tej tabeli.
 - `LinkStatsRequest::sections(): ?array` (`null`, gdy brak parametru). Reguła `sections` → `['sometimes', 'array']`, `sections.*` → `Rule::in(SECTIONS)`.
 - Odpowiedź JSON `GET links/{link}/stats/data` = wynik `build` (dla żądanych sekcji).
 
 - [ ] **17.1** Napisz `tests/Feature/LinkStatsDataTest.php` (żądania z `getJson`):
-  - `data returns the same payload as the page props` (te same dane, `->assertJson` na kluczach: `period`, `granularity`, `series`, `total`, `filters`, `options`, `sort`, pięć tabel; kształt porównany z propsami trasy strony dla identycznego zapytania)
-  - `data respects period, filters, sort and pagination` (jedno zapytanie ze wszystkimi parametrami)
-  - `sections limits the keys` (dataset: `sections[]=countries` → tylko `countries`; `summary` → bez tabel i `options`; `options`; dwie sekcje naraz) → #26
-  - `a single table section runs only its queries` (`DB::getQueryLog()` lub `DB::listen`: dla `sections[]=countries` liczba zapytań = 2, bez zapytań o `options`/inne tabele) → #26
-  - `an unknown section fails validation` (`sections[]=x` → 422, błąd w `sections.0`) → #25
-  - `invalid parameters return 422 json` (np. `period=week`) → #23
-  - `other users get 403 json and no redirect` → #24
-  - `guests get 401 json`
+    - `data returns the same payload as the page props` (te same dane, `->assertJson` na kluczach: `period`, `granularity`, `series`, `total`, `filters`, `options`, `sort`, pięć tabel; kształt porównany z propsami trasy strony dla identycznego zapytania)
+    - `data respects period, filters, sort and pagination` (jedno zapytanie ze wszystkimi parametrami)
+    - `sections limits the keys` (dataset: `sections[]=countries` → tylko `countries`; `summary` → bez tabel i `options`; `options`; dwie sekcje naraz) → #26
+    - `a single table section runs only its queries` (`DB::getQueryLog()` lub `DB::listen`: dla `sections[]=countries` liczba zapytań = 2, bez zapytań o `options`/inne tabele) → #26
+    - `an unknown section fails validation` (`sections[]=x` → 422, błąd w `sections.0`) → #25
+    - `invalid parameters return 422 json` (np. `period=week`) → #23
+    - `other users get 403 json and no redirect` → #24
+    - `guests get 401 json`
 - [ ] **17.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsDataTest.php`. Oczekiwane: **FAIL**
 - [ ] **17.3** Przenieś liczenie z `LinkStatsController` do `LinkStatsReport::build` bez zmiany zachowania. Sekcje liczone leniwie: zapytanie dla niewymaganej sekcji **nie** jest wykonywane. Kontroler: `__invoke` renderuje `links/Stats` z `link` + `build($link, $request)`; `data(LinkStatsRequest $request, Link $link): JsonResponse` zwraca `build($link, $request, $request->sections())`
 - [ ] **17.4** `LinkStatsRequest`: stała `SECTIONS`, reguły `sections`, metoda `sections()`
@@ -588,28 +607,29 @@ Znikają propsy `days` i `daily`. `inRange` filtruje `clicked_at >= from` i `<= 
 **Po co:** zmiany filtrów, okresu, sortowania, stron i limitów idą przez AJAX, a adres strony się nie zmienia.
 
 **Pliki**
+
 - Zmiana: `resources/js/pages/links/Stats.vue`, `resources/js/components/StatsTable.vue` (tylko jeśli potrzebny stan ładowania), `resources/js/types`, `tests/e2e/stats.spec.ts`
 
 **Bierze:** trasa `links.stats.data` z Wayfinder (zadanie 17), JSON z `sections[]`, błędy 422 w `errors` odpowiedzi.
 
 - [ ] **18.1** Dostosuj `stats.spec.ts` i dopisz przepływy (RED):
-  - po zmianie filtra, okresu, sortowania, strony i limitu `page.url()` równa się `/links/{id}/stats` bez query stringa → #27
-  - F5 po zmianach przywraca stan domyślny (30 dni, brak filtrów, brak znaczników) → #28
-  - szybkie kolejne zmiany: przechwyć żądania przez `page.route`, opóźnij pierwszą odpowiedź, wykonaj drugą zmianę; na końcu widać wynik drugiej, nie pierwszej → #22
-  - zły zakres (From po To) pokazuje komunikat przy selektorze, a poprzednie dane zostają → #23
-  - sort/limit/strona jednej tabeli wysyła `sections[]` tylko dla tej tabeli (asercja na żądaniu `page.waitForRequest`); zmiana okresu lub filtra wysyła żądanie bez `sections[]` lub ze wszystkimi
-  - tabele są ułożone pionowo: pozycje `y` kolejnych nagłówków (Countries → Cities → Browsers → Operating systems → Devices) rosną, a `x` jest taki sam
-  - przyciski 7/30/90 i „All time" mają rolę `button`, nie `link` (zaktualizuj dotychczasowe testy)
+    - po zmianie filtra, okresu, sortowania, strony i limitu `page.url()` równa się `/links/{id}/stats` bez query stringa → #27
+    - F5 po zmianach przywraca stan domyślny (30 dni, brak filtrów, brak znaczników) → #28
+    - szybkie kolejne zmiany: przechwyć żądania przez `page.route`, opóźnij pierwszą odpowiedź, wykonaj drugą zmianę; na końcu widać wynik drugiej, nie pierwszej → #22
+    - zły zakres (From po To) pokazuje komunikat przy selektorze, a poprzednie dane zostają → #23
+    - sort/limit/strona jednej tabeli wysyła `sections[]` tylko dla tej tabeli (asercja na żądaniu `page.waitForRequest`); zmiana okresu lub filtra wysyła żądanie bez `sections[]` lub ze wszystkimi
+    - tabele są ułożone pionowo: pozycje `y` kolejnych nagłówków (Countries → Cities → Browsers → Operating systems → Devices) rosną, a `x` jest taki sam
+    - przyciski 7/30/90 i „All time" mają rolę `button`, nie `link` (zaktualizuj dotychczasowe testy)
 - [ ] **18.2** Uruchom: `npx playwright test tests/e2e/stats.spec.ts` po `npm run build`. Oczekiwane: nowe przepływy **FAIL**
 - [ ] **18.3** `Stats.vue`:
-  - stan danych w lokalnych `ref`-ach, inicjalizowany propsami strony (bez dodatkowego żądania przy ładowaniu)
-  - `load(sections?)` buduje zapytanie z całego stanu i woła `useHttp('get', <links.stats.data>, () => query)`; poprzednie żądanie w locie jest anulowane, odpowiedź starszego nigdy nie nadpisuje nowszego
-  - odpowiedź scala się po kluczach sekcji
-  - reguły sekcji: zmiana okresu/filtra → wszystkie sekcje i strony na 1 (limity zostają); sortowanie/limit tabeli → tylko ta tabela i jej strona na 1; zmiana strony → tylko ta tabela
-  - sekcja w trakcie pobierania jest przygaszona lub ma animowany szkielet, bez migania pustym stanem
-  - błędy 422 z `errors` odpowiedzi pokazane jak dziś przy kontrolkach okresu, po udanym żądaniu znikają
-  - presety 7/30/90 i „All time" jako `<button>`; usuń `router.get`, `preserveState`, odwołania do `usePage().props.errors`
-  - układ: tabele w jednej kolumnie (usuń `md:grid-cols-2`), pełna szerokość, kolejność Countries, Cities, Browsers, Operating systems, Devices
+    - stan danych w lokalnych `ref`-ach, inicjalizowany propsami strony (bez dodatkowego żądania przy ładowaniu)
+    - `load(sections?)` buduje zapytanie z całego stanu i woła `useHttp('get', <links.stats.data>, () => query)`; poprzednie żądanie w locie jest anulowane, odpowiedź starszego nigdy nie nadpisuje nowszego
+    - odpowiedź scala się po kluczach sekcji
+    - reguły sekcji: zmiana okresu/filtra → wszystkie sekcje i strony na 1 (limity zostają); sortowanie/limit tabeli → tylko ta tabela i jej strona na 1; zmiana strony → tylko ta tabela
+    - sekcja w trakcie pobierania jest przygaszona lub ma animowany szkielet, bez migania pustym stanem
+    - błędy 422 z `errors` odpowiedzi pokazane jak dziś przy kontrolkach okresu, po udanym żądaniu znikają
+    - presety 7/30/90 i „All time" jako `<button>`; usuń `router.get`, `preserveState`, odwołania do `usePage().props.errors`
+    - układ: tabele w jednej kolumnie (usuń `md:grid-cols-2`), pełna szerokość, kolejność Countries, Cities, Browsers, Operating systems, Devices
 - [ ] **18.4** `npm run build`, potem `npx playwright test`. Oczekiwane: **PASS**
 - [ ] **18.5** `npx prettier --single-quote --write` na zmienionych plikach frontu, sprawdź `vue-tsc` (brak błędów w `Stats`/`StatsTable`/typach), poproś użytkownika o pełne `php artisan test --compact`, potem commit: `Load link stats via AJAX and stack the tables`
 

@@ -11,16 +11,16 @@ Data: 2026-10-09
 
 ## Zakres
 
-| W zakresie | Poza zakresem |
-|---|---|
-| Enum `UserRole`, kolumna `role` | Osobny guard i tabela adminów |
-| Blokada i odblokowanie konta, usunięcie konta | Gotowe pakiety panelu (Filament, Nova) |
-| Wyłączanie i włączanie linku przez admina (`disabled_by_admin_at`) | Globalna lista wszystkich linków (linki widać w kontekście użytkownika) |
-| Statystyki globalne i per użytkownik: liczniki, kliknięcia w czasie, top linki, top użytkownicy | Rozbicia kraj/przeglądarka/urządzenie w skali globalnej |
-| Statystyki dowolnego linku dla admina (reużycie obecnej strony) | Nadawanie `SuperAdmin` w panelu |
-| Zmiana roli `User` ↔ `Admin` przez `SuperAdmin` | Dziennik audytu działań admina |
-| Przełącznik `is_active` dla właściciela w liście linków | Powiadomienia e-mail o blokadzie |
-| Komenda `user:make-super-admin` (jeden `SuperAdmin`) | Testy frontu (Vue) |
+| W zakresie                                                                                      | Poza zakresem                                                           |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Enum `UserRole`, kolumna `role`                                                                 | Osobny guard i tabela adminów                                           |
+| Blokada i odblokowanie konta, usunięcie konta                                                   | Gotowe pakiety panelu (Filament, Nova)                                  |
+| Wyłączanie i włączanie linku przez admina (`disabled_by_admin_at`)                              | Globalna lista wszystkich linków (linki widać w kontekście użytkownika) |
+| Statystyki globalne i per użytkownik: liczniki, kliknięcia w czasie, top linki, top użytkownicy | Rozbicia kraj/przeglądarka/urządzenie w skali globalnej                 |
+| Statystyki dowolnego linku dla admina (reużycie obecnej strony)                                 | Nadawanie `SuperAdmin` w panelu                                         |
+| Zmiana roli `User` ↔ `Admin` przez `SuperAdmin`                                                 | Dziennik audytu działań admina                                          |
+| Przełącznik `is_active` dla właściciela w liście linków                                         | Powiadomienia e-mail o blokadzie                                        |
+| Komenda `user:make-super-admin` (jeden `SuperAdmin`)                                            | Testy frontu (Vue)                                                      |
 
 ## Założenia
 
@@ -34,11 +34,11 @@ Data: 2026-10-09
 
 Osobne migracje (wcześniejsze są już uruchomione):
 
-| Tabela | Kolumna | Typ |
-|---|---|---|
-| `users` | `role` | string, domyślnie `user`, cast na `UserRole` |
-| `users` | `blocked_at` | timestamp, nullable |
-| `links` | `disabled_by_admin_at` | timestamp, nullable |
+| Tabela  | Kolumna                | Typ                                          |
+| ------- | ---------------------- | -------------------------------------------- |
+| `users` | `role`                 | string, domyślnie `user`, cast na `UserRole` |
+| `users` | `blocked_at`           | timestamp, nullable                          |
+| `links` | `disabled_by_admin_at` | timestamp, nullable                          |
 
 Enum `UserRole` (backed string): `User`, `Admin`, `SuperAdmin`. Factory: `UserFactory` dostaje stany `admin()`, `superAdmin()`, `blocked()`, a `LinkFactory` stan `disabledByAdmin()`.
 
@@ -49,10 +49,10 @@ Enum `UserRole` (backed string): `User`, `Admin`, `SuperAdmin`. Factory: `UserFa
 - Nikt nie blokuje ani nie usuwa samego siebie. `Admin` nie rusza kont `Admin` ani `SuperAdmin`. `SuperAdmin` nie może zmienić własnej roli, a rola `SuperAdmin` nie jest nadawalna w panelu.
 - Reguły siedzą w `UserPolicy` (`block`, `delete`, `changeRole`). Dostęp do `/admin` daje middleware `admin` (rola `Admin` lub `SuperAdmin`, inaczej 403).
 - Komenda `user:make-super-admin {email}` zapewnia jedynego `SuperAdmin`a:
-  - jeśli `SuperAdmin` już istnieje, kończy się błędem i niezerowym kodem wyjścia, niezależnie od e-maila,
-  - jeśli konto o tym e-mailu istnieje (jako `User` lub `Admin`), awansuje je na `SuperAdmin` bez pytań,
-  - jeśli konta nie ma, pyta interaktywnie o imię i hasło (hasło ukryte, walidacja jak przy rejestracji) i tworzy konto z zweryfikowanym e-mailem.
-  - Jedyność jest egzekwowana w komendzie, w transakcji z blokadą. Panel nie nadaje `SuperAdmin`a (walidacja i policy).
+    - jeśli `SuperAdmin` już istnieje, kończy się błędem i niezerowym kodem wyjścia, niezależnie od e-maila,
+    - jeśli konto o tym e-mailu istnieje (jako `User` lub `Admin`), awansuje je na `SuperAdmin` bez pytań,
+    - jeśli konta nie ma, pyta interaktywnie o imię i hasło (hasło ukryte, walidacja jak przy rejestracji) i tworzy konto z zweryfikowanym e-mailem.
+    - Jedyność jest egzekwowana w komendzie, w transakcji z blokadą. Panel nie nadaje `SuperAdmin`a (walidacja i policy).
 - Backend zawsze egzekwuje reguły. Flagi `can: {block, delete, changeRole}` serwowane do frontu służą wyłącznie do ukrywania akcji.
 
 ## Blokada konta
@@ -66,16 +66,16 @@ Enum `UserRole` (backed string): `User`, `Admin`, `SuperAdmin`. Factory: `UserFa
 
 Grupa `auth`, `verified`, `admin`, prefiks `admin`, nazwy `admin.*`:
 
-| Trasa | Kontroler | Cel |
-|---|---|---|
-| `GET admin` | `Admin\DashboardController` | liczniki i statystyki globalne |
-| `GET admin/users` | `Admin\UserController@index` | lista, wyszukiwanie po nazwie i e-mailu, paginacja |
-| `GET admin/users/{user}` | `Admin\UserController@show` | dane użytkownika, jego linki, jego statystyki |
-| `DELETE admin/users/{user}` | `Admin\UserController@destroy` | usunięcie konta |
-| `PATCH admin/users/{user}/block`, `DELETE admin/users/{user}/block` | `Admin\UserBlockController` | blokada i odblokowanie |
-| `PATCH admin/users/{user}/role` | `Admin\UserRoleController` | zmiana roli (tylko `SuperAdmin`) |
-| `PATCH admin/links/{link}/disable`, `DELETE admin/links/{link}/disable` | `Admin\LinkDisableController` | ustawienie i zdjęcie `disabled_by_admin_at` |
-| `GET admin/links/{link}/stats`, `GET admin/links/{link}/stats/data` | `Admin\LinkStatsController` | statystyki dowolnego linku |
+| Trasa                                                                   | Kontroler                      | Cel                                                |
+| ----------------------------------------------------------------------- | ------------------------------ | -------------------------------------------------- |
+| `GET admin`                                                             | `Admin\DashboardController`    | liczniki i statystyki globalne                     |
+| `GET admin/users`                                                       | `Admin\UserController@index`   | lista, wyszukiwanie po nazwie i e-mailu, paginacja |
+| `GET admin/users/{user}`                                                | `Admin\UserController@show`    | dane użytkownika, jego linki, jego statystyki      |
+| `DELETE admin/users/{user}`                                             | `Admin\UserController@destroy` | usunięcie konta                                    |
+| `PATCH admin/users/{user}/block`, `DELETE admin/users/{user}/block`     | `Admin\UserBlockController`    | blokada i odblokowanie                             |
+| `PATCH admin/users/{user}/role`                                         | `Admin\UserRoleController`     | zmiana roli (tylko `SuperAdmin`)                   |
+| `PATCH admin/links/{link}/disable`, `DELETE admin/links/{link}/disable` | `Admin\LinkDisableController`  | ustawienie i zdjęcie `disabled_by_admin_at`        |
+| `GET admin/links/{link}/stats`, `GET admin/links/{link}/stats/data`     | `Admin\LinkStatsController`    | statystyki dowolnego linku                         |
 
 Poza grupą admina, w grupie użytkownika: `PATCH links/{link}/toggle` (przełącznik `is_active`, autoryzacja przez `LinkPolicy::update`). Zmiana nie dotyka `disabled_by_admin_at`.
 
@@ -90,9 +90,11 @@ Walidacja przez Form Requests: zmiana roli (`Rule::enum`, dozwolone tylko `User`
 ## UI
 
 Layout i nawigacja:
+
 - Istniejący `AppLayout`. W `AppSidebar` pozycja "Admin" widoczna dla `Admin` i `SuperAdmin` (współdzielony prop `auth.user.role`). Pod `/admin` podnawigacja: Przegląd, Użytkownicy.
 
 Strony w `resources/js/pages/admin/`:
+
 - `Dashboard.vue`: karty z licznikami, wykres kliknięć z przełącznikiem 7/30/90 dni, tabele top linków i top użytkowników. Reużywa `StatsTable.vue`, a wykres ze `Stats.vue` jest wyciągnięty do wspólnego komponentu.
 - `users/Index.vue`: tabela (nazwa, e-mail, rola, status, liczba linków, data rejestracji), wyszukiwanie przez `router.get` z `preserveState`, paginacja.
 - `users/Show.vue`: dane i status konta, akcje (Zablokuj/Odblokuj, Usuń z potwierdzeniem, Zmień rolę widoczna tylko dla `SuperAdmin`), karty i wykres statystyk użytkownika, tabela jego linków (tytuł, kod, kliknięcia, status: aktywny, wyłączony przez właściciela, wyłączony przez admina; przyciski "Wyłącz/Włącz (admin)" i "Statystyki").

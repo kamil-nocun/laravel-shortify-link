@@ -11,15 +11,15 @@ Data: 2026-10-09
 
 ## Zakres
 
-| W zakresie | Poza zakresem |
-|---|---|
-| Tabela `link_statistics`, model, factory | Unikalni odwiedzający (wymagałoby IP) |
-| Job `RecordLinkClick` i `GeoLocator` (MaxMind GeoLite2-City) | Wstępna agregacja dzienna |
-| Rozpoznawanie przeglądarki, systemu i typu urządzenia z User-Agent (`matomo/device-detector`) | Referrer |
-| Strona statystyk z filtrem 7/30/90 dni | Wersje przeglądarek i systemów, model urządzenia |
-| Filtry po kraju, mieście, przeglądarce, systemie i urządzeniu (jedna wartość na pole, AND) | Wielokrotny wybór wartości w jednym polu, wyszukiwanie tekstowe, wyszukiwanie w liście linków |
-| Kolumna z liczbą kliknięć w liście linków | Automatyczne pobieranie i aktualizacja bazy `.mmdb` |
-| Testy Pest | Retencja i czyszczenie starych kliknięć |
+| W zakresie                                                                                    | Poza zakresem                                                                                 |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Tabela `link_statistics`, model, factory                                                      | Unikalni odwiedzający (wymagałoby IP)                                                         |
+| Job `RecordLinkClick` i `GeoLocator` (MaxMind GeoLite2-City)                                  | Wstępna agregacja dzienna                                                                     |
+| Rozpoznawanie przeglądarki, systemu i typu urządzenia z User-Agent (`matomo/device-detector`) | Referrer                                                                                      |
+| Strona statystyk z filtrem 7/30/90 dni                                                        | Wersje przeglądarek i systemów, model urządzenia                                              |
+| Filtry po kraju, mieście, przeglądarce, systemie i urządzeniu (jedna wartość na pole, AND)    | Wielokrotny wybór wartości w jednym polu, wyszukiwanie tekstowe, wyszukiwanie w liście linków |
+| Kolumna z liczbą kliknięć w liście linków                                                     | Automatyczne pobieranie i aktualizacja bazy `.mmdb`                                           |
+| Testy Pest                                                                                    | Retencja i czyszczenie starych kliknięć                                                       |
 
 ## Założenia
 
@@ -37,17 +37,17 @@ Data: 2026-10-09
 
 Migracja `link_statistics` (UUID PK i FK, zgodnie z konwencją projektu):
 
-| Kolumna | Typ |
-|---|---|
-| `id` | uuid, PK |
-| `link_id` | uuid, FK do `links`, `cascadeOnDelete` |
-| `clicked_at` | timestamp |
-| `country_code` | char(2), nullable |
-| `country` | string, nullable |
-| `city` | string, nullable |
-| `browser` | string, nullable |
-| `os` | string, nullable |
-| `device_type` | string, nullable (np. `desktop`, `smartphone`, `tablet`, `bot`) |
+| Kolumna        | Typ                                                             |
+| -------------- | --------------------------------------------------------------- |
+| `id`           | uuid, PK                                                        |
+| `link_id`      | uuid, FK do `links`, `cascadeOnDelete`                          |
+| `clicked_at`   | timestamp                                                       |
+| `country_code` | char(2), nullable                                               |
+| `country`      | string, nullable                                                |
+| `city`         | string, nullable                                                |
+| `browser`      | string, nullable                                                |
+| `os`           | string, nullable                                                |
+| `device_type`  | string, nullable (np. `desktop`, `smartphone`, `tablet`, `bot`) |
 
 Indeks `(link_id, clicked_at)`. Brak `created_at` i `updated_at` (`$timestamps = false`), bo `clicked_at` jest jedyną datą.
 
@@ -79,6 +79,7 @@ Model `LinkClick` (`HasUuids`, `HasFactory`, relacja `link()`), factory z domyś
 ## Testy
 
 Pest:
+
 - job zapisuje kliknięcie z krajem i miastem (fake `GeoLocator`);
 - job zapisuje kliknięcie z `null` geo, gdy lookup nic nie zwraca;
 - job zapisuje przeglądarkę, system i typ urządzenia (fake `ClientDetector`), a przy braku User-Agent same `null`;

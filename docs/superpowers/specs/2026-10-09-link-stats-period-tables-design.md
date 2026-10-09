@@ -22,14 +22,14 @@ Filtry kraj/miasto/przeglądarka/system/urządzenie pozostają bez zmian i dzia�
 
 Parametr `period` zastępuje `days`. Wartości: `7d`, `30d`, `90d`, `all`, `day`, `month`, `year`, `range`. Domyślnie `30d`.
 
-| `period` | Wymagane parametry | Zakres |
-|---|---|---|
-| `7d`, `30d`, `90d` | brak | ostatnie N dni włącznie z dzisiejszym, od początku dnia |
-| `all` | brak | od pierwszego kliknięcia linku do teraz; brak kliknięć = pusty zakres |
-| `day` | `date` (Y-m-d) | cały dzień |
-| `month` | `month` (Y-m) | cały miesiąc |
-| `year` | `year` (4 cyfry) | cały rok |
-| `range` | `from`, `to` (Y-m-d) | od początku `from` do końca `to` |
+| `period`           | Wymagane parametry   | Zakres                                                                |
+| ------------------ | -------------------- | --------------------------------------------------------------------- |
+| `7d`, `30d`, `90d` | brak                 | ostatnie N dni włącznie z dzisiejszym, od początku dnia               |
+| `all`              | brak                 | od pierwszego kliknięcia linku do teraz; brak kliknięć = pusty zakres |
+| `day`              | `date` (Y-m-d)       | cały dzień                                                            |
+| `month`            | `month` (Y-m)        | cały miesiąc                                                          |
+| `year`             | `year` (4 cyfry)     | cały rok                                                              |
+| `range`            | `from`, `to` (Y-m-d) | od początku `from` do końca `to`                                      |
 
 Reguły:
 
@@ -41,12 +41,12 @@ Reguły:
 
 Propsy:
 
-| Prop | Typ |
-|---|---|
-| `period` | `array{period: string, date: ?string, month: ?string, year: ?int, from: ?string, to: ?string}` (echo) |
-| `granularity` | `'day'\|'month'` |
-| `series` | `list<array{date: string, count: int}>` uzupełniona zerami; `date` w formacie `Y-m-d` lub `Y-m` |
-| `total` | suma `series` |
+| Prop          | Typ                                                                                                   |
+| ------------- | ----------------------------------------------------------------------------------------------------- |
+| `period`      | `array{period: string, date: ?string, month: ?string, year: ?int, from: ?string, to: ?string}` (echo) |
+| `granularity` | `'day'\|'month'`                                                                                      |
+| `series`      | `list<array{date: string, count: int}>` uzupełniona zerami; `date` w formacie `Y-m-d` lub `Y-m`       |
+| `total`       | suma `series`                                                                                         |
 
 Prop `daily` zostaje zastąpiony przez `series`, a `days` przez `period`.
 
@@ -54,11 +54,11 @@ Prop `daily` zostaje zastąpiony przez `series`, a `days` przez `period`.
 
 Klucz tabeli: `countries`, `cities`, `browsers`, `systems`, `devices`.
 
-| Parametr | Wartości | Domyślnie |
-|---|---|---|
-| `sort[<tabela>]` | `count_desc`, `count_asc`, `name_asc`, `name_desc` | `count_desc` |
-| `<tabela>_per_page` | `10`, `25`, `50`, `100` | `10` |
-| `<tabela>_page` | liczba całkowita >= 1 | `1` |
+| Parametr            | Wartości                                           | Domyślnie    |
+| ------------------- | -------------------------------------------------- | ------------ |
+| `sort[<tabela>]`    | `count_desc`, `count_asc`, `name_asc`, `name_desc` | `count_desc` |
+| `<tabela>_per_page` | `10`, `25`, `50`, `100`                            | `10`         |
+| `<tabela>_page`     | liczba całkowita >= 1                              | `1`          |
 
 Reguły:
 
@@ -81,18 +81,18 @@ Dodatkowo prop `sort`: `array<string, string>` (echo wybranych sortowań). Nazwa
 
 ## Przypadki brzegowe (każdy ma test)
 
-| # | Sytuacja | Oczekiwane |
-|---|---|---|
-| 12 | `period=all` bez kliknięć | pusty zakres, `total` = 0, `series` puste |
-| 13 | `period=day` bez `date` lub zły format | błąd walidacji |
-| 14 | `range` z `from > to` lub dłuższy niż 5 lat | błąd walidacji |
-| 15 | Zakres dłuższy niż 92 dni, `year`, `all` | `granularity=month` |
-| 16 | Zakres w przyszłości | zera, bez błędu |
-| 17 | Ostatnia strona niepełna, strona poza zakresem | ostatnia strona z resztą wierszy |
-| 18 | `per_page` spoza listy, zła `sort` | błąd walidacji |
-| 19 | Sortowanie po nazwie z `Unknown` | `Unknown` sortowane jak zwykła nazwa `Unknown` |
-| 20 | Remisy w liczbie kliknięć | kolejność identyczna między stronami |
-| 21 | Zmiana okresu | strony wracają do 1, limity i sortowania zostają |
+| #   | Sytuacja                                       | Oczekiwane                                       |
+| --- | ---------------------------------------------- | ------------------------------------------------ |
+| 12  | `period=all` bez kliknięć                      | pusty zakres, `total` = 0, `series` puste        |
+| 13  | `period=day` bez `date` lub zły format         | błąd walidacji                                   |
+| 14  | `range` z `from > to` lub dłuższy niż 5 lat    | błąd walidacji                                   |
+| 15  | Zakres dłuższy niż 92 dni, `year`, `all`       | `granularity=month`                              |
+| 16  | Zakres w przyszłości                           | zera, bez błędu                                  |
+| 17  | Ostatnia strona niepełna, strona poza zakresem | ostatnia strona z resztą wierszy                 |
+| 18  | `per_page` spoza listy, zła `sort`             | błąd walidacji                                   |
+| 19  | Sortowanie po nazwie z `Unknown`               | `Unknown` sortowane jak zwykła nazwa `Unknown`   |
+| 20  | Remisy w liczbie kliknięć                      | kolejność identyczna między stronami             |
+| 21  | Zmiana okresu                                  | strony wracają do 1, limity i sortowania zostają |
 
 ## Testy
 
