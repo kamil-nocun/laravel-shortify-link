@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Link;
 use App\Models\User;
 use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Support\Facades\Route;
@@ -12,10 +13,11 @@ use Illuminate\Support\Facades\Route;
 function adminRoutes(): array
 {
     $target = User::factory()->create();
+    $link = Link::factory()->for($target)->create();
 
     return collect(Route::getRoutes()->getRoutes())
         ->filter(fn (LaravelRoute $route) => str_starts_with((string) $route->getName(), 'admin.'))
-        ->map(fn (LaravelRoute $route) => [$route->methods()[0], '/'.ltrim(str_replace('{user}', $target->id, $route->uri()), '/')])
+        ->map(fn (LaravelRoute $route) => [$route->methods()[0], '/'.ltrim(str_replace(['{user}', '{link}'], [$target->id, $link->id], $route->uri()), '/')])
         ->sortBy(fn (array $route) => $route[0] === 'DELETE' && str_ends_with($route[1], $target->id))
         ->values()
         ->all();
@@ -42,7 +44,3 @@ test('admin routes are not forbidden for admins', function (string $state) {
         expect($this->actingAs(User::factory()->{$state}()->create())->call($method, $uri)->status())->not->toBe(403, "{$method} {$uri} was forbidden");
     }
 })->with(['admin', 'superAdmin'])->skip(fn () => Route::getRoutes()->getByName('admin.users.index') === null, 'No admin routes yet.');
-
-test('admin panel is forbidden for regular users', function () {
-    $this->actingAs(User::factory()->create())->get('/admin')->assertForbidden();
-})->todo();

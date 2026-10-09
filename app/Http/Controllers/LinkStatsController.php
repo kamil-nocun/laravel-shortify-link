@@ -18,7 +18,12 @@ class LinkStatsController extends Controller
      */
     public function __invoke(LinkStatsRequest $request, Link $link): Response
     {
-        return Inertia::render('links/Stats', ['link' => $link, ...$this->report->build($link, $request)]);
+        return Inertia::render('links/Stats', [
+            'link' => $link,
+            ...$this->report->build($link, $request),
+            'dataUrl' => route('links.stats.data', $link),
+            'backUrl' => route('links.index'),
+        ]);
     }
 
     /**

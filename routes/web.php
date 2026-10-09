@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\LinkDisableController;
+use App\Http\Controllers\Admin\LinkStatsController as AdminLinkStatsController;
 use App\Http\Controllers\Admin\UserBlockController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserRoleController;
@@ -20,6 +23,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('links/{link}/stats', AdminLinkStatsController::class)->name('links.stats');
+    Route::get('links/{link}/stats/data', [AdminLinkStatsController::class, 'data'])->name('links.stats.data');
+    Route::patch('links/{link}/disable', [LinkDisableController::class, 'store'])->name('links.disable');
+    Route::delete('links/{link}/disable', [LinkDisableController::class, 'destroy'])->name('links.enable');
     Route::resource('users', UserController::class)->only(['index', 'show', 'destroy']);
     Route::patch('users/{user}/block', [UserBlockController::class, 'store'])->name('users.block');
     Route::delete('users/{user}/block', [UserBlockController::class, 'destroy'])->name('users.unblock');
