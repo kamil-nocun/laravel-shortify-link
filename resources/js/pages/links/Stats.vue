@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Head, useHttp } from '@inertiajs/vue3';
+import { Head, setLayoutProps, useHttp } from '@inertiajs/vue3';
 import { computed, reactive, ref, watch } from 'vue';
+import ClicksChart from '@/components/ClicksChart.vue';
 import StatsTable from '@/components/StatsTable.vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
-import { index } from '@/routes/links';
+import { queryParams } from '@/wayfinder';
 import type { RouteQueryOptions } from '@/wayfinder';
-import { data as statsData } from '@/routes/links/stats';
 import type {
     DailyClicks,
     Link,
@@ -33,7 +33,13 @@ const initial = defineProps<{
     devices: StatsTableData;
     filters: StatsFilters;
     options: StatsOptions;
+    dataUrl: string;
+    backUrl: string;
 }>();
+
+setLayoutProps({
+    breadcrumbs: [{ title: 'Links', href: initial.backUrl }],
+});
 
 const ranges = [7, 30, 90];
 
@@ -169,7 +175,7 @@ let requestId = 0;
 
 const http = useHttp<Record<string, never>, Record<string, unknown>>(
     'get',
-    () => statsData.url(link.value.id),
+    () => initial.dataUrl,
     {},
 );
 
@@ -225,11 +231,12 @@ const load = (sections: Section[] | null) => {
     loadFailed.value = false;
     http.cancel();
     http.get(
-        statsData.url(link.value.id, {
-            query: buildQuery(
-                pending.size === all.length ? null : [...pending],
-            ),
-        }),
+        initial.dataUrl +
+            queryParams({
+                query: buildQuery(
+                    pending.size === all.length ? null : [...pending],
+                ),
+            }),
     )
         .then((response) => {
             if (id !== requestId) {
@@ -409,16 +416,6 @@ const pageTable = (key: StatsTableKey, delta: number) => {
     );
     load([key]);
 };
-
-const maxDaily = computed(() =>
-    Math.max(1, ...series.value.map((day) => day.count)),
-);
-
-defineOptions({
-    layout: {
-        breadcrumbs: [{ title: 'Links', href: index() }],
-    },
-});
 </script>
 
 <template>
@@ -625,24 +622,12 @@ defineOptions({
             No clicks in this period yet.
         </p>
 
-        <div
+        <ClicksChart
             v-else
-            class="flex h-40 items-end gap-px transition-opacity"
-            :class="{ 'animate-pulse opacity-50': isLoading('summary') }"
-            role="img"
-            :aria-label="`Clicks per ${granularity}`"
-        >
-            <div
-                v-for="day in series"
-                :key="day.date"
-                class="min-w-px flex-1 rounded-t bg-primary"
-                :style="{
-                    height: `${(day.count / maxDaily) * 100}%`,
-                    minHeight: day.count > 0 ? '2px' : '0',
-                }"
-                :title="`${day.date}: ${day.count}`"
-            />
-        </div>
+            :series="series"
+            :granularity="granularity"
+            :loading="isLoading('summary')"
+        />
 
         <div class="grid gap-6 md:grid-cols-2">
             <StatsTable

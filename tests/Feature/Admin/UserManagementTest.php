@@ -6,10 +6,6 @@ use App\Models\LinkClick;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
-beforeEach(function () {
-    config(['inertia.testing.ensure_pages_exist' => false]);
-});
-
 test('admin sees users with counts and capability flags', function () {
     $admin = User::factory()->admin()->create(['created_at' => now()->subDay()]);
     $user = User::factory()->create(['name' => 'Zed']);

@@ -3,10 +3,6 @@
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
-beforeEach(function () {
-    config(['inertia.testing.ensure_pages_exist' => false]);
-});
-
 test('admin sees the dashboard report', function () {
     $this->actingAs(User::factory()->admin()->create())->get(route('admin.dashboard'))
         ->assertInertia(fn (Assert $page) => $page

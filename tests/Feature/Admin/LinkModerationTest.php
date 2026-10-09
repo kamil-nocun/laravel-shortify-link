@@ -6,7 +6,6 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
-    config(['inertia.testing.ensure_pages_exist' => false]);
     $this->admin = User::factory()->admin()->create();
     $this->link = Link::factory()->for(User::factory()->admin()->create())->create();
 });

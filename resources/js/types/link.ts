@@ -46,7 +46,11 @@ export type Paginated<T> = {
 };
 
 export type StatsFilterKey =
-    'country' | 'city' | 'browser' | 'os' | 'device_type';
+    | 'country'
+    | 'city'
+    | 'browser'
+    | 'os'
+    | 'device_type';
 
 export type StatsFilters = Record<StatsFilterKey, string | null>;
 
@@ -59,6 +63,47 @@ export type StatsOptions = {
 };
 
 export type StatsTableKey =
-    'countries' | 'cities' | 'browsers' | 'systems' | 'devices';
+    | 'countries'
+    | 'cities'
+    | 'browsers'
+    | 'systems'
+    | 'devices';
 
 export type StatsSorts = Record<StatsTableKey, string>;
+
+export type AdminCounters = {
+    users?: number;
+    links: number;
+    activeLinks: number;
+    disabledLinks: number;
+    clicks: number;
+};
+
+export type TopLink = {
+    id: string;
+    title: string | null;
+    code: string;
+    clicks: number;
+};
+
+export type TopUser = {
+    id: string;
+    name: string;
+    email: string;
+    clicks: number;
+};
+
+export type AdminUser = {
+    id: string;
+    name: string;
+    email: string;
+    role: 'user' | 'admin' | 'super_admin';
+    blocked_at: string | null;
+    created_at: string;
+    links_count: number;
+    can: {
+        block: boolean;
+        delete: boolean;
+        changeRole: boolean;
+    };
+};
