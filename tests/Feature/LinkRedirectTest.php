@@ -1,6 +1,8 @@
 <?php
 
+use App\Jobs\RecordLinkClick;
 use App\Models\Link;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('active link redirects with 302 to original_url', function () {
@@ -59,3 +61,25 @@ test('other 404s are not rendered as the NotFound page', function () {
         ->assertNotFound()
         ->assertDontSee('errors\/NotFound', false);
 });
+
+test('successful redirect dispatches RecordLinkClick', function () {
+    Queue::fake();
+    $link = Link::factory()->create();
+
+    $this->get(route('links.redirect', $link->code))->assertRedirect($link->original_url);
+
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->linkId === $link->id);
+});
+
+test('refused redirects dispatch nothing', function (?string $state) {
+    Queue::fake();
+    $code = $state === null ? 'zzzzzz' : Link::factory()->{$state}()->create()->code;
+
+    $this->get(route('links.redirect', $code))->assertNotFound();
+
+    Queue::assertNothingPushed();
+})->with([
+    'inactive' => 'inactive',
+    'expired' => 'expired',
+    'unknown' => null,
+]);
