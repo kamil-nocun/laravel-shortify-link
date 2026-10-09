@@ -71,6 +71,14 @@ class UserPolicy
     }
 
     /**
+     * Determine whether the actor may assign a package to the target.
+     */
+    public function assignPackage(User $actor, User $target): bool
+    {
+        return $actor->isSuperAdmin() && ! $target->isSuperAdmin();
+    }
+
+    /**
      * Determine whether the target is within the actor's scope of clients.
      */
     public function manages(User $actor, User $target): bool

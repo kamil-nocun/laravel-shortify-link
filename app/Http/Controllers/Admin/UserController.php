@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\BillingPeriod;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminStatsRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Link;
+use App\Models\Package;
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
 use App\Support\AdminStatsReport;
@@ -96,6 +98,9 @@ class UserController extends Controller
             'assignedAdministrators' => $this->isAssignable($request->user(), $user)
                 ? $user->assignedAdmins()->orderBy('name')->get(['users.id', 'users.name', 'users.email'])->map->only(['id', 'name', 'email'])->all()
                 : [],
+            'effectiveLimit' => $user->linkLimit(),
+            'packageAssignment' => $request->user()->can('assignPackage', $user) ? $this->presentAssignment($user) : null,
+            'packages' => $request->user()->can('assignPackage', $user) ? $this->packageOptions() : [],
             'links' => $user->links()->withCount('clicks')->with('disabledBy:id,name')->latest()->paginate(15)->withQueryString()
                 ->through(fn (Link $link) => [...$link->toArray(), 'disabled_by_name' => $link->disabledBy?->name]),
             ...$this->report->build($user, $request),
@@ -160,6 +165,39 @@ class UserController extends Controller
     private function isAssignable(User $actor, User $user): bool
     {
         return $actor->can('assignAdministrators', User::class) && $user->role === UserRole::User;
+    }
+
+    /**
+     * @return array{package_id: string, package_name: string, billing_period: string, price: int, starts_at: string, expires_at: string, active: bool}|null
+     */
+    private function presentAssignment(User $user): ?array
+    {
+        $assignment = $user->packageAssignment()->with('package:id,name')->first();
+
+        return $assignment ? [
+            'package_id' => $assignment->package_id,
+            'package_name' => $assignment->package->name,
+            'billing_period' => $assignment->billing_period->value,
+            'price' => $assignment->price,
+            'starts_at' => $assignment->starts_at->toIso8601String(),
+            'expires_at' => $assignment->expires_at->toIso8601String(),
+            'active' => $assignment->isActive(),
+        ] : null;
+    }
+
+    /**
+     * Packages selectable for assignment, with the periods that have a price.
+     *
+     * @return list<array{id: string, name: string, link_limit: int, available_periods: list<string>}>
+     */
+    private function packageOptions(): array
+    {
+        return Package::orderBy('name')->get()->map(fn (Package $package) => [
+            'id' => $package->id,
+            'name' => $package->name,
+            'link_limit' => $package->link_limit,
+            'available_periods' => array_map(fn (BillingPeriod $period) => $period->value, $package->availablePeriods()),
+        ])->values()->all();
     }
 
     /**
