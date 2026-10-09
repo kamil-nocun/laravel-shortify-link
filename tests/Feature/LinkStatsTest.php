@@ -288,3 +288,14 @@ test('range must not be reversed or longer than 5 years', function (string $from
     'reversed' => ['2026-02-01', '2026-01-01', 'from'],
     'too long' => ['2020-01-01', '2026-01-01', 'to'],
 ]);
+
+test('a malformed from reports a validation error instead of failing', function () {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'range', 'from' => 'abc', 'to' => '2026-01-01']))
+        ->assertSessionHasErrors('from')
+        ->assertSessionDoesntHaveErrors('to');
+});
+
+test('a range of exactly 5 years is allowed', function () {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'range', 'from' => '2021-01-01', 'to' => '2026-01-01']))
+        ->assertSessionDoesntHaveErrors();
+});

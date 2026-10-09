@@ -54,7 +54,11 @@ class LinkStatsRequest extends FormRequest
                 function (string $attribute, mixed $value, Closure $fail): void {
                     $from = $this->input('from');
 
-                    if (is_string($from) && is_string($value) && Carbon::parse($from)->addYears(5)->lt(Carbon::parse($value))) {
+                    if (! is_string($from) || ! is_string($value) || ! Carbon::canBeCreatedFromFormat($from, 'Y-m-d') || ! Carbon::canBeCreatedFromFormat($value, 'Y-m-d')) {
+                        return;
+                    }
+
+                    if (Carbon::createFromFormat('!Y-m-d', $from)->addYears(5)->lt(Carbon::createFromFormat('!Y-m-d', $value))) {
                         $fail('The range must not be longer than 5 years.');
                     }
                 },
