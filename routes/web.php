@@ -9,7 +9,7 @@ Route::inertia('/', 'FrontApp')->name('front_app');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
-    Route::get('links/{link}/stats', LinkStatsController::class)->middleware('throttle:60,1')->name('links.stats');
+    Route::get('links/{link}/stats', LinkStatsController::class)->name('links.stats');
     Route::resource('links', LinkController::class)->except('show');
 });
 

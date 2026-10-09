@@ -243,16 +243,6 @@ test('filter options are loaded with a single query', function () {
     expect($optionQueries)->toHaveCount(1);
 });
 
-test('stats requests are rate limited', function () {
-    $this->actingAs($this->user);
-
-    foreach (range(1, 60) as $attempt) {
-        $this->get(route('links.stats', $this->link))->assertOk();
-    }
-
-    $this->get(route('links.stats', $this->link))->assertTooManyRequests();
-});
-
 test('each option list is capped at 200 values independently', function () {
     foreach (range(1, 205) as $index) {
         clickOn($this->link, ['browser' => sprintf('Browser %03d', $index), 'os' => 'Linux']);
