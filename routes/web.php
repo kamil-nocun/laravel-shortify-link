@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdministratorController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LinkDisableController;
 use App\Http\Controllers\Admin\LinkStatsController as AdminLinkStatsController;
+use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\UserAdministratorController;
 use App\Http\Controllers\Admin\UserBlockController;
 use App\Http\Controllers\Admin\UserController;
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('links/{link}/stats/data', [AdminLinkStatsController::class, 'data'])->name('links.stats.data');
     Route::patch('links/{link}/disable', [LinkDisableController::class, 'store'])->name('links.disable');
     Route::delete('links/{link}/disable', [LinkDisableController::class, 'destroy'])->name('links.enable');
+    Route::resource('packages', PackageController::class)->except('show');
     Route::resource('administrators', AdministratorController::class)->only(['index', 'create', 'store']);
     Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
     Route::get('users/{user}/links/create', [UserLinkController::class, 'create'])->name('users.links.create');
