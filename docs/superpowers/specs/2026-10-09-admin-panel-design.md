@@ -6,7 +6,7 @@ Data: 2026-10-09
 
 - Trzy role użytkowników: `User`, `Admin`, `SuperAdmin`. Panel pod `/admin` jest dostępny dla `Admin` i `SuperAdmin`.
 - Admin zarządza użytkownikami (lista, podgląd, blokada, usunięcie), moderuje ich linki (wyłączenie i włączenie osobną flagą) i widzi statystyki: globalne, per użytkownik oraz per link.
-- `SuperAdmin` dodatkowo zmienia role (`User` ↔ `Admin`). Pierwszego `SuperAdmin` nadaje komenda artisan.
+- `SuperAdmin` dodatkowo zmienia role (`User` ↔ `Admin`). W systemie jest co najwyżej jeden `SuperAdmin`, tworzony komendą artisan.
 - Właściciel linku dostaje szybki przełącznik włącz/wyłącz w liście swoich linków.
 
 ## Zakres
@@ -20,7 +20,7 @@ Data: 2026-10-09
 | Statystyki dowolnego linku dla admina (reużycie obecnej strony) | Nadawanie `SuperAdmin` w panelu |
 | Zmiana roli `User` ↔ `Admin` przez `SuperAdmin` | Dziennik audytu działań admina |
 | Przełącznik `is_active` dla właściciela w liście linków | Powiadomienia e-mail o blokadzie |
-| Komenda `user:make-super-admin` | Testy frontu (Vue) |
+| Komenda `user:make-super-admin` (jeden `SuperAdmin`) | Testy frontu (Vue) |
 
 ## Założenia
 
@@ -48,7 +48,11 @@ Enum `UserRole` (backed string): `User`, `Admin`, `SuperAdmin`. Factory: `UserFa
 - `SuperAdmin` robi to samo wobec wszystkich oprócz siebie i dodatkowo zmienia role `User` ↔ `Admin`.
 - Nikt nie blokuje ani nie usuwa samego siebie. `Admin` nie rusza kont `Admin` ani `SuperAdmin`. `SuperAdmin` nie może zmienić własnej roli, a rola `SuperAdmin` nie jest nadawalna w panelu.
 - Reguły siedzą w `UserPolicy` (`block`, `delete`, `changeRole`). Dostęp do `/admin` daje middleware `admin` (rola `Admin` lub `SuperAdmin`, inaczej 403).
-- Komenda `user:make-super-admin {email}` nadaje rolę istniejącemu użytkownikowi. Dla nieistniejącego e-maila kończy się błędem i niezerowym kodem wyjścia.
+- Komenda `user:make-super-admin {email}` zapewnia jedynego `SuperAdmin`a:
+  - jeśli `SuperAdmin` już istnieje, kończy się błędem i niezerowym kodem wyjścia, niezależnie od e-maila,
+  - jeśli konto o tym e-mailu istnieje (jako `User` lub `Admin`), awansuje je na `SuperAdmin` bez pytań,
+  - jeśli konta nie ma, pyta interaktywnie o imię i hasło (hasło ukryte, walidacja jak przy rejestracji) i tworzy konto z zweryfikowanym e-mailem.
+  - Jedyność jest egzekwowana w komendzie, w transakcji z blokadą. Panel nie nadaje `SuperAdmin`a (walidacja i policy).
 - Backend zawsze egzekwuje reguły. Flagi `can: {block, delete, changeRole}` serwowane do frontu służą wyłącznie do ukrywania akcji.
 
 ## Blokada konta
@@ -105,7 +109,7 @@ Pest, feature, na factory.
 - **Dostęp:** gość trafia na logowanie, `User` dostaje 403 na każdej trasie `/admin/*` (test na zbiorze tras), `Admin` i `SuperAdmin` wchodzą. Prop roli trafia do frontu.
 - **Blokada konta:** wylogowanie aktywnej sesji, odmowa logowania, 404 linków zablokowanego i powrót po odblokowaniu. Admin blokuje `User`, ale nie siebie ani innego `Admin` lub `SuperAdmin` (403). `SuperAdmin` blokuje `Admin`, ale nie siebie.
 - **Usuwanie konta:** usuwa użytkownika, linki i `link_statistics`. Te same ograniczenia ról co przy blokadzie.
-- **Zmiana roli:** `SuperAdmin` zmienia `User` ↔ `Admin`, `Admin` dostaje 403, nie da się nadać `SuperAdmin` ani zmienić własnej roli, wartość spoza `User` i `Admin` jest odrzucana. Komenda `user:make-super-admin`: sukces i błąd dla nieistniejącego e-maila.
+- **Zmiana roli:** `SuperAdmin` zmienia `User` ↔ `Admin`, `Admin` dostaje 403, nie da się nadać `SuperAdmin` ani zmienić własnej roli, wartość spoza `User` i `Admin` jest odrzucana. Komenda `user:make-super-admin`: tworzy konto, gdy e-maila nie ma, awansuje istniejące konto, odmawia przy istniejącym `SuperAdmin`ie (także dla innego e-maila) i nie zmienia wtedy żadnych danych.
 - **Moderacja linków:** ustawienie i zdjęcie blokady, zablokowany link daje 404 mimo `is_active`. Właściciel nie zdejmie blokady admina. Przełącznik właściciela działa tylko na jego linku (cudzy: 403). `Link::active()` w pełnej tabeli (dataset: `is_active` × `disabled_by_admin_at` × `expires_at` × zablokowany właściciel).
 - **Statystyki:** `AdminStatsReport` (liczniki, szereg dzienny z zerami, top linki i użytkownicy, brak przecieku między użytkownikami), admin widzi statystyki cudzego linku, `User` nadal dostaje 403 na cudzym linku, istniejące testy statystyk bez zmian.
 - **Lista użytkowników:** wyszukiwanie, paginacja, poprawne flagi `can` zależnie od roli zalogowanego.
