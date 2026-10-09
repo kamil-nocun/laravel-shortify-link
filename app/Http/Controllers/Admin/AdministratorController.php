@@ -40,6 +40,7 @@ class AdministratorController extends Controller
             ->withQueryString()
             ->through(fn (User $user) => [
                 ...$user->only(['id', 'name', 'email', 'blocked_at', 'created_at']),
+                'blocked_by_id' => $user->blocked_by,
                 'blocked_by_name' => $user->blockedBy?->name,
                 'can' => [
                     'block' => $request->user()->can('block', $user),

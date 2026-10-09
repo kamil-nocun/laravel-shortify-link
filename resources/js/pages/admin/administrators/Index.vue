@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from "@inertiajs/vue3";
+import { Head, Link as InertiaLink, router, usePage } from "@inertiajs/vue3";
 import { watchDebounced } from "@vueuse/core";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,10 @@ defineOptions({
         ],
     },
 });
+
+const isSuperAdmin = computed(
+    () => usePage().props.auth.user.role === "super_admin",
+);
 </script>
 
 <template>
@@ -116,7 +120,19 @@ defineOptions({
                             >
                                 {{ user.blocked_at ? "Blocked" : "Active" }}
                                 <template v-if="user.blocked_by_name">
-                                    by {{ user.blocked_by_name }}
+                                    by
+                                    <InertiaLink
+                                        v-if="
+                                            isSuperAdmin && user.blocked_by_id
+                                        "
+                                        :href="show(user.blocked_by_id)"
+                                        class="underline-offset-4 hover:underline"
+                                    >
+                                        {{ user.blocked_by_name }}
+                                    </InertiaLink>
+                                    <template v-else>{{
+                                        user.blocked_by_name
+                                    }}</template>
                                 </template>
                             </Badge>
                         </td>

@@ -4,12 +4,13 @@ import {
     Link as InertiaLink,
     router,
     setLayoutProps,
-} from '@inertiajs/vue3';
-import { computed, ref, useTemplateRef } from 'vue';
-import ClicksChart from '@/components/ClicksChart.vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+    usePage,
+} from "@inertiajs/vue3";
+import { computed, ref, useTemplateRef } from "vue";
+import ClicksChart from "@/components/ClicksChart.vue";
+import Heading from "@/components/Heading.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogClose,
@@ -19,10 +20,10 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from '@/components/ui/dialog';
-import { dashboard } from '@/routes/admin';
-import { disable, enable, stats as linkStats } from '@/routes/admin/links';
-import { create as createLink } from '@/routes/admin/users/links';
+} from "@/components/ui/dialog";
+import { dashboard } from "@/routes/admin";
+import { disable, enable, stats as linkStats } from "@/routes/admin/links";
+import { create as createLink } from "@/routes/admin/users/links";
 import {
     block,
     destroy,
@@ -30,7 +31,7 @@ import {
     role as updateRole,
     show,
     unblock,
-} from '@/routes/admin/users';
+} from "@/routes/admin/users";
 import type {
     AdminCounters,
     AdministratorOption,
@@ -39,14 +40,14 @@ import type {
     Link,
     Paginated,
     StatsPeriodParams,
-} from '@/types';
+} from "@/types";
 
 const props = defineProps<{
     user: AdminUser;
     assignedAdministrators: AdministratorOption[];
     links: Paginated<Link>;
     period: StatsPeriodParams;
-    granularity: 'day' | 'month';
+    granularity: "day" | "month";
     total: number;
     series: DailyClicks[];
     counters: AdminCounters;
@@ -54,19 +55,19 @@ const props = defineProps<{
 
 const ranges = [7, 30, 90];
 
-const roleLabels: Record<AdminUser['role'], string> = {
-    user: 'User',
-    admin: 'Admin',
-    super_admin: 'Super admin',
+const roleLabels: Record<AdminUser["role"], string> = {
+    user: "User",
+    admin: "Admin",
+    super_admin: "Super admin",
 };
 
 const cards = computed(() => [
-    { label: 'Links', value: props.counters.links },
+    { label: "Links", value: props.counters.links },
     {
-        label: 'Active / disabled links',
+        label: "Active / disabled links",
         value: `${props.counters.activeLinks} / ${props.counters.disabledLinks}`,
     },
-    { label: 'Clicks', value: props.counters.clicks },
+    { label: "Clicks", value: props.counters.clicks },
 ]);
 
 const setPeriod = (range: number) =>
@@ -81,10 +82,10 @@ const toggleBlock = () =>
         ? router.delete(unblock(props.user.id).url, { preserveScroll: true })
         : router.patch(block(props.user.id).url, {}, { preserveScroll: true });
 
-type AssignableRole = Exclude<AdminUser['role'], 'super_admin'>;
+type AssignableRole = Exclude<AdminUser["role"], "super_admin">;
 
 const targetRole = computed<AssignableRole>(() =>
-    props.user.role === 'admin' ? 'user' : 'admin',
+    props.user.role === "admin" ? "user" : "admin",
 );
 
 const isRoleOpen = ref(false);
@@ -103,7 +104,7 @@ const changeRole = () =>
 
 const isDeleteOpen = ref(false);
 const isDeleting = ref(false);
-const cancelButton = useTemplateRef<{ $el: HTMLElement }>('cancelButton');
+const cancelButton = useTemplateRef<{ $el: HTMLElement }>("cancelButton");
 
 const focusCancel = (event: Event) => {
     event.preventDefault();
@@ -126,17 +127,21 @@ const toggleLink = (link: Link) =>
         ? router.delete(enable(link.id).url, { preserveScroll: true })
         : router.patch(disable(link.id).url, {}, { preserveScroll: true });
 
+const isSuperAdmin = computed(
+    () => usePage().props.auth.user.role === "super_admin",
+);
+
 const linkStatus = (link: Link) =>
     link.disabled_by_admin_at
-        ? `Disabled by ${link.disabled_by_name ?? 'admin'}`
+        ? "Disabled by"
         : link.is_active
-          ? 'Active'
-          : 'Disabled by owner';
+          ? "Active"
+          : "Disabled by owner";
 
 setLayoutProps({
     breadcrumbs: [
-        { title: 'Admin', href: dashboard() },
-        { title: 'Users', href: index() },
+        { title: "Admin", href: dashboard() },
+        { title: "Users", href: index() },
         { title: props.user.name, href: show(props.user.id) },
     ],
 });
@@ -154,9 +159,19 @@ setLayoutProps({
                     <Badge
                         :variant="user.blocked_at ? 'destructive' : 'secondary'"
                     >
-                        {{ user.blocked_at ? 'Blocked' : 'Active' }}
+                        {{ user.blocked_at ? "Blocked" : "Active" }}
                         <template v-if="user.blocked_by_name">
-                            by {{ user.blocked_by_name }}
+                            by
+                            <InertiaLink
+                                v-if="isSuperAdmin && user.blocked_by_id"
+                                :href="show(user.blocked_by_id)"
+                                class="underline-offset-4 hover:underline"
+                            >
+                                {{ user.blocked_by_name }}
+                            </InertiaLink>
+                            <template v-else>{{
+                                user.blocked_by_name
+                            }}</template>
                         </template>
                     </Badge>
                     <span class="text-muted-foreground">
@@ -198,7 +213,7 @@ setLayoutProps({
                     size="sm"
                     @click="toggleBlock"
                 >
-                    {{ user.blocked_at ? 'Unblock' : 'Block' }}
+                    {{ user.blocked_at ? "Unblock" : "Block" }}
                 </Button>
                 <Dialog v-if="user.can.delete" v-model:open="isDeleteOpen">
                     <DialogTrigger as-child>
@@ -232,11 +247,11 @@ setLayoutProps({
 
         <div v-if="user.can.assignAdministrators" class="space-y-2">
             <h2 class="font-medium">Assigned administrators</h2>
-            <ul
-                v-if="assignedAdministrators.length > 0"
-                class="text-sm"
-            >
-                <li v-for="administrator in assignedAdministrators" :key="administrator.id">
+            <ul v-if="assignedAdministrators.length > 0" class="text-sm">
+                <li
+                    v-for="administrator in assignedAdministrators"
+                    :key="administrator.id"
+                >
                     <InertiaLink
                         :href="show(administrator.id)"
                         class="underline-offset-4 hover:underline"
@@ -317,7 +332,7 @@ setLayoutProps({
                         :key="link.id"
                         class="border-t"
                     >
-                        <td class="p-3">{{ link.title ?? '—' }}</td>
+                        <td class="p-3">{{ link.title ?? "—" }}</td>
                         <td class="p-3 font-mono">{{ link.code }}</td>
                         <td class="p-3 tabular-nums">
                             {{ link.clicks_count ?? 0 }}
@@ -333,6 +348,18 @@ setLayoutProps({
                                 "
                             >
                                 {{ linkStatus(link) }}
+                                <template v-if="link.disabled_by_admin_at">
+                                    <InertiaLink
+                                        v-if="isSuperAdmin && link.disabled_by"
+                                        :href="show(link.disabled_by)"
+                                        class="underline-offset-4 hover:underline"
+                                    >
+                                        {{ link.disabled_by_name }}
+                                    </InertiaLink>
+                                    <template v-else>{{
+                                        link.disabled_by_name ?? "admin"
+                                    }}</template>
+                                </template>
                             </Badge>
                         </td>
                         <td class="space-x-2 p-3 text-right whitespace-nowrap">
@@ -345,8 +372,8 @@ setLayoutProps({
                             >
                                 {{
                                     link.disabled_by_admin_at
-                                        ? 'Enable'
-                                        : 'Disable'
+                                        ? "Enable"
+                                        : "Disable"
                                 }}
                             </Button>
                             <Button variant="outline" size="sm" as-child>

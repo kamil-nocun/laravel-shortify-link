@@ -7,6 +7,7 @@ export type Link = {
     is_active: boolean;
     expires_at: string | null;
     disabled_by_admin_at: string | null;
+    disabled_by?: string | null;
     disabled_by_name?: string | null;
     clicks_count?: number;
 };
@@ -100,6 +101,7 @@ export type AdminUser = {
     email: string;
     role: 'user' | 'admin' | 'super_admin';
     blocked_at: string | null;
+    blocked_by_id: string | null;
     blocked_by_name: string | null;
     created_at: string;
     links_count: number;

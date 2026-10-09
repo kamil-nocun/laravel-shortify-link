@@ -184,6 +184,7 @@ class UserController extends Controller
     {
         return [
             ...$user->only(['id', 'name', 'email', 'role', 'blocked_at', 'created_at', 'links_count']),
+            'blocked_by_id' => $user->blocked_by,
             'blocked_by_name' => $user->blockedBy?->name,
             'can' => [
                 'block' => $actor->can('block', $user),
