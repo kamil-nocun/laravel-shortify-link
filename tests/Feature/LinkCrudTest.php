@@ -95,6 +95,16 @@ test('update of an expired link keeps its unchanged expires_at', function () {
     expect($link->refresh()->title)->toBe('Renamed');
 });
 
+test('update with an unparseable expires_at is rejected', function () {
+    $link = Link::factory()->for($this->user)->expired()->create();
+
+    $this->actingAs($this->user)->patch(route('links.update', $link), [
+        'original_url' => $link->original_url,
+        'is_active' => true,
+        'expires_at' => 'not-a-date',
+    ])->assertSessionHasErrors('expires_at');
+});
+
 test('destroy deletes the link', function () {
     $link = Link::factory()->for($this->user)->create();
 

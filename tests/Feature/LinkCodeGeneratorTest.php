@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Link;
+use App\Models\User;
 use App\Support\LinkCodeGenerator;
 
 test('generates a six character code over the alphabet', function () {
@@ -42,4 +43,23 @@ test('retries on collision', function () {
     };
 
     expect($generator->generate())->toBe('fresh2');
+});
+
+test('createFor retries once on a unique constraint violation', function () {
+    $user = User::factory()->create();
+    Link::factory()->create(['code' => 'taken1']);
+
+    $generator = new class extends LinkCodeGenerator
+    {
+        public int $calls = 0;
+
+        public function generate(): string
+        {
+            return $this->calls++ === 0 ? 'taken1' : 'fresh2';
+        }
+    };
+
+    $link = $generator->createFor($user, ['original_url' => 'https://example.com']);
+
+    expect($link->code)->toBe('fresh2')->and($generator->calls)->toBe(2);
 });
