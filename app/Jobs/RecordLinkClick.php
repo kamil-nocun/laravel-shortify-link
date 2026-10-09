@@ -14,14 +14,21 @@ class RecordLinkClick implements ShouldQueue
     use Queueable;
 
     /**
+     * Not promoted: jobs queued before this property existed are restored without it.
+     */
+    public ?string $userAgent = null;
+
+    /**
      * The IP and User-Agent are only used for lookups and are never stored with the click.
      */
     public function __construct(
         public string $linkId,
         public string $ip,
         public CarbonInterface $clickedAt,
-        public ?string $userAgent = null,
-    ) {}
+        ?string $userAgent = null,
+    ) {
+        $this->userAgent = $userAgent;
+    }
 
     /**
      * Store the click with the location of the visitor; skip it when the link was deleted meanwhile.
