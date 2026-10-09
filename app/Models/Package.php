@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -22,12 +23,13 @@ use Illuminate\Support\Carbon;
  * @property bool $is_default
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
 #[Fillable(['name', 'link_limit', 'price_one_time', 'price_monthly', 'price_quarterly', 'price_yearly', 'is_default'])]
 class Package extends Model
 {
     /** @use HasFactory<PackageFactory> */
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     /**
      * @return array<string, string>

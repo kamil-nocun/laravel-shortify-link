@@ -102,6 +102,16 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * The assignment currently in force, if any.
+     */
+    public function activeAssignment(): ?PackageAssignment
+    {
+        $assignment = $this->packageAssignment()->with('package')->first();
+
+        return $assignment?->isActive() ? $assignment : null;
+    }
+
+    /**
      * Effective package: the active assignment, else the default package; none for a super admin.
      */
     public function package(): ?Package
@@ -110,19 +120,19 @@ class User extends Authenticatable implements MustVerifyEmail
             return null;
         }
 
-        $assignment = $this->packageAssignment()->with('package')->first();
-
-        return $assignment?->isActive()
-            ? $assignment->package
-            : Package::where('is_default', true)->first();
+        return $this->activeAssignment()?->package ?? Package::where('is_default', true)->first();
     }
 
     /**
-     * Maximum number of links, or null when unlimited.
+     * Maximum number of links, or null when unlimited. An assignment's snapshot wins over later package edits.
      */
     public function linkLimit(): ?int
     {
-        return $this->isSuperAdmin() ? null : ($this->package()?->link_limit ?? 0);
+        if ($this->isSuperAdmin()) {
+            return null;
+        }
+
+        return $this->activeAssignment()?->link_limit ?? Package::where('is_default', true)->value('link_limit') ?? 0;
     }
 
     public function canCreateLink(): bool

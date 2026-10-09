@@ -26,6 +26,7 @@ class UserPackageController extends Controller
             'package_id' => $package->id,
             'billing_period' => $period,
             'price' => $package->priceFor($period),
+            'link_limit' => $package->link_limit,
             'starts_at' => $startsAt,
             'expires_at' => $period->expiresAt($startsAt) ?? $request->date('expires_at'),
         ]);
