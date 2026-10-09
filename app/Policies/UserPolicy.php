@@ -23,11 +23,11 @@ class UserPolicy
     }
 
     /**
-     * Determine whether the actor may add links on the target's behalf.
+     * Determine whether the actor may add links on the target's behalf, within the target's package limit.
      */
     public function createLink(User $actor, User $target): bool
     {
-        return $this->outranks($actor, $target) && $this->manages($actor, $target);
+        return $this->outranks($actor, $target) && $this->manages($actor, $target) && $target->canCreateLink();
     }
 
     /**

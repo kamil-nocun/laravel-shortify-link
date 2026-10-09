@@ -8,6 +8,14 @@ use App\Models\User;
 class LinkPolicy
 {
     /**
+     * Determine whether the user's package allows another link.
+     */
+    public function create(User $user): bool
+    {
+        return $user->canCreateLink();
+    }
+
+    /**
      * Determine whether the user owns the link (or is an admin) and may see its stats.
      */
     public function view(User $user, Link $link): bool

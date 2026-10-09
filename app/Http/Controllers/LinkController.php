@@ -21,6 +21,7 @@ class LinkController extends Controller
     {
         return Inertia::render('links/Index', [
             'links' => $request->user()->links()->withCount('clicks')->latest()->paginate(15),
+            'quota' => ['used' => $request->user()->links()->count(), 'limit' => $request->user()->linkLimit()],
         ]);
     }
 
@@ -29,6 +30,8 @@ class LinkController extends Controller
      */
     public function create(): Response
     {
+        Gate::authorize('create', Link::class);
+
         return Inertia::render('links/Create');
     }
 
@@ -37,6 +40,8 @@ class LinkController extends Controller
      */
     public function store(StoreLinkRequest $request, LinkCodeGenerator $generator): RedirectResponse
     {
+        Gate::authorize('create', Link::class);
+
         $generator->createFor($request->user(), $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link created.')]);
