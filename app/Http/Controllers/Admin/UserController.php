@@ -31,6 +31,7 @@ class UserController extends Controller
         $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
 
         $users = User::query()
+            ->visibleTo($request->user())
             ->where('role', UserRole::User)
             ->withCount('links')
             ->when($search !== '', fn ($query) => $query->where(

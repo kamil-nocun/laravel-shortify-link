@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\Link;
+use App\Models\LinkClick;
 use App\Models\User;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('attach creates pivot row with non-empty id', function () {
     $client = User::factory()->create();
@@ -110,4 +112,39 @@ test('policy manages requires assignment for administrators', function () {
     expect($policy->manages($admin, $client))->toBeTrue()
         ->and($policy->manages(User::factory()->superAdmin()->create(), $client))->toBeTrue()
         ->and($policy->manages($client, $client))->toBeFalse();
+});
+
+test('dashboard and user list are scoped to assigned clients', function () {
+    $adminA = User::factory()->admin()->create();
+    $adminB = User::factory()->admin()->create();
+    $clientA = User::factory()->assignedTo($adminA)->create();
+    $clientB = User::factory()->assignedTo($adminB)->create();
+    $linkA = Link::factory()->for($clientA)->create();
+    $linkB = Link::factory()->for($clientB)->create();
+    LinkClick::factory()->count(2)->create(['link_id' => $linkA->id]);
+    LinkClick::factory()->count(3)->create(['link_id' => $linkB->id]);
+
+    $this->actingAs($adminA)->get(route('admin.dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('counters.users', 1)
+            ->where('counters.links', 1)
+            ->where('counters.clicks', 2)
+            ->has('topLinks', 1)
+            ->where('topLinks.0.id', $linkA->id)
+            ->has('topUsers', 1)
+            ->where('topUsers.0.id', $clientA->id));
+
+    $this->get(route('admin.users.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('users.data', 1)
+            ->where('users.data.0.id', $clientA->id));
+
+    $clientB->assignedAdmins()->attach($adminA);
+    $this->get(route('admin.users.index'))
+        ->assertInertia(fn (Assert $page) => $page->has('users.data', 2));
+    $this->get(route('admin.dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->where('counters.users', 2)->where('counters.clicks', 5));
+
+    $this->actingAs(User::factory()->superAdmin()->create())->get(route('admin.dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->where('counters.clicks', 5)->has('topUsers', 2));
 });

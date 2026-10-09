@@ -40,7 +40,7 @@ test('regular user cannot list users', function () {
 });
 
 test('search matches name and email', function () {
-    $admin = User::factory()->admin()->create(['name' => 'Boss', 'email' => 'boss@example.com']);
+    $admin = User::factory()->superAdmin()->create(['name' => 'Boss', 'email' => 'boss@example.com']);
     User::factory()->create(['name' => 'Alice', 'email' => 'x1@example.com']);
     User::factory()->create(['name' => 'Bob', 'email' => 'alice-mail@example.com']);
     User::factory()->create(['name' => 'Carl', 'email' => 'c@example.com']);
@@ -50,7 +50,7 @@ test('search matches name and email', function () {
 });
 
 test('search treats like wildcards literally', function (string $search, int $expected) {
-    $admin = User::factory()->admin()->create(['name' => 'Boss', 'email' => 'boss@example.com']);
+    $admin = User::factory()->superAdmin()->create(['name' => 'Boss', 'email' => 'boss@example.com']);
     User::factory()->create(['name' => 'a_b', 'email' => 'one@example.com']);
     User::factory()->create(['name' => 'axb', 'email' => 'two@example.com']);
     User::factory()->create(['name' => '100%', 'email' => 'three@example.com']);
@@ -61,7 +61,7 @@ test('search treats like wildcards literally', function (string $search, int $ex
 })->with([['a_b', 1], ['%', 1], ['k\\s', 1], ['_', 1]]);
 
 test('users are paginated by fifteen', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->superAdmin()->create();
     User::factory()->count(16)->create();
 
     $this->actingAs($admin)->get(route('admin.users.index'))

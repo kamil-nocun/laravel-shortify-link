@@ -20,9 +20,13 @@ class AdminStatsReport
      */
     public function build(?User $user, LinkStatsRequest $request): array
     {
+        $actor = $request->user();
+        $scopeToActor = $user === null && ! $actor->isSuperAdmin();
+
         $scoped = fn (): Builder => LinkClick::query()->toBase()
             ->join('links', 'links.id', '=', (new LinkClick)->qualifyColumn('link_id'))
-            ->when($user, fn (Builder $query) => $query->where('links.user_id', $user->id));
+            ->when($user, fn (Builder $query) => $query->where('links.user_id', $user->id))
+            ->when($scopeToActor, fn (Builder $query) => $query->whereIn('links.user_id', User::visibleTo($actor)->select('id')));
 
         $firstClick = $request->period()['period'] === 'all' ? $scoped()->min('clicked_at') : null;
         $period = StatsPeriod::resolve($request->period(), $firstClick === null ? null : CarbonImmutable::parse($firstClick), now());
@@ -36,7 +40,9 @@ class AdminStatsReport
         $series = $isEmpty ? [] : StatsSeries::build($perDay, $from, $period->to, $period->granularity);
         $total = array_sum(array_column($series, 'count'));
 
-        $links = Link::query()->when($user, fn ($query) => $query->whereBelongsTo($user));
+        $links = Link::query()
+            ->when($user, fn ($query) => $query->whereBelongsTo($user))
+            ->when($scopeToActor, fn ($query) => $query->visibleTo($actor));
         $linkCount = (clone $links)->count();
         $activeLinks = (clone $links)->active()->count();
 
@@ -60,7 +66,7 @@ class AdminStatsReport
             'granularity' => $period->granularity,
             'total' => $total,
             'series' => $series,
-            'counters' => ($user === null ? ['users' => User::query()->count()] : [])
+            'counters' => ($user === null ? ['users' => User::visibleTo($actor)->count()] : [])
                 + ['links' => $linkCount, 'activeLinks' => $activeLinks, 'disabledLinks' => $linkCount - $activeLinks, 'clicks' => $total],
             'topLinks' => array_values($topLinks),
             'topUsers' => array_values($topUsers),
