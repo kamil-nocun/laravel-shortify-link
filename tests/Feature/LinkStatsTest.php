@@ -87,6 +87,45 @@ test('countries and cities are capped at the top 10', function () {
         ->assertInertia(fn (Assert $page) => $page->has('countries', 10)->has('cities', 10));
 });
 
+test('browsers, systems and devices are counted and ordered', function () {
+    clickOn($this->link);
+    clickOn($this->link);
+    clickOn($this->link, ['browser' => 'Firefox', 'os' => 'Linux', 'device_type' => 'smartphone']);
+
+    $this->actingAs($this->user)->get(route('links.stats', $this->link))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('browsers', [['name' => 'Chrome', 'count' => 2], ['name' => 'Firefox', 'count' => 1]])
+            ->where('systems', [['name' => 'Windows', 'count' => 2], ['name' => 'Linux', 'count' => 1]])
+            ->where('devices', [['name' => 'desktop', 'count' => 2], ['name' => 'smartphone', 'count' => 1]]));
+});
+
+test('null client fields are shown as Unknown', function () {
+    clickOn($this->link, ['browser' => null, 'os' => null, 'device_type' => null]);
+
+    $this->actingAs($this->user)->get(route('links.stats', $this->link))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('browsers', [['name' => 'Unknown', 'count' => 1]])
+            ->where('systems', [['name' => 'Unknown', 'count' => 1]])
+            ->where('devices', [['name' => 'Unknown', 'count' => 1]]));
+});
+
+test('client tables are capped at the top 10', function () {
+    foreach (range(1, 12) as $index) {
+        clickOn($this->link, ['browser' => "Browser {$index}", 'os' => "OS {$index}", 'device_type' => "device {$index}"]);
+    }
+
+    $this->actingAs($this->user)->get(route('links.stats', $this->link))
+        ->assertInertia(fn (Assert $page) => $page->has('browsers', 10)->has('systems', 10)->has('devices', 10));
+});
+
+test('client stats respect the range and the link', function () {
+    clickOn($this->link, ['clicked_at' => now()->subDays(8)]);
+    clickOn(Link::factory()->for($this->user)->create());
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'days' => 7]))
+        ->assertInertia(fn (Assert $page) => $page->where('browsers', [])->where('systems', [])->where('devices', []));
+});
+
 test('invalid days value fails validation', function () {
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'days' => 5]))
         ->assertSessionHasErrors('days');

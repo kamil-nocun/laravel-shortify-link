@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Links\LinkStatsRequest;
 use App\Models\Link;
+use Closure;
 use Illuminate\Database\Query\Builder;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,13 +34,10 @@ class LinkStatsController extends Controller
             'count' => (int) ($perDay[now()->subDays($ago)->toDateString()] ?? 0),
         ])->all();
 
-        $countries = $clicks()
-            ->selectRaw('country, count(*) as total')
-            ->groupBy('country')
-            ->orderByDesc('total')
-            ->limit(self::TOP_LIMIT)
-            ->get()
-            ->map(fn ($row): array => ['name' => $row->country ?? self::UNKNOWN, 'count' => (int) $row->total]);
+        $countries = $this->topBy($clicks, 'country');
+        $browsers = $this->topBy($clicks, 'browser');
+        $systems = $this->topBy($clicks, 'os');
+        $devices = $this->topBy($clicks, 'device_type');
 
         $cities = $clicks()
             ->selectRaw('city, country, count(*) as total')
@@ -57,8 +55,35 @@ class LinkStatsController extends Controller
             'days' => $days,
             'total' => array_sum(array_column($daily, 'count')),
             'daily' => $daily,
-            'countries' => $countries->values(),
+            'countries' => $countries,
             'cities' => $cities->values(),
+            'browsers' => $browsers,
+            'systems' => $systems,
+            'devices' => $devices,
         ]);
+    }
+
+    /**
+     * Most frequent values of a click column; missing values are grouped as Unknown.
+     *
+     * @param  Closure(): Builder  $clicks
+     * @return list<array{name: string, count: int}>
+     */
+    private function topBy(Closure $clicks, string $column): array
+    {
+        $rows = $clicks()
+            ->select($column)
+            ->selectRaw('count(*) as total')
+            ->groupBy($column)
+            ->orderByDesc('total')
+            ->limit(self::TOP_LIMIT)
+            ->get()
+            ->map(fn ($row): array => [
+                'name' => is_string($row->{$column}) ? $row->{$column} : self::UNKNOWN,
+                'count' => (int) $row->total,
+            ])
+            ->all();
+
+        return array_values($rows);
     }
 }

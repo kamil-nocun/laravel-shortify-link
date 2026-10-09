@@ -44,6 +44,11 @@ test('stats page shows clicks and switches the range', async ({ page }) => {
     await expect(
         page.getByRole('cell', { name: 'Warsaw, Poland' }),
     ).toBeVisible();
+    for (const name of ['Chrome', 'Windows', 'desktop']) {
+        await expect(
+            page.getByRole('cell', { name, exact: true }),
+        ).toBeVisible();
+    }
 
     await page.getByRole('link', { name: '7 days' }).click();
     await expect(page).toHaveURL(/days=7/);

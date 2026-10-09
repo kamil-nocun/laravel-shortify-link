@@ -13,6 +13,9 @@ const props = defineProps<{
     daily: DailyClicks[];
     countries: StatsRow[];
     cities: StatsRow[];
+    browsers: StatsRow[];
+    systems: StatsRow[];
+    devices: StatsRow[];
 }>();
 
 const ranges = [7, 30, 90];
@@ -89,6 +92,9 @@ defineOptions({
                 v-for="table in [
                     { title: 'Countries', rows: countries },
                     { title: 'Cities', rows: cities },
+                    { title: 'Browsers', rows: browsers },
+                    { title: 'Operating systems', rows: systems },
+                    { title: 'Devices', rows: devices },
                 ]"
                 :key="table.title"
             >
