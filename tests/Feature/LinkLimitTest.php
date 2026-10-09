@@ -4,6 +4,7 @@ use App\Models\Link;
 use App\Models\Package;
 use App\Models\PackageAssignment;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function userWithLimit(int $limit, int $links, ?User $user = null): User
@@ -64,4 +65,10 @@ test('index exposes the quota', function () {
 test('super admin quota has no limit', function () {
     $this->actingAs(User::factory()->superAdmin()->create())->get(route('links.index'))
         ->assertInertia(fn (Assert $page) => $page->where('quota.limit', null));
+});
+
+test('denial at the limit explains the reason', function () {
+    $user = userWithLimit(1, 1);
+
+    expect(Gate::forUser($user)->inspect('create', Link::class)->message())->toBe('Link limit reached for your package.');
 });

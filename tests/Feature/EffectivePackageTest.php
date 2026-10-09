@@ -62,3 +62,10 @@ test('creating links is allowed only below the limit', function () {
     Link::factory()->for($user)->create();
     expect($user->canCreateLink())->toBeFalse();
 });
+
+test('assignment that has not started yet is inactive', function () {
+    $user = User::factory()->create();
+    PackageAssignment::factory()->for($user)->create(['starts_at' => now()->addMonth(), 'expires_at' => now()->addMonths(2)]);
+
+    expect($user->package()->is_default)->toBeTrue();
+});

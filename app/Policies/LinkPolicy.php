@@ -4,15 +4,16 @@ namespace App\Policies;
 
 use App\Models\Link;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class LinkPolicy
 {
     /**
      * Determine whether the user's package allows another link.
      */
-    public function create(User $user): bool
+    public function create(User $user): Response|bool
     {
-        return $user->canCreateLink();
+        return $user->canCreateLink() ?: Response::deny(__('Link limit reached for your package.'));
     }
 
     /**

@@ -90,3 +90,12 @@ test('unused package can be deleted', function () {
 
     expect(Package::find($package->id))->toBeNull();
 });
+
+test('the current default package cannot be unmarked directly', function () {
+    $default = Package::where('is_default', true)->firstOrFail();
+
+    $this->actingAs($this->super)->put(route('admin.packages.update', $default), ['name' => 'Free', 'link_limit' => 10, 'is_default' => false])
+        ->assertSessionHasErrors('is_default');
+
+    expect($default->fresh()->is_default)->toBeTrue();
+});

@@ -36,7 +36,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('You are not allowed to do that.')]);
+            $message = in_array($e->getMessage(), ['', 'This action is unauthorized.'], true)
+                ? __('You are not allowed to do that.')
+                : $e->getMessage();
+
+            Inertia::flash('toast', ['type' => 'error', 'message' => $message]);
 
             return to_route('links.index');
         });

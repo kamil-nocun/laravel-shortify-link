@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class UserPolicy
 {
@@ -25,9 +26,13 @@ class UserPolicy
     /**
      * Determine whether the actor may add links on the target's behalf, within the target's package limit.
      */
-    public function createLink(User $actor, User $target): bool
+    public function createLink(User $actor, User $target): Response|bool
     {
-        return $this->outranks($actor, $target) && $this->manages($actor, $target) && $target->canCreateLink();
+        if (! $this->outranks($actor, $target) || ! $this->manages($actor, $target)) {
+            return false;
+        }
+
+        return $target->canCreateLink() ?: Response::deny(__('Link limit reached for the user\'s package.'));
     }
 
     /**

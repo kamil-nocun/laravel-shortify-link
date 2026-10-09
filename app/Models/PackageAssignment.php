@@ -58,6 +58,6 @@ class PackageAssignment extends Model
 
     public function isActive(): bool
     {
-        return $this->expires_at->isFuture();
+        return ! $this->starts_at->isFuture() && $this->expires_at->isFuture();
     }
 }
