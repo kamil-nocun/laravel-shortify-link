@@ -3,6 +3,7 @@
 use App\Models\Link;
 use App\Models\LinkClick;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -229,4 +230,38 @@ test('other users are bounced to the list with an error toast', function () {
 
 test('guests are redirected to login', function () {
     $this->get(route('links.stats', $this->link))->assertRedirect(route('login'));
+});
+
+test('filter options are loaded with a single query', function () {
+    clickOn($this->link);
+    DB::enableQueryLog();
+
+    $this->actingAs($this->user)->get(route('links.stats', $this->link))->assertOk();
+
+    $optionQueries = collect(DB::getQueryLog())
+        ->filter(fn (array $entry): bool => str_contains($entry['query'], 'distinct'));
+    expect($optionQueries)->toHaveCount(1);
+});
+
+test('stats requests are rate limited', function () {
+    $this->actingAs($this->user);
+
+    foreach (range(1, 60) as $attempt) {
+        $this->get(route('links.stats', $this->link))->assertOk();
+    }
+
+    $this->get(route('links.stats', $this->link))->assertTooManyRequests();
+});
+
+test('each option list is capped at 200 values independently', function () {
+    foreach (range(1, 205) as $index) {
+        clickOn($this->link, ['browser' => sprintf('Browser %03d', $index), 'os' => 'Linux']);
+    }
+
+    $this->actingAs($this->user)->get(route('links.stats', $this->link))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('options.browsers', 200)
+            ->where('options.browsers.0', 'Browser 001')
+            ->where('options.systems', ['Linux'])
+            ->where('options.countries', ['Poland']));
 });

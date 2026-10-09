@@ -73,13 +73,7 @@ class LinkStatsController extends Controller
             'systems' => $systems,
             'devices' => $devices,
             'filters' => $filters,
-            'options' => [
-                'countries' => $this->optionsFor($inRange, 'country'),
-                'cities' => $this->optionsFor($inRange, 'city'),
-                'browsers' => $this->optionsFor($inRange, 'browser'),
-                'systems' => $this->optionsFor($inRange, 'os'),
-                'devices' => $this->optionsFor($inRange, 'device_type'),
-            ],
+            'options' => $this->options($inRange),
         ]);
     }
 
@@ -108,20 +102,34 @@ class LinkStatsController extends Controller
     }
 
     /**
-     * Distinct values of a click column in alphabetical order, with Unknown last when some are missing.
+     * Distinct values of every filterable column in alphabetical order, with Unknown last when some are missing;
+     * fetched with one UNION query instead of one query per column.
      *
      * @param  Closure(): Builder  $inRange
-     * @return list<string>
+     * @return array<string, list<string>>
      */
-    private function optionsFor(Closure $inRange, string $column): array
+    private function options(Closure $inRange): array
     {
-        $values = $inRange()->distinct()->orderBy($column)->limit(self::OPTIONS_LIMIT)->pluck($column);
-        $options = $values->filter(fn (mixed $value): bool => is_string($value))->values();
+        $keys = ['country' => 'countries', 'city' => 'cities', 'browser' => 'browsers', 'os' => 'systems', 'device_type' => 'devices'];
 
-        if ($values->contains(null)) {
-            $options->push(self::UNKNOWN);
+        $query = null;
+
+        foreach (array_keys($keys) as $column) {
+            $part = $inRange()->select($column.' as value')->selectRaw('? as field', [$column])->distinct()->orderBy($column)->limit(self::OPTIONS_LIMIT);
+            $query = $query === null ? $part : $query->unionAll($part);
         }
 
-        return array_values($options->all());
+        $rows = $query->get()->groupBy('field');
+
+        return collect($keys)->map(function (string $key, string $column) use ($rows): array {
+            $values = $rows->get($column, collect())->pluck('value');
+            $options = $values->filter(fn (mixed $value): bool => is_string($value))->values();
+
+            if ($values->contains(null)) {
+                $options->push(self::UNKNOWN);
+            }
+
+            return array_values($options->all());
+        })->mapWithKeys(fn (array $options, string $column): array => [$keys[$column] => $options])->all();
     }
 }
