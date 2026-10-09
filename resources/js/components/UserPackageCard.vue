@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { router, useForm } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import { computed, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { destroy, update } from '@/routes/admin/users/package';
+import { update } from '@/routes/admin/users/package';
 import { billingPeriodLabels, formatPrice } from '@/types';
 import type {
     BillingPeriod,
@@ -18,12 +18,17 @@ const props = defineProps<{
     assignment: PackageAssignment | null;
     packages: PackageOption[];
     effectiveLimit: number | null;
+    paymentState: 'awaiting_payment' | 'active' | 'expired' | null;
 }>();
 
 const form = useForm({
     package_id: props.assignment?.package_id ?? props.packages[0]?.id ?? '',
     billing_period: '' as BillingPeriod | '',
 });
+
+const extraErrors = computed(
+    () => form.errors as Record<string, string | undefined>,
+);
 
 const availablePeriods = computed(
     () =>
@@ -67,20 +72,15 @@ const submit = () =>
                 <Badge v-if="assignment.package_withdrawn" variant="outline"
                     >Withdrawn</Badge
                 >
-                <Button
-                    variant="outline"
-                    size="sm"
-                    @click="
-                        router.delete(destroy(userId).url, {
-                            preserveScroll: true,
-                        })
-                    "
-                    >Remove</Button
-                >
             </p>
             <p v-else class="text-sm text-muted-foreground">
-                No assignment; the default package applies.
+                No active package; the default package applies.
             </p>
+            <Badge v-if="paymentState === 'awaiting_payment'" variant="outline"
+                >Awaiting payment</Badge
+            >
+            <InputError :message="extraErrors.package" />
+            <InputError :message="extraErrors.stripe" />
 
             <form class="grid gap-4 sm:grid-cols-2" @submit.prevent="submit">
                 <div class="grid gap-2">
@@ -127,7 +127,8 @@ const submit = () =>
                         type="submit"
                         size="sm"
                         :disabled="form.processing || !form.billing_period"
-                        >Assign package</Button
+                        
+                        >Assign and send invoice</Button
                     >
                 </div>
             </form>

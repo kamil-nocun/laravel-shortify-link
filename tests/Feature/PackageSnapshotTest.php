@@ -14,18 +14,6 @@ test('editing a package does not change the limit of an active assignment', func
     expect($user->linkLimit())->toBe(20);
 });
 
-test('assigning a package stores its limit as a snapshot', function () {
-    $super = User::factory()->superAdmin()->create();
-    $client = User::factory()->create();
-    $package = Package::factory()->withPrices()->create(['link_limit' => 42]);
-
-    $this->actingAs($super)->put(route('admin.users.package.update', $client), [
-        'package_id' => $package->id, 'billing_period' => 'monthly',
-    ])->assertRedirect();
-
-    expect($client->packageAssignment()->first()->link_limit)->toBe(42);
-});
-
 test('editing the default package applies immediately to users without assignment', function () {
     $user = User::factory()->create();
 

@@ -45,7 +45,6 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::delete('users/{user}/block', [UserBlockController::class, 'destroy'])->name('users.unblock');
     Route::put('users/{user}/administrators', [UserAdministratorController::class, 'update'])->name('users.administrators.update');
     Route::put('users/{user}/package', [UserPackageController::class, 'update'])->name('users.package.update');
-    Route::delete('users/{user}/package', [UserPackageController::class, 'destroy'])->name('users.package.destroy');
     Route::patch('users/{user}/role', UserRoleController::class)->name('users.role');
 });
 

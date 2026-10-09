@@ -99,6 +99,7 @@ class UserController extends Controller
                 ? $user->assignedAdmins()->orderBy('name')->get(['users.id', 'users.name', 'users.email'])->map->only(['id', 'name', 'email'])->all()
                 : [],
             'effectiveLimit' => $user->linkLimit(),
+            'paymentState' => $request->user()->can('assignPackage', $user) ? $this->paymentState($user) : null,
             'packageAssignment' => $request->user()->can('assignPackage', $user) ? $this->presentAssignment($user) : null,
             'packages' => $request->user()->can('assignPackage', $user) ? $this->packageOptions() : [],
             'links' => $user->links()->withCount('clicks')->with('disabledBy:id,name')->latest()->paginate(15)->withQueryString()
@@ -187,17 +188,30 @@ class UserController extends Controller
     }
 
     /**
+     * Where the user's package stands: invoice unpaid, running, or ended.
+     */
+    private function paymentState(User $user): ?string
+    {
+        return match (true) {
+            $user->subscriptions()->incomplete()->exists() => 'awaiting_payment',
+            $user->activeAssignment() !== null => 'active',
+            $user->packageAssignment()->exists() => 'expired',
+            default => null,
+        };
+    }
+
+    /**
      * Packages selectable for assignment, with the periods that have a price.
      *
      * @return list<array{id: string, name: string, link_limit: int, available_periods: list<string>}>
      */
     private function packageOptions(): array
     {
-        return Package::where('is_default', false)->orderBy('name')->get()->map(fn (Package $package) => [
+        return Package::where('is_default', false)->orderBy('name')->get()->filter(fn (Package $package) => array_filter($package->availablePeriods(), fn (BillingPeriod $period) => $package->stripePriceId($period) !== null) !== [])->map(fn (Package $package) => [
             'id' => $package->id,
             'name' => $package->name,
             'link_limit' => $package->link_limit,
-            'available_periods' => array_map(fn (BillingPeriod $period) => $period->value, $package->availablePeriods()),
+            'available_periods' => array_values(array_map(fn (BillingPeriod $period) => $period->value, array_filter($package->availablePeriods(), fn (BillingPeriod $period) => $package->stripePriceId($period) !== null))),
         ])->values()->all();
     }
 

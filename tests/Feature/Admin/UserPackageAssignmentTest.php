@@ -1,91 +1,76 @@
 <?php
 
+use App\Billing\PackageBilling;
 use App\Enums\BillingPeriod;
 use App\Models\Package;
 use App\Models\PackageAssignment;
+use App\Models\Subscription;
 use App\Models\User;
+use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\FakePackageBilling;
 
 beforeEach(function () {
     $this->super = User::factory()->superAdmin()->create();
     $this->client = User::factory()->create();
-    $this->package = Package::factory()->withPrices()->create(['link_limit' => 50]);
-    $this->travelTo(now()->startOfSecond());
+    $this->package = Package::factory()->withPrices()->create([
+        'link_limit' => 50, 'stripe_price_id_monthly' => 'price_m', 'stripe_price_id_one_time' => 'price_o',
+    ]);
 });
 
-test('cyclic periods store computed expiry and price snapshot', function (BillingPeriod $period, int $price) {
-    $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
-        'package_id' => $this->package->id, 'billing_period' => $period->value,
-    ])->assertRedirect();
-
-    $assignment = $this->client->packageAssignment()->firstOrFail();
-    expect($assignment->price)->toBe($price)
-        ->and($assignment->billing_period)->toBe($period)
-        ->and($assignment->expires_at->equalTo($period->expiresAt($assignment->starts_at)))->toBeTrue();
-})->with([
-    [BillingPeriod::Monthly, 1000],
-    [BillingPeriod::Quarterly, 2700],
-    [BillingPeriod::Yearly, 9900],
-]);
-
-test('one time assignment defaults to one calendar month', function () {
-    $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
-        'package_id' => $this->package->id, 'billing_period' => 'one_time',
-    ])->assertRedirect();
-
-    $assignment = $this->client->packageAssignment()->firstOrFail();
-    expect($assignment->price)->toBe(4900)
-        ->and($assignment->expires_at->equalTo($assignment->starts_at->copy()->addMonthNoOverflow()))->toBeTrue();
-});
-
-test('manually supplied dates are ignored', function (string $period) {
+test('assigning a package sends a Stripe invoice without granting the limit', function (string $period) {
     $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
         'package_id' => $this->package->id, 'billing_period' => $period,
-        'starts_at' => now()->addYear()->toDateTimeString(), 'expires_at' => now()->addDays(3)->toDateTimeString(),
     ])->assertRedirect();
 
-    $assignment = $this->client->packageAssignment()->firstOrFail();
-    expect($assignment->starts_at->equalTo(now()))->toBeTrue()
-        ->and($assignment->expires_at->equalTo(now()->addMonthNoOverflow()))->toBeTrue();
-})->with(['one_time', 'monthly']);
+    expect($this->billing->calls)->toBe([['invoice', [$this->client->id, $this->package->id, $period]]])
+        ->and($this->client->packageAssignment()->exists())->toBeFalse()
+        ->and($this->client->linkLimit())->toBe(10);
+})->with(['monthly', 'one_time']);
 
-test('a period without a price is rejected', function () {
-    $package = Package::factory()->create(['price_monthly' => 1000]);
-
+test('a period without a Stripe price is rejected', function () {
     $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
-        'package_id' => $package->id, 'billing_period' => 'yearly',
+        'package_id' => $this->package->id, 'billing_period' => 'yearly',
     ])->assertSessionHasErrors('billing_period');
 
-    expect($this->client->packageAssignment()->exists())->toBeFalse();
+    expect($this->billing->called())->toBe([]);
 });
 
-test('the unpriced default package cannot be assigned', function () {
+test('the default and withdrawn packages cannot be assigned', function () {
     $free = Package::where('is_default', true)->firstOrFail();
+    $this->package->delete();
 
-    $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
-        'package_id' => $free->id, 'billing_period' => 'monthly',
-    ])->assertSessionHasErrors('billing_period');
+    foreach ([$free, $this->package] as $package) {
+        $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
+            'package_id' => $package->id, 'billing_period' => 'monthly',
+        ])->assertSessionHasErrors('package_id');
+    }
+
+    expect($this->billing->called())->toBe([]);
 });
 
-test('assigning again replaces the previous assignment', function () {
-    $other = Package::factory()->withPrices()->create();
+test('a user who already holds a package cannot be invoiced for another', function () {
     PackageAssignment::factory()->for($this->client)->for($this->package)->create();
 
     $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
-        'package_id' => $other->id, 'billing_period' => 'monthly',
-    ])->assertRedirect();
+        'package_id' => $this->package->id, 'billing_period' => 'monthly',
+    ])->assertSessionHasErrors('package');
 
-    expect(PackageAssignment::where('user_id', $this->client->id)->count())->toBe(1)
-        ->and($this->client->packageAssignment()->first()->package_id)->toBe($other->id);
+    expect($this->billing->called())->toBe([]);
 });
 
-test('removing the assignment returns the user to the default package', function () {
-    PackageAssignment::factory()->for($this->client)->for($this->package)->create();
+test('a failing Stripe call is reported', function () {
+    $this->app->instance(PackageBilling::class, new class extends FakePackageBilling
+    {
+        public function invoice(User $user, Package $package, BillingPeriod $period): void
+        {
+            throw new RuntimeException('Stripe is unavailable.');
+        }
+    });
 
-    $this->actingAs($this->super)->delete(route('admin.users.package.destroy', $this->client))->assertRedirect();
-
-    expect($this->client->packageAssignment()->exists())->toBeFalse()
-        ->and($this->client->package()->is_default)->toBeTrue();
+    $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
+        'package_id' => $this->package->id, 'billing_period' => 'monthly',
+    ])->assertSessionHasErrors('stripe');
 });
 
 test('administrators and users cannot assign packages', function () {
@@ -94,8 +79,9 @@ test('administrators and users cannot assign packages', function () {
     $managed = User::factory()->assignedTo($admin)->create();
 
     $this->actingAs($admin)->put(route('admin.users.package.update', $managed), $payload)->assertForbidden();
-    $this->actingAs($admin)->delete(route('admin.users.package.destroy', $managed))->assertForbidden();
     $this->actingAs($this->client)->put(route('admin.users.package.update', $this->client), $payload)->assertForbidden();
+
+    expect($this->billing->called())->toBe([]);
 });
 
 test('a package cannot be assigned to a super administrator', function () {
@@ -106,13 +92,18 @@ test('a package cannot be assigned to a super administrator', function () {
     ])->assertForbidden();
 });
 
-test('show exposes package data to super admin only', function () {
+test('removing an assignment is no longer possible from the admin panel', function () {
+    expect(Route::has('admin.users.package.destroy'))->toBeFalse();
+});
+
+test('show exposes package data and the payment state to super admin only', function () {
     PackageAssignment::factory()->for($this->client)->for($this->package)->create();
 
     $this->actingAs($this->super)->get(route('admin.users.show', $this->client))
         ->assertInertia(fn (Assert $page) => $page
             ->where('packageAssignment.package_id', $this->package->id)
             ->where('packageAssignment.active', true)
+            ->where('paymentState', 'active')
             ->where('effectiveLimit', 50)
             ->has('packages'));
 
@@ -126,33 +117,23 @@ test('show exposes package data to super admin only', function () {
             ->where('effectiveLimit', 10));
 });
 
-test('a withdrawn package cannot be assigned', function () {
-    $this->package->delete();
-
-    $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
-        'package_id' => $this->package->id, 'billing_period' => 'monthly',
-    ])->assertSessionHasErrors('package_id');
-});
-
-test('show flags a withdrawn package and leaves it out of the options', function () {
-    PackageAssignment::factory()->for($this->client)->for($this->package)->create();
-    $this->package->delete();
+test('payment state is awaiting payment while a subscription is incomplete and expired after the period', function () {
+    Subscription::create(['user_id' => $this->client->id, 'type' => 'default', 'stripe_id' => 'sub_i', 'stripe_status' => 'incomplete', 'stripe_price' => 'price_m', 'quantity' => 1]);
 
     $this->actingAs($this->super)->get(route('admin.users.show', $this->client))
-        ->assertInertia(fn (Assert $page) => $page
-            ->where('packageAssignment.package_withdrawn', true)
-            ->where('packageAssignment.package_name', $this->package->name)
-            ->where('packages', fn ($packages) => collect($packages)->doesntContain('id', $this->package->id)));
-});
+        ->assertInertia(fn (Assert $page) => $page->where('paymentState', 'awaiting_payment'));
 
-test('show reports an active package as not withdrawn', function () {
-    PackageAssignment::factory()->for($this->client)->for($this->package)->create();
+    $this->client->subscriptions()->delete();
+    PackageAssignment::factory()->for($this->client)->for($this->package)->expired()->create();
 
     $this->actingAs($this->super)->get(route('admin.users.show', $this->client))
-        ->assertInertia(fn (Assert $page) => $page->where('packageAssignment.package_withdrawn', false));
+        ->assertInertia(fn (Assert $page) => $page->where('paymentState', 'expired'));
 });
 
-test('the default package is not offered for assignment', function () {
+test('only packages with Stripe prices are offered for assignment', function () {
+    Package::factory()->create(['name' => 'Unsynced', 'price_monthly' => 500]);
+
     $this->actingAs($this->super)->get(route('admin.users.show', $this->client))
-        ->assertInertia(fn (Assert $page) => $page->where('packages', fn ($packages) => collect($packages)->doesntContain('name', 'Free')));
+        ->assertInertia(fn (Assert $page) => $page->where('packages', fn ($packages) => collect($packages)->pluck('name')->all() === [$this->package->name]
+            && $packages[0]['available_periods'] === ['one_time', 'monthly']));
 });

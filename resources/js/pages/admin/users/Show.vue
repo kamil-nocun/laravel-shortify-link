@@ -51,6 +51,7 @@ const props = defineProps<{
     packageAssignment: PackageAssignment | null;
     packages: PackageOption[];
     effectiveLimit: number | null;
+    paymentState: "awaiting_payment" | "active" | "expired" | null;
     links: Paginated<Link>;
     period: StatsPeriodParams;
     granularity: "day" | "month";
@@ -256,6 +257,7 @@ setLayoutProps({
             :assignment="packageAssignment"
             :packages="packages"
             :effective-limit="effectiveLimit"
+            :payment-state="paymentState"
         />
 
         <div v-if="user.can.assignAdministrators" class="space-y-2">

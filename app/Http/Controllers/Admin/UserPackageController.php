@@ -2,55 +2,39 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Billing\PackageBilling;
 use App\Enums\BillingPeriod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateUserPackageRequest;
 use App\Models\Package;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Throwable;
 
 class UserPackageController extends Controller
 {
+    public function __construct(private readonly PackageBilling $billing) {}
+
     /**
-     * Assign a package to the user, replacing any previous assignment.
+     * Invoice the user for the package; it activates when Stripe reports the payment.
      */
     public function update(UpdateUserPackageRequest $request, User $user): RedirectResponse
     {
-        $period = BillingPeriod::from($request->validated('billing_period'));
-        $startsAt = now();
+        try {
+            $this->billing->invoice(
+                $user,
+                Package::findOrFail($request->validated('package_id')),
+                BillingPeriod::from($request->validated('billing_period')),
+            );
+        } catch (Throwable $exception) {
+            report($exception);
 
-        DB::transaction(function () use ($request, $user, $period, $startsAt) {
-            $package = Package::lockForUpdate()->findOrFail($request->validated('package_id'));
-            $user->packageAssignment()->lockForUpdate()->first();
+            throw ValidationException::withMessages(['stripe' => __('The invoice could not be created in Stripe.')]);
+        }
 
-            $user->packageAssignment()->updateOrCreate([], [
-                'package_id' => $package->id,
-                'billing_period' => $period,
-                'price' => $package->priceFor($period),
-                'link_limit' => $package->link_limit,
-                'starts_at' => $startsAt,
-                'expires_at' => $period->expiresAt($startsAt),
-            ]);
-        });
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Package assigned.')]);
-
-        return back();
-    }
-
-    /**
-     * Remove the assignment; the user falls back to the default package.
-     */
-    public function destroy(User $user): RedirectResponse
-    {
-        Gate::authorize('assignPackage', $user);
-
-        $user->packageAssignment()->delete();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Package removed.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Invoice sent. The package activates after payment.')]);
 
         return back();
     }

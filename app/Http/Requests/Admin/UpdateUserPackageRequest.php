@@ -22,24 +22,30 @@ class UpdateUserPackageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'package_id' => ['required', 'uuid', Rule::exists('packages', 'id')->whereNull('deleted_at')],
+            'package_id' => ['required', 'uuid', Rule::exists('packages', 'id')->where('is_default', false)->whereNull('deleted_at')],
             'billing_period' => ['required', Rule::enum(BillingPeriod::class)],
         ];
     }
 
     /**
-     * The chosen period must have a price in the package.
+     * The user must not hold a package yet, and the package must sell the chosen period in Stripe.
      *
      * @return list<callable(Validator): void>
      */
     public function after(): array
     {
         return [function (Validator $validator) {
+            if ($this->route('user')->activeAssignment() !== null) {
+                $validator->errors()->add('package', __('This user already has a package.'));
+
+                return;
+            }
+
             $period = BillingPeriod::tryFrom((string) $this->input('billing_period'));
             $package = Package::find($this->input('package_id'));
 
-            if ($period && $package && $package->priceFor($period) === null) {
-                $validator->errors()->add('billing_period', __('This package has no price for the chosen period.'));
+            if ($period && $package && $package->stripePriceId($period) === null) {
+                $validator->errors()->add('billing_period', __('This package is not sold for the chosen period.'));
             }
         }];
     }
