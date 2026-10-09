@@ -9,13 +9,12 @@ use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class LinkStatsController extends Controller
 {
-    private const TOP_LIMIT = 10;
-
     private const OPTIONS_LIMIT = 200;
 
     private const UNKNOWN = 'Unknown';
@@ -50,21 +49,13 @@ class LinkStatsController extends Controller
 
         $series = $isEmpty ? [] : $this->series($perDay, $from, $period->to, $period->granularity);
 
-        $countries = $this->topBy($clicks, 'country');
-        $browsers = $this->topBy($clicks, 'browser');
-        $systems = $this->topBy($clicks, 'os');
-        $devices = $this->topBy($clicks, 'device_type');
-
-        $cities = $clicks()
-            ->selectRaw('city, country, count(*) as total')
-            ->groupBy('city', 'country')
-            ->orderByDesc('total')
-            ->limit(self::TOP_LIMIT)
-            ->get()
-            ->map(fn ($row): array => [
-                'name' => collect([$row->city ?? self::UNKNOWN, $row->country])->filter()->implode(', '),
-                'count' => (int) $row->total,
-            ]);
+        $tables = [
+            'countries' => $this->table($clicks, 'countries', ['country'], $request),
+            'cities' => $this->table($clicks, 'cities', ['city', 'country'], $request),
+            'browsers' => $this->table($clicks, 'browsers', ['browser'], $request),
+            'systems' => $this->table($clicks, 'systems', ['os'], $request),
+            'devices' => $this->table($clicks, 'devices', ['device_type'], $request),
+        ];
 
         return Inertia::render('links/Stats', [
             'link' => $link,
@@ -72,11 +63,8 @@ class LinkStatsController extends Controller
             'granularity' => $period->granularity,
             'total' => array_sum(array_column($series, 'count')),
             'series' => $series,
-            'countries' => $countries,
-            'cities' => $cities->values(),
-            'browsers' => $browsers,
-            'systems' => $systems,
-            'devices' => $devices,
+            ...$tables,
+            'sort' => collect(LinkStatsRequest::TABLES)->mapWithKeys(fn (string $table): array => [$table => $request->sort($table)])->all(),
             'filters' => $filters,
             'options' => $this->options($inRange),
         ]);
@@ -109,27 +97,63 @@ class LinkStatsController extends Controller
     }
 
     /**
-     * Most frequent values of a click column; missing values are grouped as Unknown.
+     * One sorted page of click counts grouped by the given columns (a fixed whitelist, never request input);
+     * missing values are grouped as Unknown and an out-of-range page is clamped to the last one.
      *
      * @param  Closure(): Builder  $clicks
-     * @return list<array{name: string, count: int}>
+     * @param  list<string>  $columns  grouping columns; the first one is the name, the second (cities) the country
+     * @return array{rows: list<array{name: string, count: int}>, page: int, lastPage: int, total: int, perPage: int}
      */
-    private function topBy(Closure $clicks, string $column): array
+    private function table(Closure $clicks, string $table, array $columns, LinkStatsRequest $request): array
     {
-        $rows = $clicks()
-            ->select($column)
-            ->selectRaw('count(*) as total')
-            ->groupBy($column)
-            ->orderByDesc('total')
-            ->limit(self::TOP_LIMIT)
-            ->get()
+        $perPage = $request->perPage($table);
+        $sort = $request->sort($table);
+        $direction = str_ends_with($sort, '_asc') ? 'asc' : 'desc';
+
+        $total = DB::query()->fromSub($clicks()->select($columns)->groupBy($columns), 'groups')->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min($request->page($table), $lastPage);
+
+        $query = $clicks()->select($columns)->selectRaw('count(*) as total')->groupBy($columns);
+
+        if (str_starts_with($sort, 'count_')) {
+            $query->orderBy('total', $direction);
+            $direction = 'asc';
+        }
+
+        foreach ($columns as $index => $column) {
+            $query->orderByRaw($this->orderSql($column, $index === 0, $direction));
+        }
+
+        $rows = $query->forPage($page, $perPage)->get()
             ->map(fn ($row): array => [
-                'name' => is_string($row->{$column}) ? $row->{$column} : self::UNKNOWN,
+                'name' => collect(array_map(fn (string $column): ?string => $row->{$column}, $columns))
+                    ->map(fn (?string $value, int $index): ?string => $index === 0 ? ($value ?? self::UNKNOWN) : $value)
+                    ->filter()->implode(', '),
                 'count' => (int) $row->total,
             ])
             ->all();
 
-        return array_values($rows);
+        return ['rows' => array_values($rows), 'page' => $page, 'lastPage' => $lastPage, 'total' => $total, 'perPage' => $perPage];
+    }
+
+    /**
+     * ORDER BY fragment for a whitelisted click column; the name column treats NULL as Unknown.
+     *
+     * @return literal-string
+     */
+    private function orderSql(string $column, bool $isName, string $direction): string
+    {
+        $expression = match ($column) {
+            'country' => $isName ? "COALESCE(country, 'Unknown')" : 'country',
+            'city' => "COALESCE(city, 'Unknown')",
+            'browser' => "COALESCE(browser, 'Unknown')",
+            'os' => "COALESCE(os, 'Unknown')",
+            'device_type' => "COALESCE(device_type, 'Unknown')",
+            default => throw new \InvalidArgumentException("Unsortable column {$column}"),
+        };
+
+        return $expression.($direction === 'asc' ? ' asc' : ' desc');
     }
 
     /**

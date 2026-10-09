@@ -25,6 +25,27 @@ class LinkStatsRequest extends FormRequest
     public const FILTERS = ['country', 'city', 'browser', 'os', 'device_type'];
 
     /**
+     * Tables that are sorted and paginated independently.
+     *
+     * @var list<string>
+     */
+    public const TABLES = ['countries', 'cities', 'browsers', 'systems', 'devices'];
+
+    /**
+     * Allowed rows per page of a table.
+     *
+     * @var list<int>
+     */
+    public const PER_PAGE = [10, 25, 50, 100];
+
+    /**
+     * Allowed sort orders of a table.
+     *
+     * @var list<string>
+     */
+    public const SORTS = ['count_desc', 'count_asc', 'name_asc', 'name_desc'];
+
+    /**
      * Only the link owner may see its stats.
      */
     public function authorize(): bool
@@ -62,7 +83,50 @@ class LinkStatsRequest extends FormRequest
                 },
             ],
             ...array_fill_keys(self::FILTERS, ['nullable', 'string', 'max:255']),
+            ...$this->tableRules(),
         ];
+    }
+
+    /**
+     * Rules of the sort, per page and page parameters of every table.
+     *
+     * @return array<string, array<mixed>>
+     */
+    private function tableRules(): array
+    {
+        $rules = [];
+
+        foreach (self::TABLES as $table) {
+            $rules["sort.{$table}"] = ['sometimes', Rule::in(self::SORTS)];
+            $rules["{$table}_per_page"] = ['sometimes', Rule::in(self::PER_PAGE)];
+            $rules["{$table}_page"] = ['sometimes', 'integer', 'min:1'];
+        }
+
+        return $rules;
+    }
+
+    /**
+     * Requested sort order of a table.
+     */
+    public function sort(string $table): string
+    {
+        return $this->input("sort.{$table}", self::SORTS[0]);
+    }
+
+    /**
+     * Requested rows per page of a table.
+     */
+    public function perPage(string $table): int
+    {
+        return $this->integer("{$table}_per_page", self::PER_PAGE[0]);
+    }
+
+    /**
+     * Requested page of a table.
+     */
+    public function page(string $table): int
+    {
+        return $this->integer("{$table}_page", 1);
     }
 
     /**

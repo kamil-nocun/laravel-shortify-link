@@ -11,7 +11,7 @@ import type {
     StatsFilters,
     StatsOptions,
     StatsPeriodParams,
-    StatsRow,
+    StatsTable,
 } from '@/types';
 
 const props = defineProps<{
@@ -20,11 +20,11 @@ const props = defineProps<{
     granularity: 'day' | 'month';
     total: number;
     series: DailyClicks[];
-    countries: StatsRow[];
-    cities: StatsRow[];
-    browsers: StatsRow[];
-    systems: StatsRow[];
-    devices: StatsRow[];
+    countries: StatsTable;
+    cities: StatsTable;
+    browsers: StatsTable;
+    systems: StatsTable;
+    devices: StatsTable;
     filters: StatsFilters;
     options: StatsOptions;
 }>();
@@ -217,11 +217,11 @@ defineOptions({
         <div class="grid gap-6 md:grid-cols-2">
             <section
                 v-for="table in [
-                    { title: 'Countries', rows: countries },
-                    { title: 'Cities', rows: cities },
-                    { title: 'Browsers', rows: browsers },
-                    { title: 'Operating systems', rows: systems },
-                    { title: 'Devices', rows: devices },
+                    { title: 'Countries', rows: countries.rows },
+                    { title: 'Cities', rows: cities.rows },
+                    { title: 'Browsers', rows: browsers.rows },
+                    { title: 'Operating systems', rows: systems.rows },
+                    { title: 'Devices', rows: devices.rows },
                 ]"
                 :key="table.title"
             >

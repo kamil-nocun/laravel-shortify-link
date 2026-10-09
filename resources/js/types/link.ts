@@ -14,6 +14,14 @@ export type StatsRow = {
     count: number;
 };
 
+export type StatsTable = {
+    rows: StatsRow[];
+    page: number;
+    lastPage: number;
+    total: number;
+    perPage: number;
+};
+
 export type DailyClicks = {
     date: string;
     count: number;

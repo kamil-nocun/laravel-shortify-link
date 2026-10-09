@@ -29,8 +29,8 @@ test('owner sees stats with total, series, countries and cities', function () {
             ->where('total', 3)
             ->where('series.29.count', 2)
             ->where('series.27.count', 1)
-            ->where('countries', [['name' => 'Poland', 'count' => 2], ['name' => 'Germany', 'count' => 1]])
-            ->where('cities', [['name' => 'Warsaw, Poland', 'count' => 2], ['name' => 'Berlin, Germany', 'count' => 1]]));
+            ->where('countries.rows', [['name' => 'Poland', 'count' => 2], ['name' => 'Germany', 'count' => 1]])
+            ->where('cities.rows', [['name' => 'Warsaw, Poland', 'count' => 2], ['name' => 'Berlin, Germany', 'count' => 1]]));
 });
 
 test('period defaults to 30d and the series covers every day with zeros', function () {
@@ -129,7 +129,7 @@ test('a range in the future returns zeros', function (array $query) {
 
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, ...$query]))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('series', [])->where('countries', [])->where('options.browsers', []));
+        ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('series', [])->where('countries.rows', [])->where('options.browsers', []));
 })->with([
     'year' => [['period' => 'year', 'year' => '2030']],
     'month' => [['period' => 'month', 'month' => '2030-01']],
@@ -143,8 +143,8 @@ test('period applies to totals, tables and options', function () {
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'day', 'date' => '2026-03-10']))
         ->assertInertia(fn (Assert $page) => $page
             ->where('total', 1)
-            ->where('countries', [['name' => 'Germany', 'count' => 1]])
-            ->where('browsers', [['name' => 'Opera', 'count' => 1]])
+            ->where('countries.rows', [['name' => 'Germany', 'count' => 1]])
+            ->where('browsers.rows', [['name' => 'Opera', 'count' => 1]])
             ->where('options.countries', ['Germany'])
             ->where('options.browsers', ['Opera']));
 });
@@ -154,7 +154,7 @@ test('clicks older than the range and clicks of other links are excluded', funct
     clickOn(Link::factory()->for($this->user)->create());
 
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => '7d']))
-        ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('countries', [])->where('cities', []));
+        ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('countries.rows', [])->where('cities.rows', []));
 });
 
 test('null geo is shown as Unknown', function () {
@@ -162,8 +162,8 @@ test('null geo is shown as Unknown', function () {
 
     $this->actingAs($this->user)->get(route('links.stats', $this->link))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('countries', [['name' => 'Unknown', 'count' => 1]])
-            ->where('cities', [['name' => 'Unknown', 'count' => 1]]));
+            ->where('countries.rows', [['name' => 'Unknown', 'count' => 1]])
+            ->where('cities.rows', [['name' => 'Unknown', 'count' => 1]]));
 });
 
 test('cities with unknown name are listed per country, not merged under one label', function () {
@@ -172,19 +172,20 @@ test('cities with unknown name are listed per country, not merged under one labe
 
     $this->actingAs($this->user)->get(route('links.stats', $this->link))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('cities.0.name', fn (string $name) => in_array($name, ['Unknown, Poland', 'Unknown, Germany'], true))
-            ->where('cities.1.name', fn (string $name) => in_array($name, ['Unknown, Poland', 'Unknown, Germany'], true))
-            ->where('cities.0.name', fn (string $name) => $name !== 'Unknown')
-            ->has('cities', 2));
+            ->where('cities.rows.0.name', fn (string $name) => in_array($name, ['Unknown, Poland', 'Unknown, Germany'], true))
+            ->where('cities.rows.1.name', fn (string $name) => in_array($name, ['Unknown, Poland', 'Unknown, Germany'], true))
+            ->where('cities.rows.0.name', fn (string $name) => $name !== 'Unknown')
+            ->has('cities.rows', 2));
 });
 
-test('countries and cities are capped at the top 10', function () {
+test('countries and cities show the first 10 rows with the full total', function () {
     foreach (range(1, 12) as $index) {
         clickOn($this->link, ['country' => "Country {$index}", 'city' => "City {$index}"]);
     }
 
     $this->actingAs($this->user)->get(route('links.stats', $this->link))
-        ->assertInertia(fn (Assert $page) => $page->has('countries', 10)->has('cities', 10));
+        ->assertInertia(fn (Assert $page) => $page->has('countries.rows', 10)->where('countries.total', 12)->where('countries.perPage', 10)->where('countries.lastPage', 2)
+            ->has('cities.rows', 10)->where('cities.total', 12));
 });
 
 test('browsers, systems and devices are counted and ordered', function () {
@@ -194,9 +195,9 @@ test('browsers, systems and devices are counted and ordered', function () {
 
     $this->actingAs($this->user)->get(route('links.stats', $this->link))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('browsers', [['name' => 'Chrome', 'count' => 2], ['name' => 'Firefox', 'count' => 1]])
-            ->where('systems', [['name' => 'Windows', 'count' => 2], ['name' => 'Linux', 'count' => 1]])
-            ->where('devices', [['name' => 'desktop', 'count' => 2], ['name' => 'smartphone', 'count' => 1]]));
+            ->where('browsers.rows', [['name' => 'Chrome', 'count' => 2], ['name' => 'Firefox', 'count' => 1]])
+            ->where('systems.rows', [['name' => 'Windows', 'count' => 2], ['name' => 'Linux', 'count' => 1]])
+            ->where('devices.rows', [['name' => 'desktop', 'count' => 2], ['name' => 'smartphone', 'count' => 1]]));
 });
 
 test('null client fields are shown as Unknown', function () {
@@ -204,18 +205,18 @@ test('null client fields are shown as Unknown', function () {
 
     $this->actingAs($this->user)->get(route('links.stats', $this->link))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('browsers', [['name' => 'Unknown', 'count' => 1]])
-            ->where('systems', [['name' => 'Unknown', 'count' => 1]])
-            ->where('devices', [['name' => 'Unknown', 'count' => 1]]));
+            ->where('browsers.rows', [['name' => 'Unknown', 'count' => 1]])
+            ->where('systems.rows', [['name' => 'Unknown', 'count' => 1]])
+            ->where('devices.rows', [['name' => 'Unknown', 'count' => 1]]));
 });
 
-test('client tables are capped at the top 10', function () {
+test('client tables show the first 10 rows with the full total', function () {
     foreach (range(1, 12) as $index) {
         clickOn($this->link, ['browser' => "Browser {$index}", 'os' => "OS {$index}", 'device_type' => "device {$index}"]);
     }
 
     $this->actingAs($this->user)->get(route('links.stats', $this->link))
-        ->assertInertia(fn (Assert $page) => $page->has('browsers', 10)->has('systems', 10)->has('devices', 10));
+        ->assertInertia(fn (Assert $page) => $page->has('browsers.rows', 10)->where('browsers.total', 12)->has('systems.rows', 10)->has('devices.rows', 10));
 });
 
 test('client stats respect the range and the link', function () {
@@ -223,7 +224,7 @@ test('client stats respect the range and the link', function () {
     clickOn(Link::factory()->for($this->user)->create());
 
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => '7d']))
-        ->assertInertia(fn (Assert $page) => $page->where('browsers', [])->where('systems', [])->where('devices', []));
+        ->assertInertia(fn (Assert $page) => $page->where('browsers.rows', [])->where('systems.rows', [])->where('devices.rows', []));
 });
 
 test('each filter narrows the total and the tables', function (string $filter, string $value, array $match, array $other) {
@@ -235,8 +236,8 @@ test('each filter narrows the total and the tables', function (string $filter, s
         ->assertInertia(fn (Assert $page) => $page
             ->where('total', 2)
             ->where('filters.'.$filter, $value)
-            ->where('browsers.0.count', 2)
-            ->has('browsers', 1));
+            ->where('browsers.rows.0.count', 2)
+            ->has('browsers.rows', 1));
 })->with([
     'country' => ['country', 'Germany', ['country' => 'Germany', 'browser' => 'Chrome'], ['country' => 'Poland', 'browser' => 'Firefox']],
     'city' => ['city', 'Berlin', ['city' => 'Berlin', 'browser' => 'Chrome'], ['city' => 'Warsaw', 'browser' => 'Firefox']],
@@ -259,7 +260,7 @@ test('the Unknown filter matches clicks with null values', function () {
     clickOn($this->link, ['browser' => 'Chrome']);
 
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'browser' => 'Unknown']))
-        ->assertInertia(fn (Assert $page) => $page->where('total', 1)->where('browsers', [['name' => 'Unknown', 'count' => 1]]));
+        ->assertInertia(fn (Assert $page) => $page->where('total', 1)->where('browsers.rows', [['name' => 'Unknown', 'count' => 1]]));
 });
 
 test('the city filter matches the plain city name', function () {
@@ -276,7 +277,7 @@ test('a filter never reveals clicks of another link', function () {
     clickOn($other, ['browser' => 'Opera']);
 
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'browser' => 'Opera']))
-        ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('browsers', []));
+        ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('browsers.rows', []));
 });
 
 test('an array filter value fails validation', function () {
@@ -392,4 +393,108 @@ test('a malformed from reports a validation error instead of failing', function 
 test('a range of exactly 5 years is allowed', function () {
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'range', 'from' => '2021-01-01', 'to' => '2026-01-01']))
         ->assertSessionDoesntHaveErrors();
+});
+
+function manyCities(int $count): void
+{
+    foreach (range(1, $count) as $index) {
+        clickOn(test()->link, ['country' => 'Poland', 'city' => sprintf('City %02d', $index)]);
+    }
+}
+
+test('each per page value changes rows and lastPage', function (int $perPage) {
+    manyCities(30);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'cities_per_page' => $perPage]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('cities.rows', min($perPage, 30))
+            ->where('cities.perPage', $perPage)
+            ->where('cities.total', 30)
+            ->where('cities.lastPage', (int) ceil(30 / $perPage)));
+})->with([10, 25, 50, 100]);
+
+test('the last page holds the remainder', function () {
+    manyCities(25);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'cities_page' => 3]))
+        ->assertInertia(fn (Assert $page) => $page->where('cities.page', 3)->has('cities.rows', 5));
+});
+
+test('a page past the end returns the last page', function () {
+    manyCities(25);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'cities_page' => 99]))
+        ->assertInertia(fn (Assert $page) => $page->where('cities.page', 3)->where('cities.lastPage', 3)->has('cities.rows', 5));
+});
+
+test('table pages and per page are independent', function () {
+    manyCities(25);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'countries_page' => 2, 'countries_per_page' => 25]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('countries.page', 1)
+            ->where('countries.perPage', 25)
+            ->where('cities.page', 1)
+            ->where('cities.perPage', 10)
+            ->has('cities.rows', 10));
+});
+
+test('rows are sorted by variant', function (string $sort, array $expected) {
+    clickOn($this->link, ['browser' => 'Chrome']);
+    clickOn($this->link, ['browser' => 'Chrome']);
+    clickOn($this->link, ['browser' => 'Chrome']);
+    clickOn($this->link, ['browser' => 'Firefox']);
+    clickOn($this->link, ['browser' => 'Firefox']);
+    clickOn($this->link, ['browser' => 'Brave']);
+    clickOn($this->link, ['browser' => null]);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'sort' => ['browsers' => $sort]]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('browsers.rows', fn ($rows) => collect($rows)->pluck('name')->all() === $expected)
+            ->where('sort.browsers', $sort));
+})->with([
+    'count_desc' => ['count_desc', ['Chrome', 'Firefox', 'Brave', 'Unknown']],
+    'count_asc' => ['count_asc', ['Brave', 'Unknown', 'Firefox', 'Chrome']],
+    'name_asc' => ['name_asc', ['Brave', 'Chrome', 'Firefox', 'Unknown']],
+    'name_desc' => ['name_desc', ['Unknown', 'Firefox', 'Chrome', 'Brave']],
+]);
+
+test('ties keep the same order across pages', function () {
+    manyCities(30);
+    $names = [];
+
+    foreach ([1, 2, 3] as $page) {
+        $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'cities_page' => $page]))
+            ->assertInertia(function (Assert $inertia) use (&$names) {
+                $names = [...$names, ...collect($inertia->toArray()['props']['cities']['rows'])->pluck('name')->all()];
+            });
+    }
+
+    expect($names)->toHaveCount(30)->and(array_unique($names))->toHaveCount(30);
+});
+
+test('sort echoes the current values and defaults to count_desc', function () {
+    $this->actingAs($this->user)->get(route('links.stats', $this->link))
+        ->assertInertia(fn (Assert $page) => $page->where('sort', array_fill_keys(['countries', 'cities', 'browsers', 'systems', 'devices'], 'count_desc')));
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'sort' => ['cities' => 'name_asc']]))
+        ->assertInertia(fn (Assert $page) => $page->where('sort.cities', 'name_asc')->where('sort.countries', 'count_desc'));
+});
+
+test('invalid sort, per page or page fails validation', function (array $query, string $field) {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, ...$query]))
+        ->assertSessionHasErrors($field);
+})->with([
+    'sort' => [['sort' => ['countries' => 'x']], 'sort.countries'],
+    'per page' => [['countries_per_page' => 7], 'countries_per_page'],
+    'page zero' => [['countries_page' => 0], 'countries_page'],
+    'page text' => [['countries_page' => 'abc'], 'countries_page'],
+]);
+
+test('pagination respects period and filters', function () {
+    manyCities(12);
+    clickOn($this->link, ['country' => 'Germany', 'city' => 'Berlin', 'clicked_at' => now()->subDays(60)]);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'country' => 'Poland']))
+        ->assertInertia(fn (Assert $page) => $page->where('cities.total', 12)->where('cities.lastPage', 2)->where('countries.total', 1));
 });
