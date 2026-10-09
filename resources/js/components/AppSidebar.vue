@@ -4,6 +4,7 @@ import {
     BookOpen,
     FolderGit2,
     Link2,
+    Package,
     Shield,
     Users,
 } from "@lucide/vue";
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/sidebar";
 import { dashboard } from "@/routes";
 import { index as administratorsIndex } from "@/routes/admin/administrators";
+import { index as packagesIndex } from "@/routes/admin/packages";
 import { index as usersIndex } from "@/routes/admin/users";
 import { index as linksIndex } from "@/routes/links";
 import type { NavItem } from "@/types";
@@ -42,7 +44,10 @@ const mainNavItems = computed<NavItem[]>(() => {
 
     return [
         ...(role === "super_admin"
-            ? [{ title: "Admin", href: administratorsIndex(), icon: Shield }]
+            ? [
+                  { title: "Admin", href: administratorsIndex(), icon: Shield },
+                  { title: "Packages", href: packagesIndex(), icon: Package },
+              ]
             : []),
         ...(role === "admin" || role === "super_admin"
             ? [{ title: "Users", href: usersIndex(), icon: Users }]
