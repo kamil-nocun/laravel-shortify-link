@@ -24,6 +24,7 @@ use Illuminate\Support\Str;
  * @property-read string $short_url
  * @property bool $is_active
  * @property Carbon|null $expires_at
+ * @property Carbon|null $disabled_by_admin_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -48,6 +49,7 @@ class Link extends Model
         return [
             'is_active' => 'boolean',
             'expires_at' => 'datetime',
+            'disabled_by_admin_at' => 'datetime',
         ];
     }
 
@@ -71,6 +73,11 @@ class Link extends Model
     {
         $query->where('is_active', true)
             ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+    }
+
+    public function isDisabledByAdmin(): bool
+    {
+        return $this->disabled_by_admin_at !== null;
     }
 
     /**

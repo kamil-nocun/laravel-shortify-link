@@ -6,6 +6,7 @@ export type Link = {
     short_url: string;
     is_active: boolean;
     expires_at: string | null;
+    disabled_by_admin_at: string | null;
     clicks_count?: number;
 };
 

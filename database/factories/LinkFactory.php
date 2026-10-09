@@ -37,6 +37,11 @@ class LinkFactory extends Factory
         return $this->state(['is_active' => false]);
     }
 
+    public function disabledByAdmin(): static
+    {
+        return $this->state(['disabled_by_admin_at' => now()]);
+    }
+
     /**
      * Indicate that the link has already expired.
      */
