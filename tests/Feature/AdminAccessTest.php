@@ -27,13 +27,13 @@ test('admin routes redirect guests to login', function () {
     foreach (adminRoutes() as [$method, $uri]) {
         $this->call($method, $uri)->assertRedirect(route('login'));
     }
-})->skip(fn () => Route::getRoutes()->getByName('admin.users.index') === null, 'No admin routes yet.');
+});
 
 test('admin routes are forbidden for regular users', function () {
     foreach (adminRoutes() as [$method, $uri]) {
         $this->actingAs(User::factory()->create())->call($method, $uri)->assertForbidden();
     }
-})->skip(fn () => Route::getRoutes()->getByName('admin.users.index') === null, 'No admin routes yet.');
+});
 
 test('admin routes are not forbidden for admins', function (string $state) {
     foreach (adminRoutes() as [$method, $uri]) {
@@ -43,4 +43,4 @@ test('admin routes are not forbidden for admins', function (string $state) {
 
         expect($this->actingAs(User::factory()->{$state}()->create())->call($method, $uri)->status())->not->toBe(403, "{$method} {$uri} was forbidden");
     }
-})->with(['admin', 'superAdmin'])->skip(fn () => Route::getRoutes()->getByName('admin.users.index') === null, 'No admin routes yet.');
+})->with(['admin', 'superAdmin']);
