@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateUserPackageRequest;
 use App\Models\Package;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
@@ -19,17 +20,21 @@ class UserPackageController extends Controller
     public function update(UpdateUserPackageRequest $request, User $user): RedirectResponse
     {
         $period = BillingPeriod::from($request->validated('billing_period'));
-        $package = Package::findOrFail($request->validated('package_id'));
         $startsAt = $request->date('starts_at') ?? now();
 
-        $user->packageAssignment()->updateOrCreate([], [
-            'package_id' => $package->id,
-            'billing_period' => $period,
-            'price' => $package->priceFor($period),
-            'link_limit' => $package->link_limit,
-            'starts_at' => $startsAt,
-            'expires_at' => $period->expiresAt($startsAt) ?? $request->date('expires_at'),
-        ]);
+        DB::transaction(function () use ($request, $user, $period, $startsAt) {
+            $package = Package::lockForUpdate()->findOrFail($request->validated('package_id'));
+            $user->packageAssignment()->lockForUpdate()->first();
+
+            $user->packageAssignment()->updateOrCreate([], [
+                'package_id' => $package->id,
+                'billing_period' => $period,
+                'price' => $package->priceFor($period),
+                'link_limit' => $package->link_limit,
+                'starts_at' => $startsAt,
+                'expires_at' => $period->expiresAt($startsAt) ?? $request->date('expires_at'),
+            ]);
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Package assigned.')]);
 

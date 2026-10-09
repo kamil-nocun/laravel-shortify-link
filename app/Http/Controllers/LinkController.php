@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Links\StoreLinkRequest;
 use App\Http\Requests\Links\UpdateLinkRequest;
 use App\Models\Link;
+use App\Models\Package;
 use App\Models\User;
 use App\Support\LinkCodeGenerator;
 use Illuminate\Http\RedirectResponse;
@@ -90,14 +91,14 @@ class LinkController extends Controller
     /**
      * Notice for a user whose current package has been withdrawn.
      *
-     * @return array{package_name: string, ends_at: string}|null
+     * @return array{package_name: string, ends_at: string, default_package_name: string|null}|null
      */
     private function packageNotice(User $user): ?array
     {
         $assignment = $user->activeAssignment();
 
         return $assignment?->package->trashed()
-            ? ['package_name' => $assignment->package->name, 'ends_at' => $assignment->expires_at->toIso8601String()]
+            ? ['package_name' => $assignment->package->name, 'ends_at' => $assignment->expires_at->toIso8601String(), 'default_package_name' => Package::where('is_default', true)->value('name')]
             : null;
     }
 }

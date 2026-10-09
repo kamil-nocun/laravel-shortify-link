@@ -23,7 +23,9 @@ class PackageController extends Controller
         Gate::authorize('viewAny', Package::class);
 
         return Inertia::render('admin/packages/Index', [
-            'packages' => Package::withCount('assignments')->orderByDesc('is_default')->orderBy('name')->get(),
+            'packages' => Package::withCount(['assignments' => fn ($query) => $query->where('expires_at', '>', now())])
+                ->orderByDesc('is_default')->orderBy('name')->get(),
+            'defaultPackageName' => Package::where('is_default', true)->value('name'),
         ]);
     }
 
@@ -72,7 +74,7 @@ class PackageController extends Controller
     }
 
     /**
-     * Delete an unassigned package; withdraw an assigned one so current periods run out; never touch the default.
+     * Delete a package without running assignments; withdraw one that has them so current periods run out; never touch the default.
      */
     public function destroy(Package $package): RedirectResponse
     {
@@ -82,9 +84,22 @@ class PackageController extends Controller
             throw ValidationException::withMessages(['package' => __('The default package cannot be deleted.')]);
         }
 
-        $package->assignments()->exists() ? $package->delete() : $package->forceDelete();
+        $withdrawn = DB::transaction(function () use ($package) {
+            Package::whereKey($package->id)->lockForUpdate()->first();
+            $package->assignments()->where('expires_at', '<=', now())->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Package deleted.')]);
+            if ($package->assignments()->exists()) {
+                $package->delete();
+
+                return true;
+            }
+
+            $package->forceDelete();
+
+            return false;
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $withdrawn ? __('Package withdrawn.') : __('Package deleted.')]);
 
         return to_route('admin.packages.index');
     }

@@ -193,7 +193,7 @@ class UserController extends Controller
      */
     private function packageOptions(): array
     {
-        return Package::orderBy('name')->get()->map(fn (Package $package) => [
+        return Package::where('is_default', false)->orderBy('name')->get()->map(fn (Package $package) => [
             'id' => $package->id,
             'name' => $package->name,
             'link_limit' => $package->link_limit,

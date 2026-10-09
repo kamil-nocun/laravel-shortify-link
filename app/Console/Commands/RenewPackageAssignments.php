@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\BillingPeriod;
+use App\Models\Package;
 use App\Models\PackageAssignment;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Command;
@@ -26,6 +27,8 @@ class RenewPackageAssignments extends Command
             ->where('expires_at', '<=', now())
             ->pluck('id')
             ->each(fn (string $id) => DB::transaction(fn () => $this->renew($id)));
+
+        Package::onlyTrashed()->whereDoesntHave('assignments')->forceDelete();
 
         return self::SUCCESS;
     }

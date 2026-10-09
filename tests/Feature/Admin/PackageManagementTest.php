@@ -110,3 +110,31 @@ test('the current default package cannot be unmarked directly', function () {
 
     expect($default->fresh()->is_default)->toBeTrue();
 });
+
+test('a package whose assignments all expired is deleted for good', function () {
+    $package = Package::factory()->create();
+    PackageAssignment::factory()->for($package)->expired()->create();
+
+    $this->actingAs($this->super)->delete(route('admin.packages.destroy', $package))->assertRedirect(route('admin.packages.index'));
+
+    expect(Package::withTrashed()->find($package->id))->toBeNull();
+});
+
+test('index counts only active assignments', function () {
+    $package = Package::factory()->create();
+    PackageAssignment::factory()->for($package)->create();
+    PackageAssignment::factory()->for($package)->expired()->create();
+
+    $this->actingAs($this->super)->get(route('admin.packages.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('packages', fn ($packages) => collect($packages)->firstWhere('id', $package->id)['assignments_count'] === 1)
+            ->where('defaultPackageName', 'Free'));
+});
+
+test('withdrawing reports it as withdrawn', function () {
+    $package = Package::factory()->create();
+    PackageAssignment::factory()->for($package)->create();
+
+    $this->actingAs($this->super)->delete(route('admin.packages.destroy', $package))
+        ->assertSessionHas('inertia.flash_data.toast.message', 'Package withdrawn.');
+});

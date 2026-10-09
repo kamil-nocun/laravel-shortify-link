@@ -82,6 +82,7 @@ test('index announces a withdrawn package until the assignment ends', function (
     $this->actingAs($user)->get(route('links.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('packageNotice.package_name', 'Gold')
+            ->where('packageNotice.default_package_name', 'Free')
             ->where('packageNotice.ends_at', $assignment->expires_at->toIso8601String()));
 });
 

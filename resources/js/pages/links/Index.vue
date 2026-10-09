@@ -21,7 +21,11 @@ import type { Link, Paginated } from '@/types';
 const props = defineProps<{
     links: Paginated<Link>;
     quota: { used: number; limit: number | null };
-    packageNotice: { package_name: string; ends_at: string } | null;
+    packageNotice: {
+        package_name: string;
+        ends_at: string;
+        default_package_name: string | null;
+    } | null;
 }>();
 
 const limitReached = computed(
@@ -64,7 +68,7 @@ defineOptions({
                 Package {{ packageNotice.package_name }} is being withdrawn.
                 From
                 {{ new Date(packageNotice.ends_at).toLocaleDateString() }}
-                the Free package applies.
+                {{ packageNotice.default_package_name ?? 'default' }} package applies.
             </AlertDescription>
         </Alert>
 

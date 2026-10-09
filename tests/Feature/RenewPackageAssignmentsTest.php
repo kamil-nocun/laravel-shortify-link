@@ -95,3 +95,21 @@ test('renewal is scheduled every minute so paying users do not lapse onto the fr
 
     expect($event)->not->toBeNull()->and($event->expression)->toBe('* * * * *');
 });
+
+test('a withdrawn package is purged once its last assignment ends', function () {
+    expiredAssignment($this->user, $this->package);
+    $this->package->delete();
+
+    $this->artisan('packages:renew')->assertSuccessful();
+
+    expect(Package::withTrashed()->find($this->package->id))->toBeNull();
+});
+
+test('a withdrawn package with a running assignment is kept', function () {
+    PackageAssignment::factory()->for($this->user)->for($this->package)->create();
+    $this->package->delete();
+
+    $this->artisan('packages:renew')->assertSuccessful();
+
+    expect(Package::onlyTrashed()->find($this->package->id))->not->toBeNull();
+});

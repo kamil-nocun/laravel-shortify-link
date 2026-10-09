@@ -148,3 +148,8 @@ test('show reports an active package as not withdrawn', function () {
     $this->actingAs($this->super)->get(route('admin.users.show', $this->client))
         ->assertInertia(fn (Assert $page) => $page->where('packageAssignment.package_withdrawn', false));
 });
+
+test('the default package is not offered for assignment', function () {
+    $this->actingAs($this->super)->get(route('admin.users.show', $this->client))
+        ->assertInertia(fn (Assert $page) => $page->where('packages', fn ($packages) => collect($packages)->doesntContain('name', 'Free')));
+});

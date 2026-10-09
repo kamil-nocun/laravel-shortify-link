@@ -19,7 +19,11 @@ import { create, destroy, edit, index } from '@/routes/admin/packages';
 import { formatPrice } from '@/types';
 import type { Package } from '@/types';
 
-defineProps<{ packages: Package[]; errors: Record<string, string> }>();
+defineProps<{
+    packages: Package[];
+    defaultPackageName: string | null;
+    errors: Record<string, string>;
+}>();
 
 defineOptions({
     layout: {
@@ -99,7 +103,7 @@ defineOptions({
                                                 {{ pkg.assignments_count }}
                                                 user(s) will keep {{ pkg.name }}
                                                 until their current period ends,
-                                                then move to the Free package.
+                                                then move to {{ defaultPackageName ?? 'the default package' }}.
                                             </template>
                                             <template v-else
                                                 >{{ pkg.name }} will be removed
