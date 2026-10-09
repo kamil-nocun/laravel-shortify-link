@@ -6,6 +6,17 @@ export type Link = {
     short_url: string;
     is_active: boolean;
     expires_at: string | null;
+    clicks_count?: number;
+};
+
+export type StatsRow = {
+    name: string;
+    count: number;
+};
+
+export type DailyClicks = {
+    date: string;
+    count: number;
 };
 
 export type Paginated<T> = {

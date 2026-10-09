@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Head, Link as InertiaLink, router } from "@inertiajs/vue3";
+import Heading from "@/components/Heading.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogClose,
@@ -12,15 +12,15 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from '@/components/ui/dialog';
-import { create, destroy, edit, index } from '@/routes/links';
-import type { Link, Paginated } from '@/types';
+} from "@/components/ui/dialog";
+import { create, destroy, edit, index, stats } from "@/routes/links";
+import type { Link, Paginated } from "@/types";
 
 defineProps<{ links: Paginated<Link> }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Links', href: index() }],
+        breadcrumbs: [{ title: "Links", href: index() }],
     },
 });
 </script>
@@ -36,10 +36,7 @@ defineOptions({
             </Button>
         </div>
 
-        <p
-            v-if="links.data.length === 0"
-            class="text-sm text-muted-foreground"
-        >
+        <p v-if="links.data.length === 0" class="text-sm text-muted-foreground">
             You have no links yet.
         </p>
 
@@ -50,6 +47,7 @@ defineOptions({
                         <th class="p-3">Title</th>
                         <th class="p-3">Target URL</th>
                         <th class="p-3">Short URL</th>
+                        <th class="p-3">Clicks</th>
                         <th class="p-3">Status</th>
                         <th class="p-3">Expires</th>
                         <th class="p-3 text-right">Actions</th>
@@ -61,18 +59,19 @@ defineOptions({
                         :key="link.id"
                         class="border-t"
                     >
-                        <td class="p-3">{{ link.title ?? '—' }}</td>
+                        <td class="p-3">{{ link.title ?? "—" }}</td>
                         <td class="max-w-64 truncate p-3">
                             {{ link.original_url }}
                         </td>
                         <td class="p-3 font-mono">{{ link.short_url }}</td>
+                        <td class="p-3">{{ link.clicks_count ?? 0 }}</td>
                         <td class="p-3">
                             <Badge
                                 :variant="
                                     link.is_active ? 'default' : 'secondary'
                                 "
                                 >{{
-                                    link.is_active ? 'Active' : 'Inactive'
+                                    link.is_active ? "Active" : "Inactive"
                                 }}</Badge
                             >
                         </td>
@@ -80,10 +79,15 @@ defineOptions({
                             {{
                                 link.expires_at
                                     ? new Date(link.expires_at).toLocaleString()
-                                    : '—'
+                                    : "—"
                             }}
                         </td>
                         <td class="space-x-2 p-3 text-right">
+                            <Button variant="outline" size="sm" as-child>
+                                <InertiaLink :href="stats(link.id)"
+                                    >Stats</InertiaLink
+                                >
+                            </Button>
                             <Button variant="outline" size="sm" as-child>
                                 <InertiaLink :href="edit(link.id)"
                                     >Edit</InertiaLink
