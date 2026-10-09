@@ -18,8 +18,11 @@ class UserRoleController extends Controller
     {
         DB::transaction(function () use ($request, $user): void {
             $user->forceFill(['role' => $request->validated('role')])->save();
-            $user->assignedAdmins()->detach();
-            $user->managedClients()->detach();
+
+            if ($user->wasChanged('role')) {
+                $user->assignedAdmins()->detach();
+                $user->managedClients()->detach();
+            }
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Role updated.')]);

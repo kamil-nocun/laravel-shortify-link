@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\Link;
 use App\Models\LinkClick;
 use App\Models\User;
@@ -229,4 +230,17 @@ test('demoting an administrator clears their managed clients', function () {
 
     expect(DB::table('client_admin')->where('admin_id', $admin->id)->count())->toBe(0)
         ->and($client->fresh())->not->toBeNull();
+
+    $formerAdmin = $admin->fresh()->forceFill(['role' => UserRole::Admin]);
+    expect(User::visibleTo($formerAdmin)->whereKey($client->id)->exists())->toBeFalse();
+});
+
+test('resubmitting the same role keeps assignments', function () {
+    $super = User::factory()->superAdmin()->create();
+    $admin = User::factory()->admin()->create();
+    User::factory()->assignedTo($admin)->create();
+
+    $this->actingAs($super)->patch(route('admin.users.role', $admin), ['role' => 'admin'])->assertRedirect();
+
+    expect(DB::table('client_admin')->where('admin_id', $admin->id)->count())->toBe(1);
 });
