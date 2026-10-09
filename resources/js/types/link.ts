@@ -19,6 +19,15 @@ export type DailyClicks = {
     count: number;
 };
 
+export type StatsPeriodParams = {
+    period: string;
+    date: string | null;
+    month: string | null;
+    year: string | null;
+    from: string | null;
+    to: string | null;
+};
+
 export type Paginated<T> = {
     data: T[];
     current_page: number;

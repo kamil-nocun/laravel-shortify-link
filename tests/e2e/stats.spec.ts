@@ -54,7 +54,7 @@ test('stats page shows clicks and switches the range', async ({ page }) => {
     }
 
     await page.getByRole('link', { name: '7 days' }).click();
-    await expect(page).toHaveURL(/days=7/);
+    await expect(page).toHaveURL(/period=7d/);
     await expect(page.getByText('3 clicks in the last 7 days')).toBeVisible();
 });
 
@@ -76,7 +76,7 @@ test('stats can be filtered, filters removed one by one and reset', async ({
     await expect(page).toHaveURL(/browser=Firefox/);
 
     await page.getByRole('link', { name: '7 days' }).click();
-    await expect(page).toHaveURL(/days=7/);
+    await expect(page).toHaveURL(/period=7d/);
     await expect(page).toHaveURL(/browser=Firefox/);
 
     await page.getByLabel('Country').selectOption('Germany');
@@ -94,7 +94,7 @@ test('stats can be filtered, filters removed one by one and reset', async ({
 
     await page.getByRole('button', { name: 'Clear all' }).click();
     await expect(page).not.toHaveURL(/country=/);
-    await expect(page).toHaveURL(/days=7/);
+    await expect(page).toHaveURL(/period=7d/);
     await expect(page.getByText('3 clicks in the last 7 days')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Clear all' })).toHaveCount(
         0,

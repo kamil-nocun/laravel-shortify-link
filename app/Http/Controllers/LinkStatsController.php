@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Links\LinkStatsRequest;
 use App\Models\Link;
+use App\Support\StatsPeriod;
+use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,13 +21,17 @@ class LinkStatsController extends Controller
     private const UNKNOWN = 'Unknown';
 
     /**
-     * Show click statistics of a link for the requested number of days.
+     * Show click statistics of a link for the requested period.
      */
     public function __invoke(LinkStatsRequest $request, Link $link): Response
     {
-        $days = $request->days();
-        $from = now()->subDays($days - 1)->startOfDay();
-        $inRange = fn (): Builder => $link->clicks()->toBase()->where('clicked_at', '>=', $from);
+        $firstClick = $link->clicks()->min('clicked_at');
+        $period = StatsPeriod::resolve($request->period(), $firstClick === null ? null : CarbonImmutable::parse($firstClick), now());
+        $from = $period->from;
+        $isEmpty = $from === null || $from->gt($period->to);
+        $inRange = fn (): Builder => $isEmpty
+            ? $link->clicks()->toBase()->whereRaw('1 = 0')
+            : $link->clicks()->toBase()->where('clicked_at', '>=', $from)->where('clicked_at', '<=', $period->to);
         $filters = $request->filters();
         $clicks = function () use ($inRange, $filters): Builder {
             $query = $inRange();
@@ -41,10 +48,7 @@ class LinkStatsController extends Controller
             ->groupBy('day')
             ->pluck('total', 'day');
 
-        $daily = collect(range($days - 1, 0))->map(fn (int $ago): array => [
-            'date' => now()->subDays($ago)->toDateString(),
-            'count' => (int) ($perDay[now()->subDays($ago)->toDateString()] ?? 0),
-        ])->all();
+        $series = $isEmpty ? [] : $this->series($perDay, $from, $period->to, $period->granularity);
 
         $countries = $this->topBy($clicks, 'country');
         $browsers = $this->topBy($clicks, 'browser');
@@ -64,9 +68,10 @@ class LinkStatsController extends Controller
 
         return Inertia::render('links/Stats', [
             'link' => $link,
-            'days' => $days,
-            'total' => array_sum(array_column($daily, 'count')),
-            'daily' => $daily,
+            'period' => $request->period(),
+            'granularity' => $period->granularity,
+            'total' => array_sum(array_column($series, 'count')),
+            'series' => $series,
             'countries' => $countries,
             'cities' => $cities->values(),
             'browsers' => $browsers,
@@ -75,6 +80,32 @@ class LinkStatsController extends Controller
             'filters' => $filters,
             'options' => $this->options($inRange),
         ]);
+    }
+
+    /**
+     * Click counts per day or month from start to end, with zeros for empty buckets.
+     *
+     * @param  Collection<string, mixed>  $perDay  click counts keyed by Y-m-d
+     * @return list<array{date: string, count: int}>
+     */
+    private function series(Collection $perDay, CarbonImmutable $from, CarbonImmutable $to, string $granularity): array
+    {
+        $isMonthly = $granularity === 'month';
+        $counts = [];
+
+        foreach ($perDay as $day => $total) {
+            $key = $isMonthly ? substr((string) $day, 0, 7) : (string) $day;
+            $counts[$key] = ($counts[$key] ?? 0) + (int) $total;
+        }
+
+        $series = [];
+
+        for ($cursor = $isMonthly ? $from->startOfMonth() : $from; $cursor->lte($to); $cursor = $isMonthly ? $cursor->addMonth() : $cursor->addDay()) {
+            $key = $cursor->format($isMonthly ? 'Y-m' : 'Y-m-d');
+            $series[] = ['date' => $key, 'count' => $counts[$key] ?? 0];
+        }
+
+        return $series;
     }
 
     /**

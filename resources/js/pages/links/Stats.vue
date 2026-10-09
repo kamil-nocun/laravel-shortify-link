@@ -10,14 +10,16 @@ import type {
     StatsFilterKey,
     StatsFilters,
     StatsOptions,
+    StatsPeriodParams,
     StatsRow,
 } from '@/types';
 
 const props = defineProps<{
     link: Link;
-    days: number;
+    period: StatsPeriodParams;
+    granularity: 'day' | 'month';
     total: number;
-    daily: DailyClicks[];
+    series: DailyClicks[];
     countries: StatsRow[];
     cities: StatsRow[];
     browsers: StatsRow[];
@@ -28,6 +30,8 @@ const props = defineProps<{
 }>();
 
 const ranges = [7, 30, 90];
+
+const days = computed(() => props.series.length);
 
 const filterFields = computed(() => {
     const fields: { key: StatsFilterKey; label: string; options: string[] }[] =
@@ -68,8 +72,8 @@ const activeFilters = computed(() =>
     filterFields.value.filter((field) => props.filters[field.key] !== null),
 );
 
-const query = (filters: StatsFilters, days: number = props.days) => ({
-    days,
+const query = (filters: StatsFilters, period: string = props.period.period) => ({
+    period,
     ...Object.fromEntries(
         Object.entries(filters).filter(([, value]) => value !== null),
     ),
@@ -94,7 +98,7 @@ const clearFilters = () =>
     });
 
 const maxDaily = computed(() =>
-    Math.max(1, ...props.daily.map((day) => day.count)),
+    Math.max(1, ...props.series.map((day) => day.count)),
 );
 
 defineOptions({
@@ -117,12 +121,12 @@ defineOptions({
                 <Button
                     v-for="range in ranges"
                     :key="range"
-                    :variant="range === days ? 'default' : 'outline'"
+                    :variant="`${range}d` === period.period ? 'default' : 'outline'"
                     size="sm"
                     as-child
                 >
                     <InertiaLink
-                        :href="stats(link.id, { query: query(filters, range) })"
+                        :href="stats(link.id, { query: query(filters, `${range}d`) })"
                         preserve-scroll
                     >
                         {{ range }} days
@@ -199,7 +203,7 @@ defineOptions({
             aria-label="Clicks per day"
         >
             <div
-                v-for="day in daily"
+                v-for="day in series"
                 :key="day.date"
                 class="min-w-px flex-1 rounded-t bg-primary"
                 :style="{

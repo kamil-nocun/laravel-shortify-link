@@ -17,7 +17,7 @@ function clickOn(Link $link, array $attributes = []): LinkClick
     return LinkClick::factory()->for($link)->create($attributes);
 }
 
-test('owner sees stats with total, daily series, countries and cities', function () {
+test('owner sees stats with total, series, countries and cities', function () {
     clickOn($this->link);
     clickOn($this->link);
     clickOn($this->link, ['clicked_at' => now()->subDays(2), 'country_code' => 'DE', 'country' => 'Germany', 'city' => 'Berlin']);
@@ -27,34 +27,117 @@ test('owner sees stats with total, daily series, countries and cities', function
             ->component('links/Stats')
             ->where('link.id', $this->link->id)
             ->where('total', 3)
-            ->where('daily.29.count', 2)
-            ->where('daily.27.count', 1)
+            ->where('series.29.count', 2)
+            ->where('series.27.count', 1)
             ->where('countries', [['name' => 'Poland', 'count' => 2], ['name' => 'Germany', 'count' => 1]])
             ->where('cities', [['name' => 'Warsaw, Poland', 'count' => 2], ['name' => 'Berlin, Germany', 'count' => 1]]));
 });
 
-test('days defaults to 30 and the daily series covers every day with zeros', function () {
+test('period defaults to 30d and the series covers every day with zeros', function () {
     clickOn($this->link);
 
     $this->actingAs($this->user)->get(route('links.stats', $this->link))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('days', 30)
-            ->has('daily', 30)
-            ->where('daily.0.date', now()->subDays(29)->toDateString())
-            ->where('daily.0.count', 0)
-            ->where('daily.29.date', now()->toDateString()));
+            ->where('period.period', '30d')
+            ->where('granularity', 'day')
+            ->has('series', 30)
+            ->where('series.0.date', now()->subDays(29)->toDateString())
+            ->where('series.0.count', 0)
+            ->where('series.29.date', now()->toDateString()));
 });
 
-test('days selects the range', function (int $days) {
-    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'days' => $days]))
-        ->assertInertia(fn (Assert $page) => $page->where('days', $days)->has('daily', $days));
-})->with([7, 30, 90]);
+test('period selects the range', function (string $period, int $days) {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => $period]))
+        ->assertInertia(fn (Assert $page) => $page->where('period.period', $period)->has('series', $days));
+})->with([['7d', 7], ['30d', 30], ['90d', 90]]);
+
+test('day, month, year and range limit the clicks', function (array $query, array $inside, array $outside) {
+    foreach ($inside as $moment) {
+        clickOn($this->link, ['clicked_at' => $moment]);
+    }
+    foreach ($outside as $moment) {
+        clickOn($this->link, ['clicked_at' => $moment]);
+    }
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, ...$query]))
+        ->assertInertia(fn (Assert $page) => $page->where('total', count($inside)));
+})->with([
+    'day' => [['period' => 'day', 'date' => '2026-03-10'], ['2026-03-10 00:00:00', '2026-03-10 23:59:59'], ['2026-03-09 23:59:59', '2026-03-11 00:00:00']],
+    'month' => [['period' => 'month', 'month' => '2026-03'], ['2026-03-01 00:00:00', '2026-03-31 23:59:59'], ['2026-02-28 23:59:59', '2026-04-01 00:00:00']],
+    'year' => [['period' => 'year', 'year' => '2025'], ['2025-01-01 00:00:00', '2025-12-31 23:59:59'], ['2024-12-31 23:59:59', '2026-01-01 00:00:00']],
+    'range' => [['period' => 'range', 'from' => '2026-03-10', 'to' => '2026-03-12'], ['2026-03-10 00:00:00', '2026-03-12 23:59:59'], ['2026-03-09 23:59:59', '2026-03-13 00:00:00']],
+]);
+
+test('all covers every click of the link and ignores other links', function () {
+    clickOn($this->link, ['clicked_at' => '2025-11-20 10:00:00']);
+    clickOn($this->link);
+    clickOn(Link::factory()->for($this->user)->create(), ['clicked_at' => '2024-01-01 10:00:00']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'all']))
+        ->assertInertia(fn (Assert $page) => $page->where('total', 2)->where('series.0.date', '2025-11'));
+});
+
+test('all without clicks returns an empty series and zero total', function () {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'all']))
+        ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('series', [])->where('options.countries', []));
+});
+
+test('series is monthly above 92 days and for year and all', function (array $query, string $granularity) {
+    clickOn($this->link, ['clicked_at' => '2026-01-15 10:00:00']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, ...$query]))
+        ->assertInertia(fn (Assert $page) => $page->where('granularity', $granularity));
+})->with([
+    'range 92 days' => [['period' => 'range', 'from' => '2026-01-01', 'to' => '2026-04-02'], 'day'],
+    'range 93 days' => [['period' => 'range', 'from' => '2026-01-01', 'to' => '2026-04-03'], 'month'],
+    'year' => [['period' => 'year', 'year' => '2026'], 'month'],
+    'all' => [['period' => 'all'], 'month'],
+]);
+
+test('monthly series sums days per month and fills empty months with zeros', function () {
+    clickOn($this->link, ['clicked_at' => '2026-01-05 10:00:00']);
+    clickOn($this->link, ['clicked_at' => '2026-01-20 10:00:00']);
+    clickOn($this->link, ['clicked_at' => '2026-03-02 10:00:00']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'year', 'year' => '2026']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('series.0', ['date' => '2026-01', 'count' => 2])
+            ->where('series.1', ['date' => '2026-02', 'count' => 0])
+            ->where('series.2', ['date' => '2026-03', 'count' => 1])
+            ->has('series', now()->month)
+            ->where('total', 3));
+});
+
+test('a range in the future returns zeros', function (array $query) {
+    clickOn($this->link);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, ...$query]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('series', [])->where('countries', [])->where('options.browsers', []));
+})->with([
+    'year' => [['period' => 'year', 'year' => '2030']],
+    'month' => [['period' => 'month', 'month' => '2030-01']],
+    'day' => [['period' => 'day', 'date' => '2030-01-01']],
+]);
+
+test('period applies to totals, tables and options', function () {
+    clickOn($this->link, ['clicked_at' => '2026-03-10 10:00:00', 'country' => 'Germany', 'browser' => 'Opera']);
+    clickOn($this->link, ['clicked_at' => '2026-03-11 10:00:00', 'country' => 'Spain', 'browser' => 'Safari']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'day', 'date' => '2026-03-10']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('total', 1)
+            ->where('countries', [['name' => 'Germany', 'count' => 1]])
+            ->where('browsers', [['name' => 'Opera', 'count' => 1]])
+            ->where('options.countries', ['Germany'])
+            ->where('options.browsers', ['Opera']));
+});
 
 test('clicks older than the range and clicks of other links are excluded', function () {
     clickOn($this->link, ['clicked_at' => now()->subDays(8)]);
     clickOn(Link::factory()->for($this->user)->create());
 
-    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'days' => 7]))
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => '7d']))
         ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('countries', [])->where('cities', []));
 });
 
@@ -123,7 +206,7 @@ test('client stats respect the range and the link', function () {
     clickOn($this->link, ['clicked_at' => now()->subDays(8)]);
     clickOn(Link::factory()->for($this->user)->create());
 
-    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'days' => 7]))
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => '7d']))
         ->assertInertia(fn (Assert $page) => $page->where('browsers', [])->where('systems', [])->where('devices', []));
 });
 
@@ -217,11 +300,6 @@ test('filters default to null', function () {
 test('a filter value longer than 255 characters fails validation', function () {
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'browser' => str_repeat('a', 256)]))
         ->assertSessionHasErrors('browser');
-});
-
-test('invalid days value fails validation', function () {
-    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'days' => 5]))
-        ->assertSessionHasErrors('days');
 });
 
 test('other users are bounced to the list with an error toast', function () {

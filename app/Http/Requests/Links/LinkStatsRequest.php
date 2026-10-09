@@ -10,8 +10,6 @@ use Illuminate\Validation\Rule;
 
 class LinkStatsRequest extends FormRequest
 {
-    public const DEFAULT_DAYS = 30;
-
     /**
      * Allowed values of the period parameter.
      *
@@ -63,17 +61,8 @@ class LinkStatsRequest extends FormRequest
                     }
                 },
             ],
-            'days' => ['sometimes', 'integer', Rule::in([7, 30, 90])],
             ...array_fill_keys(self::FILTERS, ['nullable', 'string', 'max:255']),
         ];
-    }
-
-    /**
-     * Length of the requested range in days.
-     */
-    public function days(): int
-    {
-        return $this->integer('days', self::DEFAULT_DAYS);
     }
 
     /**
