@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserLinkController;
 use App\Http\Controllers\Admin\UserPackageController;
 use App\Http\Controllers\Admin\UserRoleController;
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\LinkStatsController;
 use App\Http\Controllers\LinkToggleController;
@@ -25,6 +26,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('links/{link}/stats/data', [LinkStatsController::class, 'data'])->name('links.stats.data');
     Route::patch('links/{link}/toggle', LinkToggleController::class)->name('links.toggle');
     Route::resource('links', LinkController::class)->except('show');
+    Route::get('billing/package', [BillingController::class, 'show'])->name('billing.package.show');
+    Route::post('billing/package/checkout', [BillingController::class, 'checkout'])->name('billing.package.checkout');
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {

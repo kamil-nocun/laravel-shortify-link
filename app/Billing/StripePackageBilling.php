@@ -72,7 +72,7 @@ class StripePackageBilling implements PackageBilling
         $options = ['success_url' => $successUrl, 'cancel_url' => $cancelUrl];
 
         $checkout = $period === BillingPeriod::OneTime
-            ? $user->checkout([$priceId => 1], $options)
+            ? $user->checkout([$priceId => 1], [...$options, 'invoice_creation' => ['enabled' => true]])
             : $user->newSubscription('default', $priceId)->checkout($options);
 
         return $checkout->url;

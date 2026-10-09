@@ -2,6 +2,7 @@
 import { Link, usePage } from "@inertiajs/vue3";
 import {
     BookOpen,
+    CreditCard,
     FolderGit2,
     Link2,
     Package,
@@ -25,6 +26,7 @@ import {
 import { dashboard } from "@/routes";
 import { index as administratorsIndex } from "@/routes/admin/administrators";
 import { index as packagesIndex } from "@/routes/admin/packages";
+import { show as billingPackage } from "@/routes/billing/package";
 import { index as usersIndex } from "@/routes/admin/users";
 import { index as linksIndex } from "@/routes/links";
 import type { NavItem } from "@/types";
@@ -53,6 +55,9 @@ const mainNavItems = computed<NavItem[]>(() => {
             ? [{ title: "Users", href: usersIndex(), icon: Users }]
             : []),
         ...baseNavItems,
+        ...(role !== "super_admin"
+            ? [{ title: "My package", href: billingPackage(), icon: CreditCard }]
+            : []),
     ];
 });
 
