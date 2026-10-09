@@ -7,7 +7,7 @@ Data: 2026-10-09
 - Każde udane przekierowanie `GET /{code}` zapisuje kliknięcie (czas, kraj, miasto, przeglądarka, system operacyjny, typ urządzenia).
 - Zapis idzie przez job w kolejce `database`, więc redirect nie czeka na lookup geo ani insert.
 - Adres IP i surowy nagłówek User-Agent nie są zapisywane w statystykach. Job używa ich tylko do lookupu geo i rozpoznania klienta.
-- Właściciel linku widzi stronę statystyk (wykres dzienny, top kraje, top miasta, top przeglądarki, systemy i typy urządzeń) z filtrem 7/30/90 dni oraz liczbę kliknięć w liście linków.
+- Właściciel linku widzi stronę statystyk (wykres dzienny, top kraje, top miasta, top przeglądarki, systemy i typy urządzeń) z filtrem 7/30/90 dni i filtrami po kraju, mieście, przeglądarce, systemie i urządzeniu oraz liczbę kliknięć w liście linków.
 
 ## Zakres
 
@@ -17,6 +17,7 @@ Data: 2026-10-09
 | Job `RecordLinkClick` i `GeoLocator` (MaxMind GeoLite2-City) | Wstępna agregacja dzienna |
 | Rozpoznawanie przeglądarki, systemu i typu urządzenia z User-Agent (`matomo/device-detector`) | Referrer |
 | Strona statystyk z filtrem 7/30/90 dni | Wersje przeglądarek i systemów, model urządzenia |
+| Filtry po kraju, mieście, przeglądarce, systemie i urządzeniu (jedna wartość na pole, AND) | Wielokrotny wybór wartości w jednym polu, wyszukiwanie tekstowe, wyszukiwanie w liście linków |
 | Kolumna z liczbą kliknięć w liście linków | Automatyczne pobieranie i aktualizacja bazy `.mmdb` |
 | Testy Pest | Retencja i czyszczenie starych kliknięć |
 
@@ -67,6 +68,11 @@ Model `LinkClick` (`HasUuids`, `HasFactory`, relacja `link()`), factory z domyś
 - `LinkStatsController` (jedna akcja). Parametr `days` walidowany do `7|30|90`, domyślnie 30.
 - Props: `link`, `days`, `total`, `daily` (pełny szereg dni, brakujące dni z zerem), `countries` (top 10), `cities` (top 10, razem z krajem), `browsers`, `systems` i `devices` (każdy: top 10, `list<array{name: string, count: int}>`). Wartości `null` pokazywane jako "Unknown".
 - Strona `resources/js/pages/links/Stats.vue`: przełącznik zakresu, wykres słupkowy w CSS/SVG (bez nowej biblioteki), pięć tabel (kraje, miasta, przeglądarki, systemy, urządzenia). Teksty przez istniejący mechanizm tłumaczeń.
+- Filtry: parametry `country`, `city`, `browser`, `os`, `device_type` obok `days`, walidowane w `LinkStatsRequest` (`nullable|string|max:255`). Łączą się przez AND i ograniczają wspólne zapytanie bazowe kontrolera, więc zawężają wykres, `total` i wszystkie tabele.
+- Wartość filtra `Unknown` oznacza `whereNull(kolumna)`, czyli kliknięcia bez rozpoznanej wartości.
+- Filtr miasta działa na samej nazwie miasta (np. `Wroclaw`), choć tabela miast pokazuje `City, Country`.
+- Dodatkowe propsy: `filters` (ustawione wartości, brak = `null`) oraz `options`: dla każdego z pięciu pól lista różnych wartości z wybranego zakresu dni, malejąco po nazwie rosnąco alfabetycznie, `Unknown` na końcu, gdy występują `null`-e, limit 200 na pole. `options` nie zależy od pozostałych filtrów, żeby nie dało się zawęzić do pustego wyniku bez drogi powrotu.
+- UI filtrów: pięć natywnych `<select>` (pierwsza opcja "All") nad wykresem, zmiana woła `router.get` z `preserveState`. Przycisk "Clear filters" widoczny, gdy jakiś filtr jest ustawiony. Przełącznik 7/30/90 dni zachowuje aktywne filtry.
 - Lista linków: `withCount('clicks')` i kolumna z liczbą kliknięć oraz link do statystyk.
 - Trasy do frontu przez Wayfinder.
 
@@ -79,6 +85,7 @@ Pest:
 - `ClientDetector`: Chrome na Windows to `desktop`, iPhone to `smartphone`, bot daje `device_type = 'bot'` z `null` browser/os, `null` i pusty User-Agent dają same `null`;
 - job dla usuniętego linku nie rzuca wyjątku;
 - redirect dispatchuje `RecordLinkClick` (`Queue::fake`); odmowa (404) nie dispatchuje;
+- filtry: każdy z pięciu filtrów zawęża `total` i tabele; dwa filtry naraz (AND); `Unknown` zwraca kliknięcia z `null`; `options` zawiera tylko wartości tego linku z wybranego zakresu; zbyt długa wartość jest odrzucona walidacją; filtr nie ujawnia kliknięć cudzego linku;
 - strona statystyk: `browsers`, `systems` i `devices` z licznikami i `Unknown` dla `null`; zakresy 7/30/90, domyślny 30, niepoprawny `days` daje błąd walidacji, klik poza zakresem niewliczony, pełny szereg dni z zerami;
 - statystyki cudzego linku: 403; gość: przekierowanie do logowania;
 - lista linków zawiera liczbę kliknięć.

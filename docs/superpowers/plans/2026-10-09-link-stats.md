@@ -19,11 +19,13 @@ Odhaczaj po zakończeniu zadania. Jedno zadanie = jeden commit.
 - [x] **5.** Backend strony statystyk
 - [x] **6.** Frontend + E2E
 - [ ] **7.** Weryfikacja końcowa (zostaje ręczny test geo, krok 7.3)
-- [ ] **8.** Zależność, kolumny klienta + `ClientDetector`
-- [ ] **9.** Job i redirect przekazują User-Agent
-- [ ] **10.** Statystyki klienta w backendzie i UI + E2E
+- [x] **8.** Zależność, kolumny klienta + `ClientDetector`
+- [x] **9.** Job i redirect przekazują User-Agent
+- [x] **10.** Statystyki klienta w backendzie i UI + E2E
+- [ ] **11.** Filtry statystyk w backendzie
+- [ ] **12.** Filtry statystyk w UI + E2E
 
-**Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5. Zadania 8–10 dobudowują statystyki klienta na gotowych 1–6: 8 → 9 → 10.
+**Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5. Zadania 8–10 dobudowują statystyki klienta na gotowych 1–6: 8 → 9 → 10. Zadania 11–12 dodają filtry na gotowych 5, 6 i 10: 11 → 12.
 
 ## Przepływ danych
 
@@ -57,6 +59,9 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 | 6 | Brak lub pusty User-Agent | Trzy pola klienta `null`, klik zapisany | 8, 9 |
 | 7 | Bot | `device_type = 'bot'`, `browser`/`os` `null` | 8 |
 | 8 | Klient `null` w tabelach | Etykieta `Unknown` | 10 |
+| 9 | Filtr `Unknown` | Zwraca kliknięcia z `null` w tej kolumnie | 11 |
+| 10 | Filtr miasta | Działa po samej nazwie miasta, nie po `City, Country` | 11 |
+| 11 | Filtr cudzego linku lub spoza zakresu | Nie ujawnia cudzych kliknięć, `options` tylko z tego linku i zakresu | 11 |
 
 ---
 
@@ -328,3 +333,58 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 - [ ] **10.8** Pint, `npx prettier --single-quote --write` na zmienionych plikach frontu, potem commit: `Show browser, os and device stats on the link stats page`
 
 **Gotowe gdy:** `LinkStatsTest` i cały zestaw E2E zielone, a pełny `php artisan test --compact` bez regresji.
+
+---
+
+## Zadanie 11: Filtry statystyk w backendzie
+
+**Po co:** zawężanie wszystkich statystyk linku po kraju, mieście, przeglądarce, systemie i urządzeniu.
+
+**Pliki**
+- Zmiana: `app/Http/Requests/Links/LinkStatsRequest.php`, `app/Http/Controllers/LinkStatsController.php`, `tests/Feature/LinkStatsTest.php`
+
+**Bierze:** zapytanie bazowe `$clicks` i metodę `topBy` z zadania 10.
+**Daje dalej (nowe propsy `links/Stats`):**
+
+| Prop | Typ |
+|---|---|
+| `filters` | `array{country: ?string, city: ?string, browser: ?string, os: ?string, device_type: ?string}` |
+| `options` | `array{countries: list<string>, cities: list<string>, browsers: list<string>, systems: list<string>, devices: list<string>}`, sortowane rosnąco, `Unknown` na końcu, limit 200 |
+
+Mapowanie pól: `country` → kolumna `country`, `city` → `city`, `browser` → `browser`, `os` → `os`, `device_type` → `device_type`. Klucze `options` odpowiadają polom w liczbie mnogiej (`countries`, `cities`, `browsers`, `systems`, `devices`).
+
+- [ ] **11.1** Dopisz testy w `LinkStatsTest`:
+  - `each filter narrows the total and the tables` (dataset: pięć pól, kliknięcia z różnymi wartościami)
+  - `filters combine with AND`
+  - `the Unknown filter matches clicks with null values` → #9
+  - `the city filter matches the plain city name` (np. `Warsaw` zawęża, a `Warsaw, Poland` nie) → #10
+  - `options list the distinct values of the link within the range` (poza zakresem i cudzy link niewliczone, `Unknown` na końcu) → #11
+  - `options do not depend on the other filters`
+  - `filters echo the current values and default to null`
+  - `a filter value longer than 255 characters fails validation`
+- [ ] **11.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsTest.php`. Oczekiwane: nowe testy **FAIL**
+- [ ] **11.3** `LinkStatsRequest`: reguły `nullable|string|max:255` dla pięciu pól; metoda `filters(): array` zwracająca pięć kluczy (brak lub pusty string → `null`)
+- [ ] **11.4** Kontroler: zmapuj niepuste filtry na `where` (`Unknown` → `whereNull`) i dołóż je do `$clicks`, tak by objęły `daily`, `topBy` i miasta. Do `options` użyj osobnej bazy zapytania z samym zakresem dni (bez filtrów): `select($column)->distinct()->orderBy($column)->limit(200)`, `null` zamienione na `Unknown` i przeniesione na koniec
+- [ ] **11.5** Uruchom `LinkStatsTest`. Oczekiwane: **PASS**
+- [ ] **11.6** Pint i PHPStan (`vendor/bin/phpstan analyse --memory-limit=1G`, dozwolony tylko znany błąd `UserFactory`), potem commit: `Add filters to link stats`
+
+**Gotowe gdy:** `LinkStatsTest` zielony, brak nowych błędów PHPStan.
+
+---
+
+## Zadanie 12: Filtry statystyk w UI + E2E
+
+**Po co:** użytkownik ustawia filtry na stronie statystyk.
+
+**Pliki**
+- Zmiana: `resources/js/pages/links/Stats.vue`, `tests/e2e/stats.spec.ts`
+
+**Bierze:** propsy `filters` i `options` z zadania 11; trasa `stats` z Wayfinder.
+
+- [ ] **12.1** Dopisz do `stats.spec.ts` przepływ: seed z klikami z dwóch przeglądarek (np. `Chrome` i `Firefox`, przez factory); wybór `Firefox` w selecie "Browser" zmienia sumę; kliknięcie "7 days" zachowuje `browser=Firefox` w URL; "Clear filters" przywraca pełną sumę
+- [ ] **12.2** Uruchom: `npx playwright test tests/e2e/stats.spec.ts`. Oczekiwane: nowy przepływ **FAIL**
+- [ ] **12.3** `Stats.vue`: propsy `filters`, `options`; pięć `<select>` z opcją "All"; zmiana woła `router.get` z aktualnym `days` i filtrami (puste pomijane), `preserveState`, `preserveScroll`; przycisk "Clear filters" widoczny, gdy jakiś filtr jest ustawiony; linki 7/30/90 dni dołączają aktywne filtry do zapytania
+- [ ] **12.4** `npm run build`, potem `npx playwright test`. Oczekiwane: **PASS**
+- [ ] **12.5** `npx prettier --single-quote --write` na zmienionych plikach, pełne `php artisan test --compact`, potem commit: `Add filters to the link stats page`
+
+**Gotowe gdy:** cały zestaw E2E i `php artisan test --compact` zielone.
