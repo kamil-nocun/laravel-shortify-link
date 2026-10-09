@@ -6,38 +6,41 @@
 
 ## Cel w jednym zdaniu
 
-Każdy udany redirect zapisuje kliknięcie (czas, kraj, miasto) przez job w kolejce; właściciel widzi statystyki 7/30/90 dni i licznik w liście linków.
+Każdy udany redirect zapisuje kliknięcie (czas, kraj, miasto, przeglądarka, system, typ urządzenia) przez job w kolejce; właściciel widzi statystyki 7/30/90 dni i licznik w liście linków.
 
 ## Mapa postępu
 
 Odhaczaj po zakończeniu zadania. Jedno zadanie = jeden commit.
 
-- [ ] **1.** Tabela `link_clicks` + model
-- [ ] **2.** `GeoLocator`
-- [ ] **3.** Job `RecordLinkClick`
-- [ ] **4.** Dispatch z redirectu
-- [ ] **5.** Backend strony statystyk
-- [ ] **6.** Frontend + E2E
-- [ ] **7.** Weryfikacja końcowa
+- [x] **1.** Tabela `link_clicks` + model
+- [x] **2.** `GeoLocator`
+- [x] **3.** Job `RecordLinkClick`
+- [x] **4.** Dispatch z redirectu
+- [x] **5.** Backend strony statystyk
+- [x] **6.** Frontend + E2E
+- [ ] **7.** Weryfikacja końcowa (zostaje ręczny test geo, krok 7.3)
+- [ ] **8.** Zależność, kolumny klienta + `ClientDetector`
+- [ ] **9.** Job i redirect przekazują User-Agent
+- [ ] **10.** Statystyki klienta w backendzie i UI + E2E
 
-**Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5.
+**Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5. Zadania 8–10 dobudowują statystyki klienta na gotowych 1–6: 8 → 9 → 10.
 
 ## Przepływ danych
 
 ```
 GET /{code} → RedirectLinkController → RecordLinkClick (kolejka)
-                                         → GeoLocator → LinkClick (DB)
+                                         → GeoLocator + ClientDetector → LinkClick (DB)
 GET links/{link}/stats → LinkStatsController → links/Stats.vue
 ```
 
 ## Zasady (obowiązują w każdym zadaniu)
 
 - UUID PK/FK. `link_clicks` bez `created_at`/`updated_at`.
-- **Nigdy** nie zapisuj IP w `link_clicks`.
+- **Nigdy** nie zapisuj IP ani surowego User-Agent w `link_clicks`. Zapisujemy tylko `browser`, `os`, `device_type` (nazwy, bez wersji).
 - `clicked_at` ustawia kontroler (czas żądania), nie job.
 - Brak geo = `null` kraj/miasto, klik i tak zapisany.
 - `days` ∈ `7|30|90`, domyślnie `30`.
-- Nowa zależność tylko `geoip2/geoip2`. Wykres bez biblioteki.
+- Zależności tylko `geoip2/geoip2` i `matomo/device-detector` (zaakceptowane). Wykres bez biblioteki.
 - Po zmianach PHP: `vendor/bin/pint --dirty --format agent`.
 - Teksty UI: angielskie literały przez `__()`. Trasy we froncie przez Wayfinder.
 - Artisan zawsze z `--no-interaction`.
@@ -51,6 +54,9 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 | 3 | Dzień bez kliknięć | Jest w `daily` z zerem | 5 |
 | 4 | Kliknięcia starsze niż zakres / cudzego linku | Nie wchodzą do sum | 5 |
 | 5 | Geo `null` w tabelach | Etykieta `Unknown` | 5 |
+| 6 | Brak lub pusty User-Agent | Trzy pola klienta `null`, klik zapisany | 8, 9 |
+| 7 | Bot | `device_type = 'bot'`, `browser`/`os` `null` | 8 |
+| 8 | Klient `null` w tabelach | Etykieta `Unknown` | 10 |
 
 ---
 
@@ -241,3 +247,84 @@ Geo `null` → `Unknown`. Lista linków dostaje `clicks_count` na każdym linku.
 - [ ] **7.3** Ręczny test geo (robi użytkownik): pobierz GeoLite2-City do `storage/app/geoip/` (konto MaxMind), kliknij krótki link z publicznego IP, uruchom `php artisan queue:work`, sprawdź wiersz w `link_clicks`
 
 **Gotowe gdy:** testy zielone, a wiersz z krajem i miastem pojawia się w bazie.
+
+---
+
+## Zadanie 8: Zależność, kolumny klienta + `ClientDetector`
+
+**Po co:** dane o kliencie i jedno miejsce, które zamienia User-Agent na trzy nazwy.
+
+**Pliki**
+- Nowe: migracja `add_client_columns_to_link_clicks_table`, `app/Support/ClientDetector.php`, `tests/Unit/ClientDetectorTest.php`
+- Zmiana: `composer.json`, `composer.lock`, `app/Models/LinkClick.php`, `database/factories/LinkClickFactory.php`, `tests/Feature/LinkClickModelTest.php`
+
+**Daje dalej:** `LinkClick` z polami `browser`, `os`, `device_type` (nullable string); `ClientDetector::detect(?string $userAgent): array` o kształcie `array{browser: ?string, os: ?string, device_type: ?string}` (w PHPDoc). Klasa **nie** jest `final` (mockowana w zadaniu 9).
+
+- [ ] **8.1** Zainstaluj: `composer require matomo/device-detector --no-interaction`
+- [ ] **8.2** Napisz test `tests/Unit/ClientDetectorTest.php` (`uses(TestCase::class)` nie jest potrzebne, klasa nie używa kontenera):
+  - `detects browser, os and device type of a desktop browser` (Chrome na Windows → `Chrome` / `Windows` / `desktop`)
+  - `detects a smartphone` (iPhone Safari → `Mobile Safari` lub `Safari`, `iOS`, `smartphone`; asercja na `os` i `device_type` oraz `browser` niepusty)
+  - `marks bots as bot without browser and os` (np. `Googlebot` → `null` / `null` / `bot`) → #7
+  - `returns nulls for a missing or empty user agent` (`null` i `''`) → #6
+- [ ] **8.3** Uruchom: `php artisan test --compact tests/Unit/ClientDetectorTest.php`. Oczekiwane: **FAIL**
+- [ ] **8.4** Zaimplementuj `detect`: `null` lub pusty (po `trim`) → trzy `null`; inaczej `DeviceDetector($userAgent)` + `parse()`; `isBot()` → `['browser' => null, 'os' => null, 'device_type' => 'bot']`; wpp `getClient('name')`, `getOs('name')`, `getDeviceName()`; wartość nierozpoznana (`UNK`, pusty string, tablica) mapuj na `null`
+- [ ] **8.5** Uruchom test. Oczekiwane: **PASS**
+- [ ] **8.6** Dopisz do `LinkClickModelTest` test `client fields may be null` (analogiczny do testu geo)
+- [ ] **8.7** Migracja: `php artisan make:migration add_client_columns_to_link_clicks_table --table=link_clicks --no-interaction`; dodaj `string('browser')->nullable()`, `string('os')->nullable()`, `string('device_type')->nullable()`; `down()` usuwa kolumny
+- [ ] **8.8** `LinkClick`: dopisz pola do `#[Fillable]` i `@property`. Factory: `Chrome` / `Windows` / `desktop`
+- [ ] **8.9** Uruchom `LinkClickModelTest` i `ClientDetectorTest`. Oczekiwane: **PASS**
+- [ ] **8.10** Pint, potem commit: `Add ClientDetector and client columns to link_clicks`
+
+**Gotowe gdy:** `ClientDetectorTest` (4 testy) i `LinkClickModelTest` zielone.
+
+---
+
+## Zadanie 9: Job i redirect przekazują User-Agent
+
+**Po co:** zapis klienta przy każdym kliknięciu.
+
+**Pliki**
+- Zmiana: `app/Jobs/RecordLinkClick.php`, `app/Http/Controllers/RedirectLinkController.php`, `tests/Feature/RecordLinkClickTest.php`, `tests/Feature/LinkRedirectTest.php`
+
+**Bierze:** `ClientDetector::detect(?string): array`.
+**Daje dalej:** `RecordLinkClick::__construct(public string $linkId, public string $ip, public CarbonInterface $clickedAt, public ?string $userAgent = null)`.
+
+- [ ] **9.1** Dopisz testy w `RecordLinkClickTest` (fake `ClientDetector` zbindowany w kontenerze):
+  - `records browser, os and device type of the client`
+  - `records null client fields when there is no user agent` → #6
+  - `does not persist the user agent` (atrybuty `LinkClick` nie zawierają surowego UA)
+- [ ] **9.2** W `LinkRedirectTest` dopisz `redirect passes the user agent to the job` (`Queue::fake()`, żądanie z nagłówkiem `User-Agent`, `Queue::assertPushed(... fn ($job) => $job->userAgent === '...')`)
+- [ ] **9.3** Uruchom oba pliki. Oczekiwane: nowe testy **FAIL**
+- [ ] **9.4** Job: dodaj parametr `userAgent`; w `handle(GeoLocator $geoLocator, ClientDetector $clientDetector)` dołącz `...$clientDetector->detect($this->userAgent)` do `create`
+- [ ] **9.5** Kontroler: przekaż `$request->userAgent()` jako czwarty argument
+- [ ] **9.6** Uruchom oba pliki. Oczekiwane: **PASS** (także dotychczasowe testy joba, mają dostać fake `ClientDetector` albo działać na realnym z `null` UA)
+- [ ] **9.7** Pint, potem commit: `Record browser, os and device type on every click`
+
+**Gotowe gdy:** `RecordLinkClickTest` i `LinkRedirectTest` w całości zielone.
+
+---
+
+## Zadanie 10: Statystyki klienta w backendzie i UI + E2E
+
+**Po co:** właściciel widzi przeglądarki, systemy i urządzenia.
+
+**Pliki**
+- Zmiana: `app/Http/Controllers/LinkStatsController.php`, `resources/js/pages/links/Stats.vue`, `tests/Feature/LinkStatsTest.php`, `tests/e2e/stats.spec.ts`
+
+**Bierze:** pola `browser`, `os`, `device_type` z zadania 8; format `StatsRow` z zadania 5.
+**Daje:** nowe propsy `links/Stats`: `browsers`, `systems`, `devices`, każdy `list<array{name: string, count: int}>`, top 10, malejąco, `null` → `Unknown`.
+
+- [ ] **10.1** Dopisz testy w `LinkStatsTest`:
+  - `browsers, systems and devices are counted and ordered` (kilka kliknięć z różnymi wartościami)
+  - `null client fields are shown as Unknown` → #8
+  - `client tables are capped at the top 10`
+  - `client stats respect the range and the link` (poza zakresem i cudzy link niewliczone)
+- [ ] **10.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsTest.php`. Oczekiwane: nowe testy **FAIL**
+- [ ] **10.3** Kontroler: wydziel prywatną metodę `topBy(string $column): Collection` (zapytanie `groupBy` + `orderByDesc('total')` + `limit(10)`, `null` → `Unknown`) i użyj jej dla `browsers` (`browser`), `systems` (`os`), `devices` (`device_type`). Kraje zostają bez zmian (inna etykieta nie jest potrzebna)
+- [ ] **10.4** Uruchom `LinkStatsTest`. Oczekiwane: **PASS**
+- [ ] **10.5** `Stats.vue`: nowe propsy; trzy kolejne tabele w tej samej siatce, ta sama pętla co kraje i miasta
+- [ ] **10.6** `tests/e2e/stats.spec.ts`: seed kliknięć zawiera klienta z factory (`Chrome`, `Windows`, `desktop`); asercje, że widać komórki `Chrome`, `Windows`, `desktop`
+- [ ] **10.7** `npm run build`, potem `npx playwright test`. Oczekiwane: **PASS**
+- [ ] **10.8** Pint, `npx prettier --single-quote --write` na zmienionych plikach frontu, potem commit: `Show browser, os and device stats on the link stats page`
+
+**Gotowe gdy:** `LinkStatsTest` i cały zestaw E2E zielone, a pełny `php artisan test --compact` bez regresji.
