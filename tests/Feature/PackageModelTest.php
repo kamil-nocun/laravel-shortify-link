@@ -3,6 +3,7 @@
 use App\Enums\BillingPeriod;
 use App\Models\Package;
 use App\Models\PackageAssignment;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 
 test('cyclic billing periods compute expiry without month overflow', function (BillingPeriod $period, string $expected) {
@@ -43,4 +44,14 @@ test('assignment is inactive when it expires now or earlier', function () {
 test('migration seeds a default free package', function () {
     expect(Package::where('is_default', true)->count())->toBe(1)
         ->and(Package::where('is_default', true)->first()->link_limit)->toBe(10);
+});
+
+test('database rejects a second default package', function () {
+    expect(fn () => Package::factory()->default()->create())->toThrow(UniqueConstraintViolationException::class);
+});
+
+test('any number of non default packages is allowed', function () {
+    Package::factory()->count(3)->create();
+
+    expect(Package::where('is_default', false)->count())->toBe(3);
 });

@@ -9,7 +9,7 @@ Zmiany pakietu (edycja, usunięcie) nie wpływają na użytkowników w trakcie o
 ## Ustalenia
 
 - Pakiet domyślny (Free) nie może zostać usunięty ani wycofany.
-- Tylko jeden pakiet może być domyślnym, gwarantowane blokadą wiersza przy przełączaniu.
+- Tylko jeden pakiet może być domyślnym, gwarantowane blokadą wiersza przy przełączaniu oraz indeksem unikalnym w bazie.
 - Edycja pakietu (limit, ceny) obowiązuje przypisania od ich następnego okresu. Pakiet domyślny nie ma okresów, więc jego edycja działa od razu.
 - Usunięcie pakietu z przypisaniami wycofuje go: obecne okresy dobiegają końca na starych warunkach, potem użytkownik przechodzi na Free. Administrator nie wybiera pakietu zastępczego.
 - Wybór między Free a pakietem płatnym należy do użytkownika końcowego i powstanie w etapie 2 razem z płatnościami (Cashier, Stripe sandbox). Do tego czasu płatny pakiet przypisuje ręcznie super administrator.
@@ -24,7 +24,7 @@ Nowa kolumna `link_limit` (unsigned integer): migawka limitu pakietu z początku
 ### `packages`
 
 - `SoftDeletes` (`deleted_at`). Wycofany pakiet znika z list i nie można go przypisać, ale wiersz zostaje, dopóki przypisania do niego wskazują (klucz obcy `restrictOnDelete` pozostaje).
-- Gwarancja jednego domyślnego przez blokadę wiersza: przełączenie domyślnego odbywa się w transakcji, która najpierw blokuje obecny domyślny pakiet (`lockForUpdate`), potem go odznacza i zaznacza nowy. Równoległy zapis czeka na blokadę, po czym widzi już nowy stan, więc zawsze zostaje dokładnie jeden domyślny. Bez indeksu unikalnego i kolumn generowanych (działa tak samo na mysql i bazie testowej).
+- Gwarancja jednego domyślnego na dwóch poziomach. Baza: kolumna generowana `default_marker` (1, gdy `is_default` jest prawdą, w przeciwnym razie `NULL`) z indeksem unikalnym; druga próba ustawienia domyślnego kończy się błędem bazy (`UniqueConstraintViolationException`). Aplikacja: przełączenie domyślnego odbywa się w transakcji, która najpierw blokuje obecny domyślny pakiet (`lockForUpdate`), odznacza go i zaznacza nowy, więc równoległy zapis czeka i widzi nowy stan zamiast trafić na błąd unikalności. Wymaga MySQL 8 (kolumny generowane z indeksem); baza dev i testowa to MySQL 8.4.
 
 ## Reguły domenowe (zmiany)
 
@@ -70,6 +70,7 @@ Gdy aktywne przypisanie wskazuje wycofany pakiet, lista linków pokazuje baner: 
 - Usunięcie pakietu z przypisaniami nie zmienia ich limitu; wycofany pakiet nie pojawia się na liście ani w opcjach przypisania; po odnowieniu użytkownik wraca na Free.
 - Usunięcie i wycofanie pakietu domyślnego jest odrzucone.
 - Odnowienie: nowy okres startuje od poprzedniego `expires_at`; pominięte okresy są nadrabiane; brak ceny okresu kończy przypisanie; przypisanie jednorazowe się nie odnawia; ponowne uruchomienie nic nie zmienia.
+- Baza odrzuca drugi pakiet domyślny (`UniqueConstraintViolationException`); dowolnie wiele niedomyślnych jest dozwolone.
 - Przełączenie domyślnego pozostawia dokładnie jeden domyślny i blokuje wiersz dotychczasowego domyślnego (`lockForUpdate` w transakcji).
 - Baner pojawia się tylko, gdy aktywne przypisanie wskazuje wycofany pakiet.
 
