@@ -72,3 +72,25 @@ test('denial at the limit explains the reason', function () {
 
     expect(Gate::forUser($user)->inspect('create', Link::class)->message())->toBe('Link limit reached for your package.');
 });
+
+test('index announces a withdrawn package until the assignment ends', function () {
+    $user = User::factory()->create();
+    $package = Package::factory()->create(['name' => 'Gold']);
+    $assignment = PackageAssignment::factory()->for($user)->for($package)->create();
+    $package->delete();
+
+    $this->actingAs($user)->get(route('links.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('packageNotice.package_name', 'Gold')
+            ->where('packageNotice.ends_at', $assignment->expires_at->toIso8601String()));
+});
+
+test('index has no package notice for a regular package or without assignment', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get(route('links.index'))->assertInertia(fn (Assert $page) => $page->where('packageNotice', null));
+
+    PackageAssignment::factory()->for($user)->create();
+
+    $this->actingAs($user)->get(route('links.index'))->assertInertia(fn (Assert $page) => $page->where('packageNotice', null));
+});

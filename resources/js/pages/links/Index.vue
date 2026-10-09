@@ -2,6 +2,7 @@
 import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +21,7 @@ import type { Link, Paginated } from '@/types';
 const props = defineProps<{
     links: Paginated<Link>;
     quota: { used: number; limit: number | null };
+    packageNotice: { package_name: string; ends_at: string } | null;
 }>();
 
 const limitReached = computed(
@@ -55,6 +57,16 @@ defineOptions({
                 </Button>
             </div>
         </div>
+
+        <Alert v-if="packageNotice">
+            <AlertTitle>Package being withdrawn</AlertTitle>
+            <AlertDescription>
+                Package {{ packageNotice.package_name }} is being withdrawn.
+                From
+                {{ new Date(packageNotice.ends_at).toLocaleDateString() }}
+                the Free package applies.
+            </AlertDescription>
+        </Alert>
 
         <p v-if="links.data.length === 0" class="text-sm text-muted-foreground">
             You have no links yet.

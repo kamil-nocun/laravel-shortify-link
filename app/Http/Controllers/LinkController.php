@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Links\StoreLinkRequest;
 use App\Http\Requests\Links\UpdateLinkRequest;
 use App\Models\Link;
+use App\Models\User;
 use App\Support\LinkCodeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class LinkController extends Controller
     {
         return Inertia::render('links/Index', [
             'links' => $request->user()->links()->withCount('clicks')->latest()->paginate(15),
+            'packageNotice' => $this->packageNotice($request->user()),
             'quota' => ['used' => $request->user()->links()->count(), 'limit' => $request->user()->linkLimit()],
         ]);
     }
@@ -83,5 +85,19 @@ class LinkController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link deleted.')]);
 
         return to_route('links.index');
+    }
+
+    /**
+     * Notice for a user whose current package has been withdrawn.
+     *
+     * @return array{package_name: string, ends_at: string}|null
+     */
+    private function packageNotice(User $user): ?array
+    {
+        $assignment = $user->activeAssignment();
+
+        return $assignment?->package->trashed()
+            ? ['package_name' => $assignment->package->name, 'ends_at' => $assignment->expires_at->toIso8601String()]
+            : null;
     }
 }

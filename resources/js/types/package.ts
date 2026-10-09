@@ -27,6 +27,7 @@ export type PackageAssignment = {
     starts_at: string;
     expires_at: string;
     active: boolean;
+    package_withdrawn: boolean;
 };
 
 export const billingPeriodLabels: Record<BillingPeriod, string> = {

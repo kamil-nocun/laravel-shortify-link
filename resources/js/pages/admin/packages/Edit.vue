@@ -23,6 +23,13 @@ defineOptions({
 
     <div class="max-w-2xl space-y-6 p-4">
         <Heading title="Edit package" :description="props.package.name" />
+        <p class="text-sm text-muted-foreground">
+            {{
+                props.package.is_default
+                    ? 'Changes apply immediately.'
+                    : "Changes apply from each user's next billing period."
+            }}
+        </p>
         <PackageForm
             :package="props.package"
             submit-label="Save changes"

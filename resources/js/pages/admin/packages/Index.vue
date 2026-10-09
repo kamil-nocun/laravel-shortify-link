@@ -83,7 +83,7 @@ defineOptions({
                                     >Edit</InertiaLink
                                 >
                             </Button>
-                            <Dialog>
+                            <Dialog v-if="!pkg.is_default">
                                 <DialogTrigger as-child>
                                     <Button variant="destructive" size="sm"
                                         >Delete</Button
@@ -93,9 +93,18 @@ defineOptions({
                                     <DialogHeader>
                                         <DialogTitle>Delete package?</DialogTitle>
                                         <DialogDescription>
-                                            {{ pkg.name }} will be removed. The
-                                            default and assigned packages
-                                            cannot be deleted.
+                                            <template
+                                                v-if="(pkg.assignments_count ?? 0) > 0"
+                                            >
+                                                {{ pkg.assignments_count }}
+                                                user(s) will keep {{ pkg.name }}
+                                                until their current period ends,
+                                                then move to the Free package.
+                                            </template>
+                                            <template v-else
+                                                >{{ pkg.name }} will be removed
+                                                permanently.</template
+                                            >
                                         </DialogDescription>
                                     </DialogHeader>
                                     <DialogFooter class="gap-2">

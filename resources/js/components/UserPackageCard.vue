@@ -71,6 +71,9 @@ const submit = () =>
                 <Badge :variant="assignment.active ? 'default' : 'destructive'">{{
                     assignment.active ? 'Active' : 'Expired'
                 }}</Badge>
+                <Badge v-if="assignment.package_withdrawn" variant="outline"
+                    >Withdrawn</Badge
+                >
                 <Button
                     variant="outline"
                     size="sm"
