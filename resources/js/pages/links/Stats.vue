@@ -100,6 +100,27 @@ const resyncWanted = () => {
     }
 };
 
+/** Reseeds all local state when the component is reused for another link. */
+watch(
+    () => initial.link.id,
+    () => {
+        http.cancel();
+        requestId++;
+        pendingSections.value = new Set();
+        period.value = initial.period;
+        granularity.value = initial.granularity;
+        sort.value = initial.sort;
+        total.value = initial.total;
+        series.value = initial.series;
+        filters.value = initial.filters;
+        options.value = initial.options;
+        for (const key of tableKeys) {
+            tables.value[key] = initial[key];
+        }
+        resyncWanted();
+    },
+);
+
 const customTypes = ['day', 'month', 'year', 'range'];
 
 const customType = ref(
@@ -159,9 +180,11 @@ const buildQuery = (sections: Section[] | null) => {
 let query: StatsQuery = {};
 let requestId = 0;
 
+const statsUrl = () => statsData.url(link.value.id, { query });
+
 const http = useHttp<Record<string, never>, Record<string, unknown>>(
     'get',
-    () => statsData.url(link.value.id, { query }),
+    statsUrl,
     {},
 );
 
@@ -216,7 +239,7 @@ const load = (sections: Section[] | null) => {
 
     query = buildQuery(pending.size === all.length ? null : [...pending]);
     http.cancel();
-    http.get(statsData.url(link.value.id, { query }))
+    http.get(statsUrl())
         .then((response) => {
             if (id !== requestId) {
                 return;
@@ -224,6 +247,7 @@ const load = (sections: Section[] | null) => {
 
             merge(response);
             sort.value = { ...wanted.sort };
+            resyncWanted();
             pendingSections.value = new Set();
         })
         .catch(() => {

@@ -215,34 +215,61 @@ test('table actions request only their section, period requests all', async ({
     expect(url.searchParams.getAll('sections[]').length).not.toBe(1);
 });
 
-test('a slow stale response never overwrites a newer one', async ({ page }) => {
+test('a newer request cancels a slow in-flight one', async ({ page }) => {
     await openStats(page, 'Period e2e');
     let first = true;
+    let slowFinished!: () => void;
+    const slowDone = new Promise<void>((resolve) => (slowFinished = resolve));
     await page.route('**/stats/data?*', async (route) => {
         if (first) {
             first = false;
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await route.continue().catch(() => {});
+            slowFinished();
+
+            return;
         }
-        await route.continue().catch(() => {});
+        await route.continue();
     });
 
     await page.getByRole('button', { name: '7 days' }).click();
     await page.getByRole('button', { name: 'All time' }).click();
     await expect(page.getByText('9 clicks in total')).toBeVisible();
-    await page.waitForTimeout(2000);
+    await slowDone;
     await expect(page.getByText('9 clicks in total')).toBeVisible();
 });
 
-test('an invalid range keeps previous data and tables are stacked', async ({
+test('an invalid range shows its error, keeps data and clears on a valid range', async ({
     page,
 }) => {
     await openStats(page, 'Period e2e');
     await page.getByLabel('Custom period').selectOption('range');
     await page.getByLabel('From', { exact: true }).fill('2021-06-30');
     await page.getByLabel('To', { exact: true }).fill('2021-06-01');
-    await expect(page.getByRole('alert').first()).toBeVisible();
+
+    const alert = page.getByRole('alert').first();
+    await expect(alert).toBeVisible();
+    await expect(alert).toHaveText(/\S/);
+    const described = await page
+        .locator('input[aria-label="From"], input[aria-label="To"]')
+        .evaluateAll((inputs) =>
+            inputs.map((input) => input.getAttribute('aria-describedby')),
+        );
+    const id = await alert.getAttribute('id');
+    expect(described).toContain(id);
+    await expect(page.locator(`#${id}`)).toHaveText(await alert.innerText());
     await expect(page.getByText('3 clicks in the last 30 days')).toBeVisible();
 
+    await page.getByLabel('From', { exact: true }).fill('2021-06-01');
+    await page.getByLabel('To', { exact: true }).fill('2021-06-30');
+    await expect(
+        page.getByText('2 clicks in 2021-06-01 - 2021-06-30'),
+    ).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('tables are stacked in one column in order', async ({ page }) => {
+    await openStats(page, 'Period e2e');
     const titles = [
         'Countries',
         'Cities',
@@ -262,4 +289,50 @@ test('an invalid range keeps previous data and tables are stacked', async ({
         expect(boxes[i]!.y).toBeGreaterThan(boxes[i - 1]!.y);
         expect(boxes[i]!.x).toBe(boxes[0]!.x);
     }
+});
+
+test('filter selects follow the state after removing a chip and clearing', async ({
+    page,
+}) => {
+    await openStats(page, 'Filters e2e');
+    const select = (label: string) =>
+        page.locator('label', { hasText: label }).locator('select');
+
+    await page.getByLabel('Browser').selectOption('Firefox');
+    await page.getByLabel('Country').selectOption('Germany');
+    await expect(select('Browser')).toHaveValue('Firefox');
+
+    await page.getByRole('button', { name: 'Remove Browser filter' }).click();
+    await expect(select('Browser')).toHaveValue('');
+    await expect(select('Country')).toHaveValue('Germany');
+
+    await page.getByRole('button', { name: 'Clear all' }).click();
+    await expect(select('Country')).toHaveValue('');
+    await expect(
+        page.getByRole('button', { name: 'Remove Country filter' }),
+    ).toHaveCount(0);
+});
+
+test('a server-clamped page is adopted by the next request', async ({
+    page,
+}) => {
+    await openStats(page, 'Pages e2e');
+    const cities = section(page, 'Cities');
+    await page.route('**/stats/data?*', async (route) => {
+        const response = await route.fetch();
+        const body = await response.json();
+        if (body.cities) {
+            body.cities.page = 1;
+        }
+        await route.fulfill({ response, json: body });
+    });
+
+    await cities.getByRole('button', { name: 'Next' }).click();
+    await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
+    const request = page.waitForRequest('**/stats/data?*');
+    await cities.getByRole('button', { name: 'Next' }).click();
+    expect(new URL((await request).url()).searchParams.get('cities_page')).toBe(
+        '2',
+    );
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
 });
