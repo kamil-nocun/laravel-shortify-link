@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Laravel\Cashier\Billable;
 
 /**
  * @property string $id
@@ -40,7 +41,7 @@ use Illuminate\Support\Carbon;
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuids, Notifiable;
+    use Billable, HasFactory, HasUuids, Notifiable;
 
     /**
      * @var array<string, mixed>

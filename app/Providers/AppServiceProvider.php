@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\Link;
+use App\Models\Subscription;
+use App\Models\SubscriptionItem;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +15,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\ExceptionResponse;
 use Inertia\Inertia;
+use Laravel\Cashier\Cashier;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,6 +35,9 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->scopeAdminRouteBindings();
         $this->renderRefusedRedirectsAsNotFoundPage();
+
+        Cashier::useSubscriptionModel(Subscription::class);
+        Cashier::useSubscriptionItemModel(SubscriptionItem::class);
     }
 
     /**
