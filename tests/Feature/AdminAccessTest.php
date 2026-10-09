@@ -1,12 +1,13 @@
 <?php
 
 use App\Models\Link;
+use App\Models\Package;
 use App\Models\User;
 use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Every admin.* route as [method, uri]; {user} parameters get a real model.
+ * Every admin.* route as [method, uri]; {user}, {link} and {package} parameters get a real model.
  *
  * @return list<array{string, string}>
  */
@@ -14,10 +15,11 @@ function adminRoutes(): array
 {
     $target = User::factory()->create();
     $link = Link::factory()->for($target)->create();
+    $package = Package::factory()->create();
 
     return collect(Route::getRoutes()->getRoutes())
         ->filter(fn (LaravelRoute $route) => str_starts_with((string) $route->getName(), 'admin.'))
-        ->map(fn (LaravelRoute $route) => [$route->methods()[0], '/'.ltrim(str_replace(['{user}', '{link}'], [$target->id, $link->id], $route->uri()), '/')])
+        ->map(fn (LaravelRoute $route) => [$route->methods()[0], '/'.ltrim(str_replace(['{user}', '{link}', '{package}'], [$target->id, $link->id, $package->id], $route->uri()), '/')])
         ->sortBy(fn (array $route) => $route[0] === 'DELETE' && str_ends_with($route[1], $target->id))
         ->values()
         ->all();
@@ -37,8 +39,8 @@ test('admin routes are forbidden for regular users', function () {
 
 test('admin routes are not forbidden for admins', function (string $state) {
     foreach (adminRoutes() as [$method, $uri]) {
-        if ($state === 'admin' && (str_ends_with($uri, '/role') || str_starts_with($uri, '/admin/administrators'))) {
-            continue; // role changes and administrator management are super admin only (policy)
+        if ($state === 'admin' && (str_ends_with($uri, '/role') || str_starts_with($uri, '/admin/administrators') || str_starts_with($uri, '/admin/packages') || str_ends_with($uri, '/package'))) {
+            continue; // role changes, administrator, package management and assignment are super admin only (policy)
         }
 
         expect($this->actingAs(User::factory()->{$state}()->create())->call($method, $uri)->status())->not->toBe(403, "{$method} {$uri} was forbidden");
