@@ -13,7 +13,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { create, destroy, edit, index, stats } from '@/routes/links';
+import { create, destroy, edit, index, stats, toggle } from '@/routes/links';
 import type { Link, Paginated } from '@/types';
 
 defineProps<{ links: Paginated<Link> }>();
@@ -66,14 +66,42 @@ defineOptions({
                         <td class="p-3 font-mono">{{ link.short_url }}</td>
                         <td class="p-3">{{ link.clicks_count ?? 0 }}</td>
                         <td class="p-3">
-                            <Badge
-                                :variant="
-                                    link.is_active ? 'default' : 'secondary'
-                                "
-                                >{{
-                                    link.is_active ? 'Active' : 'Inactive'
-                                }}</Badge
-                            >
+                            <div class="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    :aria-checked="link.is_active"
+                                    aria-label="Toggle link"
+                                    :disabled="!!link.disabled_by_admin_at"
+                                    class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                    :class="
+                                        link.is_active
+                                            ? 'bg-primary'
+                                            : 'bg-input'
+                                    "
+                                    @click="
+                                        router.patch(
+                                            toggle(link.id).url,
+                                            {},
+                                            { preserveScroll: true },
+                                        )
+                                    "
+                                >
+                                    <span
+                                        class="inline-block size-4 rounded-full bg-background shadow transition-transform"
+                                        :class="
+                                            link.is_active
+                                                ? 'translate-x-4'
+                                                : 'translate-x-0.5'
+                                        "
+                                    />
+                                </button>
+                                <Badge
+                                    v-if="link.disabled_by_admin_at"
+                                    variant="destructive"
+                                    >Blocked by admin</Badge
+                                >
+                            </div>
                         </td>
                         <td class="p-3">
                             {{
