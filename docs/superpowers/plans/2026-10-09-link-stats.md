@@ -24,10 +24,10 @@ Odhaczaj po zakończeniu zadania. Jedno zadanie = jeden commit.
 - [x] **10.** Statystyki klienta w backendzie i UI + E2E
 - [ ] **11.** Filtry statystyk w backendzie
 - [ ] **12.** Filtry statystyk w UI + E2E
-- [ ] **13.** `StatsPeriod` i walidacja okresu
-- [ ] **14.** Okres w kontrolerze (`period`, `series`, `granularity`)
-- [ ] **15.** Sortowanie i paginacja tabel w backendzie
-- [ ] **16.** UI: okres, sortowanie, paginacja i limity + E2E
+- [x] **13.** `StatsPeriod` i walidacja okresu
+- [x] **14.** Okres w kontrolerze (`period`, `series`, `granularity`)
+- [x] **15.** Sortowanie i paginacja tabel w backendzie
+- [x] **16.** UI: okres, sortowanie, paginacja i limity + E2E
 
 **Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5. Zadania 8–10 dobudowują statystyki klienta na gotowych 1–6: 8 → 9 → 10. Zadania 11–12 dodają filtry na gotowych 5, 6 i 10: 11 → 12. Zadania 13–16 dodają okres, sortowanie i paginację na gotowych 11 i 12: 13 → 14 → 15 → 16 (spec: `docs/superpowers/specs/2026-10-09-link-stats-period-tables-design.md`).
 
