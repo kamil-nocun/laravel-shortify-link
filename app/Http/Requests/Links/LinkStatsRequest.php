@@ -46,6 +46,13 @@ class LinkStatsRequest extends FormRequest
     public const SORTS = ['count_desc', 'count_asc', 'name_asc', 'name_desc'];
 
     /**
+     * Sections of the stats payload that can be requested separately.
+     *
+     * @var list<string>
+     */
+    public const SECTIONS = ['summary', 'options', 'countries', 'cities', 'browsers', 'systems', 'devices'];
+
+    /**
      * Only the link owner may see its stats.
      */
     public function authorize(): bool
@@ -82,6 +89,8 @@ class LinkStatsRequest extends FormRequest
                     }
                 },
             ],
+            'sections' => ['sometimes', 'array'],
+            'sections.*' => [Rule::in(self::SECTIONS)],
             ...array_fill_keys(self::FILTERS, ['nullable', 'string', 'max:255']),
             ...$this->tableRules(),
         ];
@@ -103,6 +112,16 @@ class LinkStatsRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /**
+     * Requested sections; null when the parameter is not set (all sections).
+     *
+     * @return ?list<string>
+     */
+    public function sections(): ?array
+    {
+        return $this->has('sections') ? array_values($this->input('sections')) : null;
     }
 
     /**
