@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -90,6 +91,45 @@ class User extends Authenticatable implements MustVerifyEmail
     public function links(): HasMany
     {
         return $this->hasMany(Link::class);
+    }
+
+    /**
+     * @return HasOne<PackageAssignment, $this>
+     */
+    public function packageAssignment(): HasOne
+    {
+        return $this->hasOne(PackageAssignment::class);
+    }
+
+    /**
+     * Effective package: the active assignment, else the default package; none for a super admin.
+     */
+    public function package(): ?Package
+    {
+        if ($this->isSuperAdmin()) {
+            return null;
+        }
+
+        $assignment = $this->packageAssignment()->with('package')->first();
+
+        return $assignment?->isActive()
+            ? $assignment->package
+            : Package::where('is_default', true)->first();
+    }
+
+    /**
+     * Maximum number of links, or null when unlimited.
+     */
+    public function linkLimit(): ?int
+    {
+        return $this->isSuperAdmin() ? null : ($this->package()?->link_limit ?? 0);
+    }
+
+    public function canCreateLink(): bool
+    {
+        $limit = $this->linkLimit();
+
+        return $limit === null || $this->links()->count() < $limit;
     }
 
     /**
