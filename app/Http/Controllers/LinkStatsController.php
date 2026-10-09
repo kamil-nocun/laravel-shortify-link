@@ -13,6 +13,8 @@ class LinkStatsController extends Controller
 {
     private const TOP_LIMIT = 10;
 
+    private const OPTIONS_LIMIT = 200;
+
     private const UNKNOWN = 'Unknown';
 
     /**
@@ -22,7 +24,17 @@ class LinkStatsController extends Controller
     {
         $days = $request->days();
         $from = now()->subDays($days - 1)->startOfDay();
-        $clicks = fn (): Builder => $link->clicks()->toBase()->where('clicked_at', '>=', $from);
+        $inRange = fn (): Builder => $link->clicks()->toBase()->where('clicked_at', '>=', $from);
+        $filters = $request->filters();
+        $clicks = function () use ($inRange, $filters): Builder {
+            $query = $inRange();
+
+            foreach (array_filter($filters, fn (?string $value): bool => $value !== null) as $column => $value) {
+                $value === self::UNKNOWN ? $query->whereNull($column) : $query->where($column, $value);
+            }
+
+            return $query;
+        };
 
         $perDay = $clicks()
             ->selectRaw('DATE(clicked_at) as day, count(*) as total')
@@ -60,6 +72,14 @@ class LinkStatsController extends Controller
             'browsers' => $browsers,
             'systems' => $systems,
             'devices' => $devices,
+            'filters' => $filters,
+            'options' => [
+                'countries' => $this->optionsFor($inRange, 'country'),
+                'cities' => $this->optionsFor($inRange, 'city'),
+                'browsers' => $this->optionsFor($inRange, 'browser'),
+                'systems' => $this->optionsFor($inRange, 'os'),
+                'devices' => $this->optionsFor($inRange, 'device_type'),
+            ],
         ]);
     }
 
@@ -85,5 +105,23 @@ class LinkStatsController extends Controller
             ->all();
 
         return array_values($rows);
+    }
+
+    /**
+     * Distinct values of a click column in alphabetical order, with Unknown last when some are missing.
+     *
+     * @param  Closure(): Builder  $inRange
+     * @return list<string>
+     */
+    private function optionsFor(Closure $inRange, string $column): array
+    {
+        $values = $inRange()->distinct()->orderBy($column)->limit(self::OPTIONS_LIMIT)->pluck($column);
+        $options = $values->filter(fn (mixed $value): bool => is_string($value))->values();
+
+        if ($values->contains(null)) {
+            $options->push(self::UNKNOWN);
+        }
+
+        return array_values($options->all());
     }
 }

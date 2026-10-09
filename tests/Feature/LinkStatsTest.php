@@ -126,6 +126,85 @@ test('client stats respect the range and the link', function () {
         ->assertInertia(fn (Assert $page) => $page->where('browsers', [])->where('systems', [])->where('devices', []));
 });
 
+test('each filter narrows the total and the tables', function (string $filter, string $value, array $match, array $other) {
+    clickOn($this->link, $match);
+    clickOn($this->link, $match);
+    clickOn($this->link, $other);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, $filter => $value]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('total', 2)
+            ->where('filters.'.$filter, $value)
+            ->where('browsers.0.count', 2)
+            ->has('browsers', 1));
+})->with([
+    'country' => ['country', 'Germany', ['country' => 'Germany', 'browser' => 'Chrome'], ['country' => 'Poland', 'browser' => 'Firefox']],
+    'city' => ['city', 'Berlin', ['city' => 'Berlin', 'browser' => 'Chrome'], ['city' => 'Warsaw', 'browser' => 'Firefox']],
+    'browser' => ['browser', 'Chrome', ['browser' => 'Chrome'], ['browser' => 'Firefox']],
+    'os' => ['os', 'Linux', ['os' => 'Linux', 'browser' => 'Chrome'], ['os' => 'Windows', 'browser' => 'Firefox']],
+    'device_type' => ['device_type', 'tablet', ['device_type' => 'tablet', 'browser' => 'Chrome'], ['device_type' => 'desktop', 'browser' => 'Firefox']],
+]);
+
+test('filters combine with AND', function () {
+    clickOn($this->link, ['country' => 'Poland', 'browser' => 'Chrome']);
+    clickOn($this->link, ['country' => 'Poland', 'browser' => 'Firefox']);
+    clickOn($this->link, ['country' => 'Germany', 'browser' => 'Chrome']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'country' => 'Poland', 'browser' => 'Chrome']))
+        ->assertInertia(fn (Assert $page) => $page->where('total', 1));
+});
+
+test('the Unknown filter matches clicks with null values', function () {
+    clickOn($this->link, ['browser' => null]);
+    clickOn($this->link, ['browser' => 'Chrome']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'browser' => 'Unknown']))
+        ->assertInertia(fn (Assert $page) => $page->where('total', 1)->where('browsers', [['name' => 'Unknown', 'count' => 1]]));
+});
+
+test('the city filter matches the plain city name', function () {
+    clickOn($this->link, ['city' => 'Warsaw', 'country' => 'Poland']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'city' => 'Warsaw']))
+        ->assertInertia(fn (Assert $page) => $page->where('total', 1));
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'city' => 'Warsaw, Poland']))
+        ->assertInertia(fn (Assert $page) => $page->where('total', 0));
+});
+
+test('options list the distinct values of the link within the range', function () {
+    clickOn($this->link, ['country' => 'Poland', 'city' => 'Warsaw', 'browser' => 'Chrome', 'os' => 'Windows', 'device_type' => 'desktop']);
+    clickOn($this->link, ['country' => 'Germany', 'city' => null, 'browser' => 'Firefox', 'os' => 'Linux', 'device_type' => 'tablet']);
+    clickOn($this->link, ['country' => 'Spain', 'clicked_at' => now()->subDays(40)]);
+    clickOn(Link::factory()->for($this->user)->create(), ['country' => 'France']);
+
+    $this->actingAs($this->user)->get(route('links.stats', $this->link))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('options.countries', ['Germany', 'Poland'])
+            ->where('options.cities', ['Warsaw', 'Unknown'])
+            ->where('options.browsers', ['Chrome', 'Firefox'])
+            ->where('options.systems', ['Linux', 'Windows'])
+            ->where('options.devices', ['desktop', 'tablet']));
+});
+
+test('options do not depend on the other filters', function () {
+    clickOn($this->link, ['country' => 'Poland', 'browser' => 'Chrome']);
+    clickOn($this->link, ['country' => 'Germany', 'browser' => 'Firefox']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'country' => 'Poland']))
+        ->assertInertia(fn (Assert $page) => $page->where('options.browsers', ['Chrome', 'Firefox']));
+});
+
+test('filters default to null', function () {
+    $this->actingAs($this->user)->get(route('links.stats', $this->link))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('filters', ['country' => null, 'city' => null, 'browser' => null, 'os' => null, 'device_type' => null]));
+});
+
+test('a filter value longer than 255 characters fails validation', function () {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'browser' => str_repeat('a', 256)]))
+        ->assertSessionHasErrors('browser');
+});
+
 test('invalid days value fails validation', function () {
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'days' => 5]))
         ->assertSessionHasErrors('days');
