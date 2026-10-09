@@ -209,3 +209,24 @@ test('administrator cannot update assignments', function () {
 
     $this->actingAs($admin)->put(route('admin.users.administrators.update', $client), ['administrators' => []])->assertForbidden();
 });
+
+test('promoting a client clears their assigned administrators', function () {
+    $super = User::factory()->superAdmin()->create();
+    $admin = User::factory()->admin()->create();
+    $client = User::factory()->assignedTo($admin)->create();
+
+    $this->actingAs($super)->patch(route('admin.users.role', $client), ['role' => 'admin'])->assertRedirect();
+
+    expect(DB::table('client_admin')->where('client_id', $client->id)->count())->toBe(0);
+});
+
+test('demoting an administrator clears their managed clients', function () {
+    $super = User::factory()->superAdmin()->create();
+    $admin = User::factory()->admin()->create();
+    $client = User::factory()->assignedTo($admin)->create();
+
+    $this->actingAs($super)->patch(route('admin.users.role', $admin), ['role' => 'user'])->assertRedirect();
+
+    expect(DB::table('client_admin')->where('admin_id', $admin->id)->count())->toBe(0)
+        ->and($client->fresh())->not->toBeNull();
+});
