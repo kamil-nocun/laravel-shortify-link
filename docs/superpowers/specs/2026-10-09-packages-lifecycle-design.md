@@ -46,7 +46,7 @@ Nowa kolumna `link_limit` (unsigned integer): migawka limitu pakietu z początku
 
 ### Odnowienie
 
-Nowe polecenie `packages:renew`, uruchamiane co godzinę przez scheduler Laravela. Dla każdego przypisania cyklicznego z `expires_at` ≤ teraz:
+Nowe polecenie `packages:renew`, uruchamiane co minutę przez scheduler Laravela (przerwa między wygaśnięciem a odnowieniem nie może obniżać limitu płacącego użytkownika do Free na dłużej niż minutę; blokada wiersza i ponowne sprawdzenie `expires_at` czynią częste uruchamianie bezpiecznym). Dla każdego przypisania cyklicznego z `expires_at` ≤ teraz:
 
 1. Pakiet wycofany, albo cena okresu w pakiecie zniknęła → przypisanie jest usuwane, użytkownik wraca do Free.
 2. W przeciwnym razie nowy okres startuje od poprzedniego `expires_at`, z aktualnym `link_limit` pakietu i ceną okresu zapisanymi jako nowa migawka. Jeśli polecenie nie działało przez kilka okresów, przesuwa się okres po okresie, aż `expires_at` będzie w przyszłości. Nie nalicza opłat (etap 2).

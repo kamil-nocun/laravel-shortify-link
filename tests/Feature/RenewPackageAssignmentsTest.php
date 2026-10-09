@@ -4,6 +4,7 @@ use App\Enums\BillingPeriod;
 use App\Models\Package;
 use App\Models\PackageAssignment;
 use App\Models\User;
+use Illuminate\Console\Scheduling\Schedule;
 
 beforeEach(function () {
     $this->travelTo(now()->startOfSecond());
@@ -86,4 +87,11 @@ test('missed periods are caught up and a second run changes nothing', function (
 
     $this->artisan('packages:renew')->assertSuccessful();
     expect($assignment->fresh()->toArray())->toBe($after->toArray());
+});
+
+test('renewal is scheduled every minute so paying users do not lapse onto the free limit', function () {
+    $event = collect(app(Schedule::class)->events())
+        ->first(fn ($event) => str_contains($event->command, 'packages:renew'));
+
+    expect($event)->not->toBeNull()->and($event->expression)->toBe('* * * * *');
 });
