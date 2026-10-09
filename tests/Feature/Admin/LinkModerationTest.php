@@ -7,7 +7,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
     $this->admin = User::factory()->admin()->create();
-    $this->link = Link::factory()->for(User::factory()->admin()->create())->create();
+    $this->link = Link::factory()->for(User::factory()->create())->create();
 });
 
 test('admin disables and enables a link without touching is_active', function () {
@@ -23,7 +23,7 @@ test('a disabled link stops redirecting until enabled', function () {
     $this->get(route('links.redirect', $this->link->code))->assertStatus(404);
 
     $this->actingAs($this->admin)->delete(route('admin.links.enable', $this->link));
-    $this->get(route('links.redirect', $this->link->code))->assertRedirect($this->link->url);
+    $this->get(route('links.redirect', $this->link->code))->assertRedirect($this->link->original_url);
 });
 
 test('regular users and guests cannot moderate', function () {
@@ -62,4 +62,22 @@ test('regular users keep denied on foreign link stats and get own urls', functio
         ->assertInertia(fn (Assert $page) => $page
             ->where('dataUrl', route('links.stats.data', $mine))
             ->where('backUrl', route('links.index')));
+});
+
+test('admin cannot moderate links owned by admins or super admins', function (string $ownerState) {
+    $link = Link::factory()->for(User::factory()->{$ownerState}()->create())->create();
+
+    $this->actingAs($this->admin)->patch(route('admin.links.disable', $link))->assertForbidden();
+    $link->forceFill(['disabled_by_admin_at' => now()])->save();
+    $this->actingAs($this->admin)->delete(route('admin.links.enable', $link))->assertForbidden();
+
+    expect($link->fresh()->disabled_by_admin_at)->not->toBeNull();
+})->with(['admin', 'superAdmin']);
+
+test('super admin can disable an admin link', function () {
+    $link = Link::factory()->for(User::factory()->admin()->create())->create();
+
+    $this->actingAs(User::factory()->superAdmin()->create())->patch(route('admin.links.disable', $link))->assertRedirect();
+
+    expect($link->fresh()->disabled_by_admin_at)->not->toBeNull();
 });

@@ -283,6 +283,7 @@ setLayoutProps({
                         </td>
                         <td class="space-x-2 p-3 text-right whitespace-nowrap">
                             <Button
+                                v-if="user.can.block"
                                 variant="outline"
                                 size="sm"
                                 :aria-label="`${link.disabled_by_admin_at ? 'Enable' : 'Disable'} link ${link.code}`"

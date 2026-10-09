@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Link;
 use App\Models\User;
 
 test('a user blocked mid-session is logged out on the next request', function () {
@@ -36,4 +37,13 @@ test('an unblocked user logs in normally', function () {
     $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password']);
 
     $this->assertAuthenticatedAs($user);
+});
+
+test('a blocked user gets 303 on inertia delete requests', function () {
+    $user = User::factory()->blocked()->create();
+    $link = Link::factory()->for($user)->create();
+
+    $this->actingAs($user)->withHeader('X-Inertia', 'true')->delete(route('links.destroy', $link))->assertStatus(303);
+
+    $this->assertGuest();
 });

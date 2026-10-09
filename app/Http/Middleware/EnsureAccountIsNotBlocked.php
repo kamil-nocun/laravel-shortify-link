@@ -23,7 +23,7 @@ class EnsureAccountIsNotBlocked
             abort(401);
         }
 
-        return redirect()->route('login')
+        return redirect()->route('login', status: 303)
             ->withErrors(['email' => __('Your account has been blocked.')]);
     }
 }

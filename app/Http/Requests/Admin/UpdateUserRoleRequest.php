@@ -18,6 +18,6 @@ class UpdateUserRoleRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['role' => ['required', Rule::in([UserRole::User->value, UserRole::Admin->value])]];
+        return ['role' => ['required', Rule::enum(UserRole::class)->only([UserRole::User, UserRole::Admin])]];
     }
 }

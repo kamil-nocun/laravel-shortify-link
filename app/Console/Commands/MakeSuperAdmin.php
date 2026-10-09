@@ -17,38 +17,44 @@ class MakeSuperAdmin extends Command
 
     public function handle(): int
     {
-        return DB::transaction(function (): int {
+        $email = $this->argument('email');
+        $attributes = null;
+
+        if (! User::where('email', $email)->exists()) {
+            $validator = Validator::make([
+                'email' => $email,
+                'name' => $this->ask('Name'),
+                'password' => $this->secret('Password'),
+            ], [
+                'email' => 'required|email|max:255',
+                'name' => 'required|string|max:255',
+                'password' => ['required', Password::defaults()],
+            ]);
+
+            if ($validator->fails()) {
+                $this->error($validator->errors()->first());
+
+                return self::FAILURE;
+            }
+
+            $attributes = $validator->validated();
+        }
+
+        return DB::transaction(function () use ($email, $attributes): int {
             if (User::where('role', UserRole::SuperAdmin)->lockForUpdate()->exists()) {
                 $this->error('A super admin already exists.');
 
                 return self::FAILURE;
             }
 
-            $email = $this->argument('email');
             $user = User::where('email', $email)->first();
 
             if ($user === null) {
-                $validator = Validator::make([
-                    'email' => $email,
-                    'name' => $this->ask('Name'),
-                    'password' => $this->secret('Password'),
-                ], [
-                    'email' => 'required|email|max:255',
-                    'name' => 'required|string|max:255',
-                    'password' => ['required', Password::defaults()],
-                ]);
-
-                if ($validator->fails()) {
-                    $this->error($validator->errors()->first());
-
-                    return self::FAILURE;
-                }
-
-                $user = new User($validator->validated());
+                $user = new User($attributes);
                 $user->forceFill(['email_verified_at' => now()]);
             }
 
-            $user->forceFill(['role' => UserRole::SuperAdmin])->save();
+            $user->forceFill(['role' => UserRole::SuperAdmin, 'blocked_at' => null])->save();
             $this->info("{$user->email} is now the super admin.");
 
             return self::SUCCESS;

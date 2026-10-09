@@ -31,6 +31,7 @@ class UserController extends Controller
                     ->orWhereRaw("email LIKE ? ESCAPE '!'", [$pattern])
             ))
             ->latest()
+            ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString()
             ->through(fn (User $user) => $this->present($user, $request->user()));

@@ -51,3 +51,11 @@ test('refuses an invalid email or a weak password', function (string $email, str
     ['boss@example.com', '123'],
     ['boss@example.com', ''],
 ]);
+
+test('promoting a blocked account clears blocked_at', function () {
+    $user = User::factory()->blocked()->create();
+
+    $this->artisan('user:make-super-admin', ['email' => $user->email])->assertExitCode(0);
+
+    expect($user->refresh()->blocked_at)->toBeNull();
+});

@@ -62,8 +62,8 @@ class AdminStatsReport
             'series' => $series,
             'counters' => ($user === null ? ['users' => User::query()->count()] : [])
                 + ['links' => $linkCount, 'activeLinks' => $activeLinks, 'disabledLinks' => $linkCount - $activeLinks, 'clicks' => $total],
-            'topLinks' => $topLinks,
-            'topUsers' => $topUsers,
+            'topLinks' => array_values($topLinks),
+            'topUsers' => array_values($topUsers),
         ];
     }
 }
