@@ -81,6 +81,7 @@ const tables = ref<Record<StatsTableKey, StatsTableData>>({
     devices: initial.devices,
 });
 
+const loadFailed = ref(false);
 const pendingSections = ref(new Set<Section>());
 const isLoading = (section: Section) => pendingSections.value.has(section);
 
@@ -107,27 +108,6 @@ const resyncWanted = () => {
         wanted.pages[key] = tables.value[key].page;
     }
 };
-
-/** Reseeds all local state when the component is reused for another link. */
-watch(
-    () => initial.link.id,
-    () => {
-        http.cancel();
-        requestId++;
-        pendingSections.value = new Set();
-        period.value = initial.period;
-        granularity.value = initial.granularity;
-        sort.value = initial.sort;
-        total.value = initial.total;
-        series.value = initial.series;
-        filters.value = initial.filters;
-        options.value = initial.options;
-        for (const key of tableKeys) {
-            tables.value[key] = initial[key];
-        }
-        resyncWanted();
-    },
-);
 
 const customTypes = ['day', 'month', 'year', 'range'];
 
@@ -185,14 +165,11 @@ const buildQuery = (sections: Section[] | null) => {
     return query;
 };
 
-let query: StatsQuery = {};
 let requestId = 0;
-
-const statsUrl = () => statsData.url(link.value.id, { query });
 
 const http = useHttp<Record<string, never>, Record<string, unknown>>(
     'get',
-    statsUrl,
+    () => statsData.url(link.value.id),
     {},
 );
 
@@ -245,29 +222,48 @@ const load = (sections: Section[] | null) => {
     const pending = pendingSections.value;
     const id = ++requestId;
 
-    query = buildQuery(pending.size === all.length ? null : [...pending]);
+    loadFailed.value = false;
     http.cancel();
-    http.get(statsUrl())
+    http.get(
+        statsData.url(link.value.id, {
+            query: buildQuery(
+                pending.size === all.length ? null : [...pending],
+            ),
+        }),
+    )
         .then((response) => {
             if (id !== requestId) {
                 return;
             }
 
+            pendingSections.value = new Set();
+
+            if (!response) {
+                // 422: errors are in http.errors, keep the previous data
+                resyncWanted();
+
+                return;
+            }
+
             merge(response);
+
             if (!response.sort) {
                 sort.value = { ...wanted.sort };
             }
 
             resyncWanted();
-            pendingSections.value = new Set();
         })
-        .catch(() => {
+        .catch((error: Error) => {
+            // The requestId guard is the real protection; http.cancel() is best-effort.
             if (id !== requestId) {
+                http.clearErrors();
+
                 return;
             }
 
-            resyncWanted();
             pendingSections.value = new Set();
+            resyncWanted();
+            loadFailed.value = error?.name !== 'HttpCancelledError';
         });
 };
 
@@ -406,8 +402,11 @@ const limitTable = (key: StatsTableKey, perPage: number) => {
     load([key]);
 };
 
-const pageTable = (key: StatsTableKey, page: number) => {
-    wanted.pages[key] = page;
+const pageTable = (key: StatsTableKey, delta: number) => {
+    wanted.pages[key] = Math.min(
+        Math.max(1, wanted.pages[key] + delta),
+        tables.value[key].lastPage,
+    );
     load([key]);
 };
 
@@ -439,6 +438,7 @@ defineOptions({
                         `${range}d` === period.period ? 'default' : 'outline'
                     "
                     size="sm"
+                    :aria-pressed="`${range}d` === period.period"
                     @click="setPreset(`${range}d`)"
                 >
                     {{ range }} days
@@ -446,6 +446,7 @@ defineOptions({
                 <Button
                     :variant="period.period === 'all' ? 'default' : 'outline'"
                     size="sm"
+                    :aria-pressed="period.period === 'all'"
                     @click="setPreset('all')"
                 >
                     All time
@@ -555,6 +556,10 @@ defineOptions({
             {{ error.message }}
         </p>
 
+        <p v-if="loadFailed" role="alert" class="text-sm text-destructive">
+            Couldn't load stats. Try again.
+        </p>
+
         <div class="flex flex-wrap items-end gap-3">
             <label
                 v-for="field in filterFields"
@@ -606,6 +611,7 @@ defineOptions({
         </div>
 
         <p
+            aria-live="polite"
             class="text-3xl font-semibold transition-opacity"
             :class="{ 'animate-pulse opacity-50': isLoading('summary') }"
         >

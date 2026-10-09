@@ -14,7 +14,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     sort: [value: string];
-    page: [page: number];
+    page: [delta: number];
     perPage: [perPage: number];
 }>();
 
@@ -73,7 +73,7 @@ const toggle = (key: 'name' | 'count') => {
                     <th class="p-2 pl-4" :aria-sort="ariaSort('name')">
                         <button
                             type="button"
-                            class="rounded px-1 hover:text-foreground"
+                            class="rounded px-1 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                             @click="toggle('name')"
                         >
                             {{ label }}
@@ -87,7 +87,7 @@ const toggle = (key: 'name' | 'count') => {
                     <th class="p-2 text-right" :aria-sort="ariaSort('count')">
                         <button
                             type="button"
-                            class="rounded px-1 hover:text-foreground"
+                            class="rounded px-1 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                             @click="toggle('count')"
                         >
                             Clicks
@@ -153,7 +153,7 @@ const toggle = (key: 'name' | 'count') => {
                     variant="outline"
                     size="sm"
                     :disabled="table.page <= 1"
-                    @click="emit('page', table.page - 1)"
+                    @click="emit('page', -1)"
                 >
                     Previous
                 </Button>
@@ -161,7 +161,7 @@ const toggle = (key: 'name' | 'count') => {
                     variant="outline"
                     size="sm"
                     :disabled="table.page >= table.lastPage"
-                    @click="emit('page', table.page + 1)"
+                    @click="emit('page', 1)"
                 >
                     Next
                 </Button>

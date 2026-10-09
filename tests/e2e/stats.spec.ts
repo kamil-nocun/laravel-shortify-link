@@ -212,7 +212,7 @@ test('table actions request only their section, period requests all', async ({
     request = page.waitForRequest('**/stats/data?*');
     await page.getByRole('button', { name: '7 days' }).click();
     url = new URL((await request).url());
-    expect(url.searchParams.getAll('sections[]').length).not.toBe(1);
+    expect(url.searchParams.getAll('sections[]')).toEqual([]);
 });
 
 test('a newer request supersedes a slow in-flight one', async ({ page }) => {
@@ -360,4 +360,33 @@ test('a server-clamped page is not resent by other tables', async ({
         '1',
     );
     await page.unrouteAll({ behavior: 'ignoreErrors' });
+});
+
+test('a failed request shows an alert, keeps data and clears on success', async ({
+    page,
+}) => {
+    await openStats(page, 'Period e2e');
+    await expect(page.getByText('3 clicks in the last 30 days')).toBeVisible();
+    await page.route('**/stats/data?*', (route) =>
+        route.fulfill({ status: 500 }),
+    );
+
+    await page.getByRole('button', { name: '7 days' }).click();
+    await expect(page.getByRole('alert')).toHaveText(
+        "Couldn't load stats. Try again.",
+    );
+    await expect(page.getByText('3 clicks in the last 30 days')).toBeVisible();
+
+    await page.unroute('**/stats/data?*');
+    await page.getByRole('button', { name: 'All time' }).click();
+    await expect(page.getByText('9 clicks in total')).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('two quick Next clicks advance two pages', async ({ page }) => {
+    await openStats(page, 'Pages e2e');
+    const cities = section(page, 'Cities');
+
+    await cities.getByRole('button', { name: 'Next' }).dblclick();
+    await expect(cities.getByText('Page 3 of 3 (25 rows)')).toBeVisible();
 });
