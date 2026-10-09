@@ -24,8 +24,12 @@ Odhaczaj po zakończeniu zadania. Jedno zadanie = jeden commit.
 - [x] **10.** Statystyki klienta w backendzie i UI + E2E
 - [ ] **11.** Filtry statystyk w backendzie
 - [ ] **12.** Filtry statystyk w UI + E2E
+- [ ] **13.** `StatsPeriod` i walidacja okresu
+- [ ] **14.** Okres w kontrolerze (`period`, `series`, `granularity`)
+- [ ] **15.** Sortowanie i paginacja tabel w backendzie
+- [ ] **16.** UI: okres, sortowanie, paginacja i limity + E2E
 
-**Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5. Zadania 8–10 dobudowują statystyki klienta na gotowych 1–6: 8 → 9 → 10. Zadania 11–12 dodają filtry na gotowych 5, 6 i 10: 11 → 12.
+**Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5. Zadania 8–10 dobudowują statystyki klienta na gotowych 1–6: 8 → 9 → 10. Zadania 11–12 dodają filtry na gotowych 5, 6 i 10: 11 → 12. Zadania 13–16 dodają okres, sortowanie i paginację na gotowych 11 i 12: 13 → 14 → 15 → 16 (spec: `docs/superpowers/specs/2026-10-09-link-stats-period-tables-design.md`).
 
 ## Przepływ danych
 
@@ -41,7 +45,7 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 - **Nigdy** nie zapisuj IP ani surowego User-Agent w `link_statistics`. Zapisujemy tylko `browser`, `os`, `device_type` (nazwy, bez wersji).
 - `clicked_at` ustawia kontroler (czas żądania), nie job.
 - Brak geo = `null` kraj/miasto, klik i tak zapisany.
-- `days` ∈ `7|30|90`, domyślnie `30`.
+- `days` ∈ `7|30|90`, domyślnie `30`. Od zadania 14 `days` zastępuje `period` (domyślnie `30d`).
 - Zależności tylko `geoip2/geoip2` i `matomo/device-detector` (zaakceptowane). Wykres bez biblioteki.
 - Po zmianach PHP: `vendor/bin/pint --dirty --format agent`.
 - Teksty UI: angielskie literały przez `__()`. Trasy we froncie przez Wayfinder.
@@ -62,6 +66,16 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 | 9 | Filtr `Unknown` | Zwraca kliknięcia z `null` w tej kolumnie | 11 |
 | 10 | Filtr miasta | Działa po samej nazwie miasta, nie po `City, Country` | 11 |
 | 11 | Filtr cudzego linku lub spoza zakresu | Nie ujawnia cudzych kliknięć, `options` tylko z tego linku i zakresu | 11 |
+| 12 | `period=all` bez kliknięć | Pusty zakres, `total` = 0, `series` puste | 13, 14 |
+| 13 | `period=day` bez `date` lub zły format | Błąd walidacji | 13 |
+| 14 | `range` z `from > to` lub dłuższy niż 5 lat | Błąd walidacji | 13 |
+| 15 | Zakres dłuższy niż 92 dni, `year`, `all` | `granularity = month` | 13 |
+| 16 | Zakres w przyszłości | Zera, bez błędu | 14 |
+| 17 | Ostatnia strona niepełna, strona poza zakresem | Ostatnia strona z resztą wierszy | 15 |
+| 18 | `per_page` spoza listy, zła `sort`, `page` < 1 | Błąd walidacji | 15 |
+| 19 | Sortowanie po nazwie z `Unknown` | `Unknown` sortowane jak nazwa | 15 |
+| 20 | Remisy w liczbie kliknięć | Ta sama kolejność na kolejnych stronach | 15 |
+| 21 | Zmiana okresu, filtra lub sortowania | Strony wracają do 1, limity zostają | 16 |
 
 ---
 
@@ -386,5 +400,138 @@ Mapowanie pól: `country` → kolumna `country`, `city` → `city`, `browser` �
 - [ ] **12.3** `Stats.vue`: propsy `filters`, `options`; pięć `<select>` z opcją "All"; jedna funkcja `visit(filters)` woła `router.get` z aktualnym `days` i niepustymi filtrami, `preserveState`, `preserveScroll`; zmiana selecta, usunięcie znacznika i reset korzystają z niej (usunięcie = filtr ustawiony na `null`, reset = wszystkie `null`); pod selectami znaczniki aktywnych filtrów (etykieta pola + wartość) z przyciskiem `×` i dostępną nazwą (np. `aria-label="Remove Browser filter"`); przycisk "Clear all" widoczny tylko gdy jakiś filtr jest ustawiony; linki 7/30/90 dni dołączają aktywne filtry do zapytania
 - [ ] **12.4** `npm run build`, potem `npx playwright test`. Oczekiwane: **PASS**
 - [ ] **12.5** `npx prettier --single-quote --write` na zmienionych plikach, pełne `php artisan test --compact`, potem commit: `Add filters to the link stats page`
+
+**Gotowe gdy:** cały zestaw E2E i `php artisan test --compact` zielone.
+
+---
+
+## Zadanie 13: `StatsPeriod` i walidacja okresu
+
+**Po co:** jedno miejsce, które zamienia parametry URL na zakres dat i ziarnistość wykresu.
+
+**Pliki**
+- Nowe: `app/Support/StatsPeriod.php`, `tests/Unit/StatsPeriodTest.php`
+- Zmiana: `app/Http/Requests/Links/LinkStatsRequest.php`, `tests/Feature/LinkStatsTest.php` (tylko testy walidacji)
+
+**Daje dalej:**
+- `StatsPeriod::resolve(array $input, ?CarbonInterface $firstClick, CarbonInterface $now): self`. `$input` ma kształt `array{period: string, date: ?string, month: ?string, year: ?string, from: ?string, to: ?string}`. Klasa **nie** jest `final`, nie używa kontenera, czas dostaje w argumencie.
+- Właściwości publiczne readonly: `?CarbonImmutable $from` (`null` = pusty zakres, tylko `all` bez kliknięć), `CarbonImmutable $to`, `string $granularity` (`'day'|'month'`).
+- `LinkStatsRequest::period(): array` zwraca `$input` powyżej (brak parametru → `null`, `period` domyślnie `30d`). Stała `LinkStatsRequest::PERIODS = ['7d', '30d', '90d', 'all', 'day', 'month', 'year', 'range']`.
+
+Reguły zakresu (spec, sekcja "Okres"): presety = ostatnie N dni włącznie z dzisiejszym od początku dnia; `all` = od `$firstClick` (początek dnia) do `$now`; `day`/`month`/`year` = cały dzień/miesiąc/rok; `range` = od początku `from` do końca `to`. Koniec zakresu = `min(koniec, $now)`. `granularity = 'month'` gdy zakres ma więcej niż 92 dni lub `period` to `year`/`all`, inaczej `'day'`.
+
+- [ ] **13.1** Napisz `tests/Unit/StatsPeriodTest.php` (stały `$now`, np. `2026-10-09 12:00`):
+  - `presets cover the last N days including today` (`30d` → `from` = `2026-09-10 00:00`, `to` = `$now`, `day`)
+  - `all starts at the first click` oraz `all without clicks is empty` (`from` = `null`) → #12
+  - `day, month and year cover the whole unit` (np. `month=2026-02` → `2026-02-01 00:00` … `2026-02-28 23:59:59`)
+  - `the end never goes past now` (`month=2026-10` → `to` = `$now`) → #16
+  - `range runs from the start of from to the end of to`
+  - `granularity is month above 92 days and for year and all` (zakres 92 dni → `day`, 93 → `month`) → #15
+- [ ] **13.2** Uruchom: `php artisan test --compact tests/Unit/StatsPeriodTest.php`. Oczekiwane: **FAIL**
+- [ ] **13.3** Zaimplementuj `StatsPeriod::resolve` w `app/Support/StatsPeriod.php`
+- [ ] **13.4** Uruchom test. Oczekiwane: **PASS**
+- [ ] **13.5** Dopisz testy walidacji w `LinkStatsTest` (każdy: `assertSessionHasErrors('<pole>')`):
+  - `period must be one of the allowed values` (`period=week` → `period`)
+  - `day, month, year and range require their parameters` (dataset: `period=day` bez `date`, `month` bez `month`, `year` bez `year`, `range` bez `from`/`to`) → #13
+  - `date formats are validated` (`date=09-10-2026`, `month=2026-13`, `year=26`) → #13
+  - `range must not be reversed or longer than 5 years` (`from > to`, `from=2020-01-01&to=2026-01-01`) → #14
+- [ ] **13.6** Uruchom `LinkStatsTest` (nowe testy **FAIL**; stare nadal `days`, dotykamy ich w zadaniu 14)
+- [ ] **13.7** `LinkStatsRequest`: reguły `period` (`sometimes`, `Rule::in(PERIODS)`), `date` (`required_if:period,day`, `date_format:Y-m-d`), `month` (`required_if:period,month`, `date_format:Y-m`), `year` (`required_if:period,year`, `digits:4`), `from`/`to` (`required_if:period,range`, `date_format:Y-m-d`; `from` → `before_or_equal:to`; reguła-domknięcie na `to`: najwyżej 5 lat od `from`). Dopisz `period()`. **Nie usuwaj jeszcze** `days()`, kontroler z niego korzysta do zadania 14
+- [ ] **13.8** Uruchom oba pliki. Oczekiwane: **PASS** nowe testy walidacji i jednostkowe; reszta bez regresji
+- [ ] **13.9** Pint i PHPStan (jak w 11.6), potem commit: `Add StatsPeriod and period validation`
+
+**Gotowe gdy:** `StatsPeriodTest` i testy walidacji zielone, brak nowych błędów PHPStan.
+
+---
+
+## Zadanie 14: Okres w kontrolerze
+
+**Po co:** wszystkie liczby na stronie liczone dla wybranego okresu.
+
+**Pliki**
+- Zmiana: `app/Http/Controllers/LinkStatsController.php`, `app/Http/Requests/Links/LinkStatsRequest.php` (usunięcie `days()` i reguły `days`), `tests/Feature/LinkStatsTest.php`
+
+**Bierze:** `StatsPeriod::resolve`, `LinkStatsRequest::period()`.
+**Daje dalej (propsy `links/Stats`):**
+
+| Prop | Typ |
+|---|---|
+| `period` | echo z `LinkStatsRequest::period()` (`period` zawsze ustawiony) |
+| `granularity` | `'day'\|'month'` |
+| `series` | `list<array{date: string, count: int}>`: `date` = `Y-m-d` (`day`) lub `Y-m` (`month`), rosnąco, bez dziur |
+| `total` | suma `series` |
+
+Znikają propsy `days` i `daily`. `inRange` filtruje `clicked_at >= from` i `<= to` (puste `from` → zawsze zero wyników), więc obejmuje też `options`.
+
+- [ ] **14.1** Przepisz istniejące testy z `days` na `period` (`days=7` → `period=7d`, `days=5` → `period=week`, `daily` → `series`) i dopisz:
+  - `period defaults to 30d`
+  - `day, month, year and range limit the clicks` (kliknięcia na granicach: `00:00:00` i `23:59:59` wchodzą, sekunda obok nie)
+  - `all covers every click of the link and ignores other links`
+  - `all without clicks returns an empty series and zero total` → #12
+  - `series is monthly above 92 days and for year and all` (`granularity`, klucze `Y-m`, zera dla miesięcy bez kliknięć) → #15
+  - `a range in the future returns zeros` → #16
+  - `period applies to totals, tables and options`
+- [ ] **14.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsTest.php`. Oczekiwane: **FAIL**
+- [ ] **14.3** Kontroler: `$period = StatsPeriod::resolve($request->period(), $link->clicks()->min('clicked_at') ... , now())`; `inRange` używa `from`/`to`. Seria: zapytanie dalej grupuje po `DATE(clicked_at)` (działa na każdym sterowniku); dla `month` dni sumuj do `Y-m` w PHP. Uzupełnij zerami od `from` do `to` w kroku `granularity`. Usuń `days()` i regułę `days` z `LinkStatsRequest`
+- [ ] **14.4** Uruchom `LinkStatsTest`. Oczekiwane: **PASS**
+- [ ] **14.5** `Stats.vue` i typy w `resources/js/types` przejdą na nowy kształt w zadaniu 16. Tymczasowo zmień tylko tyle, by `npm run build` przechodził (`daily` → `series`, `days` → `period.period`)
+- [ ] **14.6** Pint i PHPStan, potem commit: `Resolve link stats range from a flexible period`
+
+**Gotowe gdy:** `LinkStatsTest` zielony, build frontu przechodzi, brak nowych błędów PHPStan.
+
+---
+
+## Zadanie 15: Sortowanie i paginacja tabel w backendzie
+
+**Po co:** wszystkie wiersze tabel dostępne stronami, z wyborem limitu i sortowania.
+
+**Pliki**
+- Zmiana: `app/Http/Requests/Links/LinkStatsRequest.php`, `app/Http/Controllers/LinkStatsController.php`, `tests/Feature/LinkStatsTest.php`
+
+**Daje dalej:**
+- `LinkStatsRequest::TABLES = ['countries', 'cities', 'browsers', 'systems', 'devices']`, `LinkStatsRequest::PER_PAGE = [10, 25, 50, 100]`, `LinkStatsRequest::SORTS = ['count_desc', 'count_asc', 'name_asc', 'name_desc']`.
+- `LinkStatsRequest::sort(string $table): string` (domyślnie `count_desc`), `perPage(string $table): int` (domyślnie `10`), `page(string $table): int` (domyślnie `1`).
+- Parametry URL: `sort[<tabela>]`, `<tabela>_per_page`, `<tabela>_page`.
+- Propsy: każda z `countries`, `cities`, `browsers`, `systems`, `devices` ma kształt `array{rows: list<array{name: string, count: int}>, page: int, lastPage: int, total: int, perPage: int}` (zastępuje płaską listę). Nowy prop `sort`: `array<string, string>` z wartością dla wszystkich pięciu tabel.
+
+- [ ] **15.1** Przepisz testy tabel z zadań 5, 10 i 11 na nowy kształt (`countries` → `countries.rows`, limit „top 10” → `perPage` = 10 i `total`) i dopisz:
+  - `each per page value changes rows and lastPage` (dataset `10|25|50|100`, 30 różnych miast)
+  - `the last page holds the remainder` oraz `a page past the end returns the last page` → #17
+  - `table pages and per page are independent` (`countries_page=2` nie rusza `cities`)
+  - `rows are sorted by <variant>` (dataset 4 wartości `sort`, w tym `Unknown` sortowane po nazwie) → #19
+  - `ties keep the same order across pages` (30 wierszy po 1 kliknięciu, strona 1 + 2 + 3 = pełna lista bez powtórek) → #20
+  - `sort echoes the current values and defaults to count_desc`
+  - `invalid sort, per page or page fails validation` (`sort[countries]=x`, `countries_per_page=7`, `countries_page=0`, `countries_page=abc`) → #18
+  - `pagination respects period and filters` (`total` tabeli odpowiada zawężonym danym)
+- [ ] **15.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsTest.php`. Oczekiwane: nowe testy **FAIL**
+- [ ] **15.3** `LinkStatsRequest`: reguły dla `sort.<tabela>` (`Rule::in(SORTS)`), `<tabela>_per_page` (`Rule::in(PER_PAGE)`), `<tabela>_page` (`integer`, `min:1`) generowane z `TABLES`; metody `sort`, `perPage`, `page`
+- [ ] **15.4** Kontroler: zastąp `topBy` metodą `table(Closure $clicks, string $table, string $column, LinkStatsRequest $request): array`, a miasta niech używają tej samej ścieżki (grupowanie `city, country`, etykieta `City, Country`). Sortowanie po nazwie: `orderByRaw("COALESCE(<kolumna>, 'Unknown') <kierunek>")`, dla miast potem `country`; zawsze wtórne sortowanie po nazwie rosnąco (deterministyczne strony). Paginacja: `paginate($perPage, page: <strona przycięta do lastPage>, pageName: "{$table}_page")`. Sortuj po kolumnie z białej listy, nigdy po surowym wejściu
+- [ ] **15.5** Uruchom `LinkStatsTest`. Oczekiwane: **PASS**
+- [ ] **15.6** Pint i PHPStan, potem commit: `Add sorting and pagination to link stats tables`
+
+**Gotowe gdy:** `LinkStatsTest` zielony, brak nowych błędów PHPStan.
+
+---
+
+## Zadanie 16: UI okresu, sortowania, paginacji i limitów + E2E
+
+**Po co:** użytkownik steruje okresem i tabelami na stronie statystyk.
+
+**Pliki**
+- Nowe: `resources/js/components/StatsTable.vue`
+- Zmiana: `resources/js/pages/links/Stats.vue`, typy w `resources/js/types` (`StatsPeriod`, `StatsTableData`, `StatsSorts`), `tests/e2e/stats.spec.ts`
+
+**Bierze:** propsy z zadań 14 i 15; trasa `stats` z Wayfinder (bez zmian).
+
+- [ ] **16.1** Dopisz do `stats.spec.ts` (seed przez factory: 25 linków-klików z różnych miast, kliknięcia z różnych miesięcy i lat):
+  - zmiana okresu: „All time” zmienia sumę; `Month` + wybór miesiąca zawęża sumę, URL ma `period=month&month=...`; `Range` z dwiema datami zawęża sumę
+  - sortowanie: klik nagłówka „Name” w tabeli Cities zmienia kolejność wierszy, drugi klik ją odwraca; URL ma `sort[cities]=name_asc` (zakodowane)
+  - paginacja: „Page 1 of 3”, „Next” pokazuje „Page 2 of 3”; zmiana „Rows” na 50 daje „Page 1 of 1” i znikają przyciski Previous/Next
+  - reset: zmiana okresu lub sortowania wraca na „Page 1”, ale zachowuje wybrany limit → #21
+- [ ] **16.2** Uruchom: `npx playwright test tests/e2e/stats.spec.ts`. Oczekiwane: nowe przepływy **FAIL**
+- [ ] **16.3** `StatsTable.vue`: propsy `title`, `table: StatsTableData`, `sort: string`; emituje `sort(value)`, `page(n)`, `perPage(n)`. Nagłówki „Name” i „Clicks” z strzałką kierunku (klik przełącza asc/desc), pod tabelą select „Rows” (10/25/50/100, widoczny zawsze), Previous/Next (ukryte przy jednej stronie) i „Page X of Y (N rows)”
+- [ ] **16.4** `Stats.vue`: selektor okresu (presety 7/30/90 i „All time”, select `Day | Month | Year | Range` z natywnymi `<input type="date|month">`, polem roku i dwoma polami `date`); jedna funkcja `visit(overrides)` składa całe zapytanie (okres, filtry, sortowania, limity, strony), `preserveState`, `preserveScroll`. Zmiana okresu, filtra lub sortowania zeruje strony wszystkich tabel, zmiana limitu zeruje stronę tej tabeli. Pięć sekcji używa `StatsTable`. Tooltip wykresu przy `granularity = 'month'` pokazuje `Y-m`
+- [ ] **16.5** `npm run build`, potem `npx playwright test`. Oczekiwane: **PASS**
+- [ ] **16.6** `npx prettier --single-quote --write` na zmienionych plikach frontu; poproś użytkownika o pełne `php artisan test --compact`, potem commit: `Add period selector, sorting and pagination to the link stats page`
 
 **Gotowe gdy:** cały zestaw E2E i `php artisan test --compact` zielone.
