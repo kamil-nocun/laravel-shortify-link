@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $user_id
  * @property string $package_id
+ * @property string|null $subscription_id
  * @property BillingPeriod $billing_period
  * @property int $price
  * @property int $link_limit
@@ -23,7 +24,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'package_id', 'billing_period', 'price', 'link_limit', 'starts_at', 'expires_at'])]
+#[Fillable(['user_id', 'package_id', 'subscription_id', 'billing_period', 'price', 'link_limit', 'starts_at', 'expires_at'])]
 class PackageAssignment extends Model
 {
     /** @use HasFactory<PackageAssignmentFactory> */
@@ -47,6 +48,14 @@ class PackageAssignment extends Model
     public function package(): BelongsTo
     {
         return $this->belongsTo(Package::class)->withTrashed();
+    }
+
+    /**
+     * @return BelongsTo<Subscription, $this>
+     */
+    public function subscription(): BelongsTo
+    {
+        return $this->belongsTo(Subscription::class);
     }
 
     /**

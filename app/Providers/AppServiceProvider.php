@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Billing\PackageBilling;
+use App\Billing\ProjectStripeEvents;
 use App\Billing\StripePackageBilling;
 use App\Models\Link;
 use App\Models\Subscription;
@@ -12,12 +13,15 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\ExceptionResponse;
 use Inertia\Inertia;
 use Laravel\Cashier\Cashier;
+use Laravel\Cashier\Events\WebhookHandled;
+use Laravel\Cashier\Events\WebhookReceived;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,6 +44,9 @@ class AppServiceProvider extends ServiceProvider
 
         Cashier::useSubscriptionModel(Subscription::class);
         Cashier::useSubscriptionItemModel(SubscriptionItem::class);
+
+        Event::listen(WebhookReceived::class, [ProjectStripeEvents::class, 'onReceived']);
+        Event::listen(WebhookHandled::class, [ProjectStripeEvents::class, 'onHandled']);
     }
 
     /**
