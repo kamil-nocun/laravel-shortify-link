@@ -56,3 +56,8 @@ export type StatsOptions = {
     systems: string[];
     devices: string[];
 };
+
+export type StatsTableKey =
+    'countries' | 'cities' | 'browsers' | 'systems' | 'devices';
+
+export type StatsSorts = Record<StatsTableKey, string>;

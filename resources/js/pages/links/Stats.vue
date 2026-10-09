@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
+import StatsTable from '@/components/StatsTable.vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { index, stats } from '@/routes/links';
@@ -11,27 +12,71 @@ import type {
     StatsFilters,
     StatsOptions,
     StatsPeriodParams,
-    StatsTable,
+    StatsSorts,
+    StatsTable as StatsTableData,
+    StatsTableKey,
 } from '@/types';
 
 const props = defineProps<{
     link: Link;
     period: StatsPeriodParams;
     granularity: 'day' | 'month';
+    sort: StatsSorts;
     total: number;
     series: DailyClicks[];
-    countries: StatsTable;
-    cities: StatsTable;
-    browsers: StatsTable;
-    systems: StatsTable;
-    devices: StatsTable;
+    countries: StatsTableData;
+    cities: StatsTableData;
+    browsers: StatsTableData;
+    systems: StatsTableData;
+    devices: StatsTableData;
     filters: StatsFilters;
     options: StatsOptions;
 }>();
 
 const ranges = [7, 30, 90];
 
-const days = computed(() => props.series.length);
+const tableKeys: StatsTableKey[] = [
+    'countries',
+    'cities',
+    'browsers',
+    'systems',
+    'devices',
+];
+
+const tableTitles: Record<StatsTableKey, string> = {
+    countries: 'Countries',
+    cities: 'Cities',
+    browsers: 'Browsers',
+    systems: 'Operating systems',
+    devices: 'Devices',
+};
+
+const customTypes = ['day', 'month', 'year', 'range'];
+
+const customType = ref(
+    customTypes.includes(props.period.period) ? props.period.period : '',
+);
+
+watch(
+    () => props.period.period,
+    (value) => {
+        customType.value = customTypes.includes(value) ? value : '';
+    },
+);
+
+const periodLabel = computed(() => {
+    const { period, date, month, year, from, to } = props.period;
+
+    if (/^\d+d$/.test(period)) {
+        return `in the last ${period.slice(0, -1)} days`;
+    }
+
+    if (period === 'all') {
+        return 'in total';
+    }
+
+    return `in ${period === 'range' ? `${from} - ${to}` : (date ?? month ?? year)}`;
+});
 
 const filterFields = computed(() => {
     const fields: { key: StatsFilterKey; label: string; options: string[] }[] =
@@ -72,29 +117,114 @@ const activeFilters = computed(() =>
     filterFields.value.filter((field) => props.filters[field.key] !== null),
 );
 
-const query = (filters: StatsFilters, period: string = props.period.period) => ({
-    period,
-    ...Object.fromEntries(
-        Object.entries(filters).filter(([, value]) => value !== null),
-    ),
-});
+type VisitOverrides = {
+    period?: Partial<StatsPeriodParams>;
+    filters?: StatsFilters;
+    sort?: [StatsTableKey, string];
+    perPage?: [StatsTableKey, number];
+    page?: [StatsTableKey, number];
+};
 
-const visit = (filters: StatsFilters) =>
-    router.get(stats(props.link.id, { query: query(filters) }), undefined, {
-        preserveState: true,
-        preserveScroll: true,
-    });
+const buildQuery = (overrides: VisitOverrides = {}) => {
+    const period = { ...props.period, ...overrides.period };
+    const filters = overrides.filters ?? props.filters;
+    const resetPages = !overrides.page && !overrides.perPage;
+    const sort: Record<string, string> = {};
+    const query: Record<string, string | number | Record<string, string>> = {
+        period: period.period,
+    };
+
+    for (const key of ['date', 'month', 'year', 'from', 'to'] as const) {
+        const relevant =
+            period.period === 'range'
+                ? key === 'from' || key === 'to'
+                : period.period === key ||
+                  (key === 'date' && period.period === 'day');
+
+        if (relevant && period[key]) {
+            query[key] = period[key];
+        }
+    }
+
+    for (const [key, value] of Object.entries(filters)) {
+        if (value !== null) {
+            query[key] = value;
+        }
+    }
+
+    for (const key of tableKeys) {
+        sort[key] =
+            overrides.sort?.[0] === key ? overrides.sort[1] : props.sort[key];
+
+        const perPage =
+            overrides.perPage?.[0] === key
+                ? overrides.perPage[1]
+                : props[key].perPage;
+        const page = resetPages
+            ? 1
+            : overrides.page?.[0] === key
+              ? overrides.page[1]
+              : overrides.perPage?.[0] === key
+                ? 1
+                : props[key].page;
+
+        if (perPage !== 10) {
+            query[`${key}_per_page`] = perPage;
+        }
+
+        if (page > 1) {
+            query[`${key}_page`] = page;
+        }
+    }
+
+    query.sort = sort;
+
+    return query;
+};
+
+const visit = (overrides: VisitOverrides = {}) =>
+    router.get(
+        stats(props.link.id, { query: buildQuery(overrides) }),
+        undefined,
+        {
+            preserveState: true,
+            preserveScroll: true,
+        },
+    );
+
+const rangeDraft = ref<{ from?: string; to?: string }>({});
+
+const setPeriodValue = (key: keyof StatsPeriodParams, value: string) => {
+    if (customType.value !== 'range') {
+        if (value) {
+            visit({ period: { period: customType.value, [key]: value } });
+        }
+
+        return;
+    }
+
+    rangeDraft.value = { ...rangeDraft.value, [key]: value };
+
+    const from = rangeDraft.value.from ?? props.period.from;
+    const to = rangeDraft.value.to ?? props.period.to;
+
+    if (from && to) {
+        visit({ period: { period: 'range', from, to } });
+    }
+};
 
 const setFilter = (key: StatsFilterKey, value: string | null) =>
-    visit({ ...props.filters, [key]: value || null });
+    visit({ filters: { ...props.filters, [key]: value || null } });
 
 const clearFilters = () =>
     visit({
-        country: null,
-        city: null,
-        browser: null,
-        os: null,
-        device_type: null,
+        filters: {
+            country: null,
+            city: null,
+            browser: null,
+            os: null,
+            device_type: null,
+        },
     });
 
 const maxDaily = computed(() =>
@@ -117,21 +247,128 @@ defineOptions({
                 :title="link.title ?? link.short_url"
                 :description="link.short_url"
             />
-            <div class="flex gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <Button
                     v-for="range in ranges"
                     :key="range"
-                    :variant="`${range}d` === period.period ? 'default' : 'outline'"
+                    :variant="
+                        `${range}d` === period.period ? 'default' : 'outline'
+                    "
                     size="sm"
                     as-child
                 >
                     <InertiaLink
-                        :href="stats(link.id, { query: query(filters, `${range}d`) })"
+                        :href="
+                            stats(link.id, {
+                                query: buildQuery({
+                                    period: { period: `${range}d` },
+                                }),
+                            })
+                        "
                         preserve-scroll
                     >
                         {{ range }} days
                     </InertiaLink>
                 </Button>
+                <Button
+                    :variant="period.period === 'all' ? 'default' : 'outline'"
+                    size="sm"
+                    as-child
+                >
+                    <InertiaLink
+                        :href="
+                            stats(link.id, {
+                                query: buildQuery({
+                                    period: { period: 'all' },
+                                }),
+                            })
+                        "
+                        preserve-scroll
+                    >
+                        All time
+                    </InertiaLink>
+                </Button>
+                <select
+                    aria-label="Custom period"
+                    class="rounded-md border bg-background px-2 py-1.5 text-sm"
+                    v-model="customType"
+                >
+                    <option value="" disabled>Custom period</option>
+                    <option value="day">Day</option>
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                    <option value="range">Range</option>
+                </select>
+                <input
+                    v-if="customType === 'day'"
+                    type="date"
+                    aria-label="Day"
+                    class="rounded-md border bg-background px-2 py-1 text-sm"
+                    :value="period.date ?? ''"
+                    @change="
+                        setPeriodValue(
+                            'date',
+                            ($event.target as HTMLInputElement).value,
+                        )
+                    "
+                />
+                <input
+                    v-else-if="customType === 'month'"
+                    type="month"
+                    aria-label="Month"
+                    class="rounded-md border bg-background px-2 py-1 text-sm"
+                    :value="period.month ?? ''"
+                    @change="
+                        setPeriodValue(
+                            'month',
+                            ($event.target as HTMLInputElement).value,
+                        )
+                    "
+                />
+                <input
+                    v-else-if="customType === 'year'"
+                    type="number"
+                    min="1970"
+                    max="9999"
+                    aria-label="Year"
+                    class="w-24 rounded-md border bg-background px-2 py-1 text-sm"
+                    :value="period.year ?? ''"
+                    @change="
+                        /^\d{4}$/.test(
+                            ($event.target as HTMLInputElement).value,
+                        ) &&
+                        setPeriodValue(
+                            'year',
+                            ($event.target as HTMLInputElement).value,
+                        )
+                    "
+                />
+                <template v-else-if="customType === 'range'">
+                    <input
+                        type="date"
+                        aria-label="From"
+                        class="rounded-md border bg-background px-2 py-1 text-sm"
+                        :value="period.from ?? ''"
+                        @change="
+                            setPeriodValue(
+                                'from',
+                                ($event.target as HTMLInputElement).value,
+                            )
+                        "
+                    />
+                    <input
+                        type="date"
+                        aria-label="To"
+                        class="rounded-md border bg-background px-2 py-1 text-sm"
+                        :value="period.to ?? ''"
+                        @change="
+                            setPeriodValue(
+                                'to',
+                                ($event.target as HTMLInputElement).value,
+                            )
+                        "
+                    />
+                </template>
             </div>
         </div>
 
@@ -188,7 +425,7 @@ defineOptions({
         <p class="text-3xl font-semibold">
             {{ total }}
             <span class="text-base font-normal text-muted-foreground"
-                >clicks in the last {{ days }} days</span
+                >clicks {{ periodLabel }}</span
             >
         </p>
 
@@ -215,36 +452,16 @@ defineOptions({
         </div>
 
         <div class="grid gap-6 md:grid-cols-2">
-            <section
-                v-for="table in [
-                    { title: 'Countries', rows: countries.rows },
-                    { title: 'Cities', rows: cities.rows },
-                    { title: 'Browsers', rows: browsers.rows },
-                    { title: 'Operating systems', rows: systems.rows },
-                    { title: 'Devices', rows: devices.rows },
-                ]"
-                :key="table.title"
-            >
-                <h2 class="mb-2 font-medium">{{ table.title }}</h2>
-                <p
-                    v-if="table.rows.length === 0"
-                    class="text-sm text-muted-foreground"
-                >
-                    No data.
-                </p>
-                <table v-else class="w-full text-left text-sm">
-                    <tbody>
-                        <tr
-                            v-for="row in table.rows"
-                            :key="row.name"
-                            class="border-t"
-                        >
-                            <td class="p-2">{{ row.name }}</td>
-                            <td class="p-2 text-right">{{ row.count }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
+            <StatsTable
+                v-for="key in tableKeys"
+                :key="key"
+                :title="tableTitles[key]"
+                :table="props[key]"
+                :sort="sort[key]"
+                @sort="visit({ sort: [key, $event] })"
+                @page="visit({ page: [key, $event] })"
+                @per-page="visit({ perPage: [key, $event] })"
+            />
         </div>
     </div>
 </template>
