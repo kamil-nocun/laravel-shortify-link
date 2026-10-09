@@ -28,8 +28,10 @@ Odhaczaj po zakończeniu zadania. Jedno zadanie = jeden commit.
 - [x] **14.** Okres w kontrolerze (`period`, `series`, `granularity`)
 - [x] **15.** Sortowanie i paginacja tabel w backendzie
 - [x] **16.** UI: okres, sortowanie, paginacja i limity + E2E
+- [ ] **17.** `LinkStatsReport`, trasa danych JSON i `sections[]`
+- [ ] **18.** UI na `useHttp`, czysty URL i tabele jedna pod drugą + E2E
 
-**Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5. Zadania 8–10 dobudowują statystyki klienta na gotowych 1–6: 8 → 9 → 10. Zadania 11–12 dodają filtry na gotowych 5, 6 i 10: 11 → 12. Zadania 13–16 dodają okres, sortowanie i paginację na gotowych 11 i 12: 13 → 14 → 15 → 16 (spec: `docs/superpowers/specs/2026-10-09-link-stats-period-tables-design.md`).
+**Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5. Zadania 8–10 dobudowują statystyki klienta na gotowych 1–6: 8 → 9 → 10. Zadania 11–12 dodają filtry na gotowych 5, 6 i 10: 11 → 12. Zadania 13–16 dodają okres, sortowanie i paginację na gotowych 11 i 12: 13 → 14 → 15 → 16 (spec: `docs/superpowers/specs/2026-10-09-link-stats-period-tables-design.md`). Zadania 17–18 przenoszą pobieranie danych na AJAX na gotowych 13–16: 17 → 18 (spec: `docs/superpowers/specs/2026-10-09-link-stats-ajax-design.md`).
 
 ## Przepływ danych
 
@@ -76,6 +78,13 @@ GET links/{link}/stats → LinkStatsController → links/Stats.vue
 | 19 | Sortowanie po nazwie z `Unknown` | `Unknown` sortowane jak nazwa | 15 |
 | 20 | Remisy w liczbie kliknięć | Ta sama kolejność na kolejnych stronach | 15 |
 | 21 | Zmiana okresu, filtra lub sortowania | Strony wracają do 1, limity zostają | 16 |
+| 22 | Wiele szybkich zmian pod rząd | Widoczny wynik ostatniej zmiany, poprzednie żądania anulowane | 18 |
+| 23 | Zły parametr w żądaniu danych | 422 JSON z `errors`, komunikat przy kontrolce, poprzednie dane zostają | 17, 18 |
+| 24 | Cudzy link w żądaniu danych | 403 JSON, bez redirectu | 17 |
+| 25 | Nieznana nazwa w `sections[]` | 422 | 17 |
+| 26 | Żądanie tylko jednej tabeli | Odpowiedź ma tylko klucz tej tabeli; zapytania tylko dla niej | 17 |
+| 27 | Filtr, okres, sortowanie, strona | `page.url()` bez query stringa | 18 |
+| 28 | F5 po zmianach | Stan domyślny, strona się ładuje bez błędu | 18 |
 
 ---
 
@@ -535,3 +544,73 @@ Znikają propsy `days` i `daily`. `inRange` filtruje `clicked_at >= from` i `<= 
 - [ ] **16.6** `npx prettier --single-quote --write` na zmienionych plikach frontu; poproś użytkownika o pełne `php artisan test --compact`, potem commit: `Add period selector, sorting and pagination to the link stats page`
 
 **Gotowe gdy:** cały zestaw E2E i `php artisan test --compact` zielone.
+
+---
+
+## Zadanie 17: `LinkStatsReport`, trasa danych JSON i `sections[]`
+
+**Po co:** jedno źródło danych statystyk dla strony i dla żądań AJAX, z możliwością policzenia tylko wybranych sekcji.
+
+**Pliki**
+- Nowe: `app/Support/LinkStatsReport.php`, `tests/Feature/LinkStatsDataTest.php`
+- Zmiana: `app/Http/Controllers/LinkStatsController.php`, `app/Http/Requests/Links/LinkStatsRequest.php`, `routes/web.php`
+
+**Trasa:** `Route::get('links/{link}/stats/data', [LinkStatsController::class, 'data'])->name('links.stats.data')` w grupie `auth`+`verified`, **przed** `Route::resource`. Dotychczasowa `links.stats` dalej jest invokable, więc przy dodaniu drugiej trasy zostaw `__invoke` i dopisz metodę `data`. Po zmianach: `php artisan wayfinder:generate`.
+
+**Daje dalej:**
+- `LinkStatsReport::build(Link $link, LinkStatsRequest $request, ?array $sections = null): array` o kształcie propsów z zadań 14–15 bez klucza `link`. Klasa **nie** jest `final`. `$sections` ma elementy z `LinkStatsRequest::SECTIONS = ['summary', 'options', 'countries', 'cities', 'browsers', 'systems', 'devices']`; `null` = wszystkie.
+- Zawartość sekcji: `summary` → `period`, `granularity`, `series`, `total`, `filters`, `sort`; `options` → `options`; każda tabela → tylko klucz tej tabeli.
+- `LinkStatsRequest::sections(): ?array` (`null`, gdy brak parametru). Reguła `sections` → `['sometimes', 'array']`, `sections.*` → `Rule::in(SECTIONS)`.
+- Odpowiedź JSON `GET links/{link}/stats/data` = wynik `build` (dla żądanych sekcji).
+
+- [ ] **17.1** Napisz `tests/Feature/LinkStatsDataTest.php` (żądania z `getJson`):
+  - `data returns the same payload as the page props` (te same dane, `->assertJson` na kluczach: `period`, `granularity`, `series`, `total`, `filters`, `options`, `sort`, pięć tabel; kształt porównany z propsami trasy strony dla identycznego zapytania)
+  - `data respects period, filters, sort and pagination` (jedno zapytanie ze wszystkimi parametrami)
+  - `sections limits the keys` (dataset: `sections[]=countries` → tylko `countries`; `summary` → bez tabel i `options`; `options`; dwie sekcje naraz) → #26
+  - `a single table section runs only its queries` (`DB::getQueryLog()` lub `DB::listen`: dla `sections[]=countries` liczba zapytań = 2, bez zapytań o `options`/inne tabele) → #26
+  - `an unknown section fails validation` (`sections[]=x` → 422, błąd w `sections.0`) → #25
+  - `invalid parameters return 422 json` (np. `period=week`) → #23
+  - `other users get 403 json and no redirect` → #24
+  - `guests get 401 json`
+- [ ] **17.2** Uruchom: `php artisan test --compact tests/Feature/LinkStatsDataTest.php`. Oczekiwane: **FAIL**
+- [ ] **17.3** Przenieś liczenie z `LinkStatsController` do `LinkStatsReport::build` bez zmiany zachowania. Sekcje liczone leniwie: zapytanie dla niewymaganej sekcji **nie** jest wykonywane. Kontroler: `__invoke` renderuje `links/Stats` z `link` + `build($link, $request)`; `data(LinkStatsRequest $request, Link $link): JsonResponse` zwraca `build($link, $request, $request->sections())`
+- [ ] **17.4** `LinkStatsRequest`: stała `SECTIONS`, reguły `sections`, metoda `sections()`
+- [ ] **17.5** `routes/web.php`: dodaj trasę `links.stats.data`; uruchom `php artisan wayfinder:generate`
+- [ ] **17.6** Uruchom `LinkStatsDataTest` i `LinkStatsTest`. Oczekiwane: **PASS**, także dotychczasowe testy strony (builder jest wspólny)
+- [ ] **17.7** Pint i PHPStan (jak w 11.6), potem commit: `Add link stats data endpoint with selectable sections`
+
+**Gotowe gdy:** `LinkStatsDataTest` i `LinkStatsTest` zielone, brak nowych błędów PHPStan.
+
+---
+
+## Zadanie 18: UI na `useHttp`, czysty URL i tabele jedna pod drugą + E2E
+
+**Po co:** zmiany filtrów, okresu, sortowania, stron i limitów idą przez AJAX, a adres strony się nie zmienia.
+
+**Pliki**
+- Zmiana: `resources/js/pages/links/Stats.vue`, `resources/js/components/StatsTable.vue` (tylko jeśli potrzebny stan ładowania), `resources/js/types`, `tests/e2e/stats.spec.ts`
+
+**Bierze:** trasa `links.stats.data` z Wayfinder (zadanie 17), JSON z `sections[]`, błędy 422 w `errors` odpowiedzi.
+
+- [ ] **18.1** Dostosuj `stats.spec.ts` i dopisz przepływy (RED):
+  - po zmianie filtra, okresu, sortowania, strony i limitu `page.url()` równa się `/links/{id}/stats` bez query stringa → #27
+  - F5 po zmianach przywraca stan domyślny (30 dni, brak filtrów, brak znaczników) → #28
+  - szybkie kolejne zmiany: przechwyć żądania przez `page.route`, opóźnij pierwszą odpowiedź, wykonaj drugą zmianę; na końcu widać wynik drugiej, nie pierwszej → #22
+  - zły zakres (From po To) pokazuje komunikat przy selektorze, a poprzednie dane zostają → #23
+  - sort/limit/strona jednej tabeli wysyła `sections[]` tylko dla tej tabeli (asercja na żądaniu `page.waitForRequest`); zmiana okresu lub filtra wysyła żądanie bez `sections[]` lub ze wszystkimi
+  - tabele są ułożone pionowo: pozycje `y` kolejnych nagłówków (Countries → Cities → Browsers → Operating systems → Devices) rosną, a `x` jest taki sam
+  - przyciski 7/30/90 i „All time" mają rolę `button`, nie `link` (zaktualizuj dotychczasowe testy)
+- [ ] **18.2** Uruchom: `npx playwright test tests/e2e/stats.spec.ts` po `npm run build`. Oczekiwane: nowe przepływy **FAIL**
+- [ ] **18.3** `Stats.vue`:
+  - stan danych w lokalnych `ref`-ach, inicjalizowany propsami strony (bez dodatkowego żądania przy ładowaniu)
+  - `load(sections?)` buduje zapytanie z całego stanu i woła `useHttp('get', <links.stats.data>, () => query)`; poprzednie żądanie w locie jest anulowane, odpowiedź starszego nigdy nie nadpisuje nowszego
+  - odpowiedź scala się po kluczach sekcji
+  - reguły sekcji: zmiana okresu/filtra → wszystkie sekcje i strony na 1 (limity zostają); sortowanie/limit tabeli → tylko ta tabela i jej strona na 1; zmiana strony → tylko ta tabela
+  - sekcja w trakcie pobierania jest przygaszona lub ma animowany szkielet, bez migania pustym stanem
+  - błędy 422 z `errors` odpowiedzi pokazane jak dziś przy kontrolkach okresu, po udanym żądaniu znikają
+  - presety 7/30/90 i „All time" jako `<button>`; usuń `router.get`, `preserveState`, odwołania do `usePage().props.errors`
+  - układ: tabele w jednej kolumnie (usuń `md:grid-cols-2`), pełna szerokość, kolejność Countries, Cities, Browsers, Operating systems, Devices
+- [ ] **18.4** `npm run build`, potem `npx playwright test`. Oczekiwane: **PASS**
+- [ ] **18.5** `npx prettier --single-quote --write` na zmienionych plikach frontu, sprawdź `vue-tsc` (brak błędów w `Stats`/`StatsTable`/typach), poproś użytkownika o pełne `php artisan test --compact`, potem commit: `Load link stats via AJAX and stack the tables`
+
+**Gotowe gdy:** cały zestaw E2E i `php artisan test --compact` zielone, a adres strony nie zmienia się przy żadnej interakcji.
