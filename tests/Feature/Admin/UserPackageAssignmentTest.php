@@ -122,3 +122,29 @@ test('show exposes package data to super admin only', function () {
             ->where('packages', [])
             ->where('effectiveLimit', 10));
 });
+
+test('a withdrawn package cannot be assigned', function () {
+    $this->package->delete();
+
+    $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
+        'package_id' => $this->package->id, 'billing_period' => 'monthly',
+    ])->assertSessionHasErrors('package_id');
+});
+
+test('show flags a withdrawn package and leaves it out of the options', function () {
+    PackageAssignment::factory()->for($this->client)->for($this->package)->create();
+    $this->package->delete();
+
+    $this->actingAs($this->super)->get(route('admin.users.show', $this->client))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('packageAssignment.package_withdrawn', true)
+            ->where('packageAssignment.package_name', $this->package->name)
+            ->where('packages', fn ($packages) => collect($packages)->doesntContain('id', $this->package->id)));
+});
+
+test('show reports an active package as not withdrawn', function () {
+    PackageAssignment::factory()->for($this->client)->for($this->package)->create();
+
+    $this->actingAs($this->super)->get(route('admin.users.show', $this->client))
+        ->assertInertia(fn (Assert $page) => $page->where('packageAssignment.package_withdrawn', false));
+});

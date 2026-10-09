@@ -22,7 +22,7 @@ class UpdateUserPackageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'package_id' => ['required', 'uuid', Rule::exists('packages', 'id')],
+            'package_id' => ['required', 'uuid', Rule::exists('packages', 'id')->whereNull('deleted_at')],
             'billing_period' => ['required', Rule::enum(BillingPeriod::class)],
             'starts_at' => ['nullable', 'date'],
             'expires_at' => [

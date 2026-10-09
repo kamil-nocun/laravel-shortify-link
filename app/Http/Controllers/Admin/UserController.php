@@ -168,11 +168,11 @@ class UserController extends Controller
     }
 
     /**
-     * @return array{package_id: string, package_name: string, billing_period: string, price: int, starts_at: string, expires_at: string, active: bool}|null
+     * @return array{package_id: string, package_name: string, billing_period: string, price: int, starts_at: string, expires_at: string, active: bool, package_withdrawn: bool}|null
      */
     private function presentAssignment(User $user): ?array
     {
-        $assignment = $user->packageAssignment()->with('package:id,name')->first();
+        $assignment = $user->packageAssignment()->with('package')->first();
 
         return $assignment ? [
             'package_id' => $assignment->package_id,
@@ -182,6 +182,7 @@ class UserController extends Controller
             'starts_at' => $assignment->starts_at->toIso8601String(),
             'expires_at' => $assignment->expires_at->toIso8601String(),
             'active' => $assignment->isActive(),
+            'package_withdrawn' => $assignment->package->trashed(),
         ] : null;
     }
 

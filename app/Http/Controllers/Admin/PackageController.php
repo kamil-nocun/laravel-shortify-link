@@ -72,17 +72,17 @@ class PackageController extends Controller
     }
 
     /**
-     * Delete a package unless it is the default or assigned to someone.
+     * Delete an unassigned package; withdraw an assigned one so current periods run out; never touch the default.
      */
     public function destroy(Package $package): RedirectResponse
     {
         Gate::authorize('delete', $package);
 
-        if ($package->is_default || $package->assignments()->exists()) {
-            throw ValidationException::withMessages(['package' => __('The default or assigned package cannot be deleted.')]);
+        if ($package->is_default) {
+            throw ValidationException::withMessages(['package' => __('The default package cannot be deleted.')]);
         }
 
-        $package->delete();
+        $package->assignments()->exists() ? $package->delete() : $package->forceDelete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Package deleted.')]);
 

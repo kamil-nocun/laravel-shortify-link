@@ -72,15 +72,26 @@ test('marking a package as default leaves exactly one default', function () {
     expect(Package::where('is_default', true)->pluck('id')->all())->toBe([$old->id]);
 });
 
-test('default and assigned packages cannot be deleted', function () {
+test('the default package cannot be deleted', function () {
     $default = Package::where('is_default', true)->firstOrFail();
-    $used = Package::factory()->create();
-    PackageAssignment::factory()->for($used)->create();
 
     $this->actingAs($this->super)->delete(route('admin.packages.destroy', $default))->assertSessionHasErrors('package');
-    $this->actingAs($this->super)->delete(route('admin.packages.destroy', $used))->assertSessionHasErrors('package');
 
-    expect(Package::whereKey([$default->id, $used->id])->count())->toBe(2);
+    expect($default->fresh())->not->toBeNull();
+});
+
+test('a package with assignments is withdrawn instead of deleted', function () {
+    $used = Package::factory()->create(['link_limit' => 7]);
+    $assignment = PackageAssignment::factory()->for($used)->create();
+
+    $this->actingAs($this->super)->delete(route('admin.packages.destroy', $used))->assertRedirect(route('admin.packages.index'));
+
+    expect(Package::onlyTrashed()->find($used->id))->not->toBeNull()
+        ->and($assignment->user->linkLimit())->toBe(7);
+
+    $this->actingAs($this->super)->get(route('admin.packages.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('packages', fn ($packages) => collect($packages)->doesntContain('id', $used->id)));
+    $this->actingAs($this->super)->get(route('admin.packages.edit', $used))->assertNotFound();
 });
 
 test('unused package can be deleted', function () {
@@ -88,7 +99,7 @@ test('unused package can be deleted', function () {
 
     $this->actingAs($this->super)->delete(route('admin.packages.destroy', $package))->assertRedirect(route('admin.packages.index'));
 
-    expect(Package::find($package->id))->toBeNull();
+    expect(Package::withTrashed()->find($package->id))->toBeNull();
 });
 
 test('the current default package cannot be unmarked directly', function () {
