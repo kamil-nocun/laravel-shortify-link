@@ -24,6 +24,9 @@ class LinkClickFactory extends Factory
             'country_code' => 'PL',
             'country' => 'Poland',
             'city' => 'Warsaw',
+            'browser' => 'Chrome',
+            'os' => 'Windows',
+            'device_type' => 'desktop',
         ];
     }
 }

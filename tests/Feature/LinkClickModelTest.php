@@ -34,3 +34,11 @@ test('country_code, country and city may be null', function () {
         ->and($click->country)->toBeNull()
         ->and($click->city)->toBeNull();
 });
+
+test('browser, os and device_type may be null', function () {
+    $click = LinkClick::factory()->create(['browser' => null, 'os' => null, 'device_type' => null])->fresh();
+
+    expect($click->browser)->toBeNull()
+        ->and($click->os)->toBeNull()
+        ->and($click->device_type)->toBeNull();
+});

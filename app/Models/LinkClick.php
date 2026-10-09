@@ -17,8 +17,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $country_code
  * @property string|null $country
  * @property string|null $city
+ * @property string|null $browser
+ * @property string|null $os
+ * @property string|null $device_type
  */
-#[Fillable(['link_id', 'clicked_at', 'country_code', 'country', 'city'])]
+#[Fillable(['link_id', 'clicked_at', 'country_code', 'country', 'city', 'browser', 'os', 'device_type'])]
 class LinkClick extends Model
 {
     /** @use HasFactory<LinkClickFactory> */
