@@ -4,7 +4,7 @@ Rozszerzenie strony `links/Stats` (specy bazowe: `2026-10-09-link-stats-design.m
 
 ## Cel
 
-Zmiana filtra, okresu, sortowania, strony lub limitu tabeli pobiera dane przez AJAX, a adres strony nie zmienia się (`/links/{id}/stats` bez query stringa). Tabele są wyświetlone jedna pod drugą.
+Zmiana filtra, okresu, sortowania, strony lub limitu tabeli pobiera dane przez AJAX, a adres strony nie zmienia się (`/links/{id}/stats` bez query stringa). Tabele są wyświetlone w siatce 2 kolumn obok siebie (decyzja użytkownika po wdrożeniu zadania 18; pierwotnie: jedna pod drugą).
 
 ## Decyzje
 

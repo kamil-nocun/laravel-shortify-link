@@ -28,8 +28,8 @@ Odhaczaj po zakończeniu zadania. Jedno zadanie = jeden commit.
 - [x] **14.** Okres w kontrolerze (`period`, `series`, `granularity`)
 - [x] **15.** Sortowanie i paginacja tabel w backendzie
 - [x] **16.** UI: okres, sortowanie, paginacja i limity + E2E
-- [ ] **17.** `LinkStatsReport`, trasa danych JSON i `sections[]`
-- [ ] **18.** UI na `useHttp`, czysty URL i tabele jedna pod drugą + E2E
+- [x] **17.** `LinkStatsReport`, trasa danych JSON i `sections[]`
+- [x] **18.** UI na `useHttp`, czysty URL i tabele jedna pod drugą + E2E
 
 **Zależności:** 1 → 2 → 3 → 4. Zadanie 5 wymaga tylko 1. Zadanie 6 wymaga 5. Zadania 8–10 dobudowują statystyki klienta na gotowych 1–6: 8 → 9 → 10. Zadania 11–12 dodają filtry na gotowych 5, 6 i 10: 11 → 12. Zadania 13–16 dodają okres, sortowanie i paginację na gotowych 11 i 12: 13 → 14 → 15 → 16 (spec: `docs/superpowers/specs/2026-10-09-link-stats-period-tables-design.md`). Zadania 17–18 przenoszą pobieranie danych na AJAX na gotowych 13–16: 17 → 18 (spec: `docs/superpowers/specs/2026-10-09-link-stats-ajax-design.md`).
 
