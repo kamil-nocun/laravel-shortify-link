@@ -52,10 +52,7 @@ test('period selects the range', function (string $period, int $days) {
 })->with([['7d', 7], ['30d', 30], ['90d', 90]]);
 
 test('day, month, year and range limit the clicks', function (array $query, array $inside, array $outside) {
-    foreach ($inside as $moment) {
-        clickOn($this->link, ['clicked_at' => $moment]);
-    }
-    foreach ($outside as $moment) {
+    foreach ([...$inside, ...$outside] as $moment) {
         clickOn($this->link, ['clicked_at' => $moment]);
     }
 
@@ -95,17 +92,36 @@ test('series is monthly above 92 days and for year and all', function (array $qu
 ]);
 
 test('monthly series sums days per month and fills empty months with zeros', function () {
-    clickOn($this->link, ['clicked_at' => '2026-01-05 10:00:00']);
-    clickOn($this->link, ['clicked_at' => '2026-01-20 10:00:00']);
-    clickOn($this->link, ['clicked_at' => '2026-03-02 10:00:00']);
+    $year = now()->year - 1;
+    clickOn($this->link, ['clicked_at' => "{$year}-01-05 10:00:00"]);
+    clickOn($this->link, ['clicked_at' => "{$year}-01-20 10:00:00"]);
+    clickOn($this->link, ['clicked_at' => "{$year}-03-02 10:00:00"]);
 
-    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'year', 'year' => '2026']))
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'year', 'year' => $year]))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('series.0', ['date' => '2026-01', 'count' => 2])
-            ->where('series.1', ['date' => '2026-02', 'count' => 0])
-            ->where('series.2', ['date' => '2026-03', 'count' => 1])
-            ->has('series', now()->month)
+            ->where('series.0', ['date' => "{$year}-01", 'count' => 2])
+            ->where('series.1', ['date' => "{$year}-02", 'count' => 0])
+            ->where('series.2', ['date' => "{$year}-03", 'count' => 1])
+            ->has('series', 12)
             ->where('total', 3));
+});
+
+test('all fills zeros across a year boundary', function () {
+    $year = now()->year - 2;
+    clickOn($this->link, ['clicked_at' => "{$year}-12-15 10:00:00"]);
+    clickOn($this->link, ['clicked_at' => ($year + 1).'-02-10 10:00:00']);
+
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'all']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('series.0', ['date' => "{$year}-12", 'count' => 1])
+            ->where('series.1', ['date' => ($year + 1).'-01', 'count' => 0])
+            ->where('series.2', ['date' => ($year + 1).'-02', 'count' => 1]));
+});
+
+test('an inverted explicit range is rejected and renders no stats', function () {
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'period' => 'range', 'from' => '2026-03-12', 'to' => '2026-03-10']))
+        ->assertSessionHasErrors('from')
+        ->assertRedirect();
 });
 
 test('a range in the future returns zeros', function (array $query) {

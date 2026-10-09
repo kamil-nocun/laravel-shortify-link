@@ -25,7 +25,7 @@ class LinkStatsController extends Controller
      */
     public function __invoke(LinkStatsRequest $request, Link $link): Response
     {
-        $firstClick = $link->clicks()->min('clicked_at');
+        $firstClick = $request->period()['period'] === 'all' ? $link->clicks()->min('clicked_at') : null;
         $period = StatsPeriod::resolve($request->period(), $firstClick === null ? null : CarbonImmutable::parse($firstClick), now());
         $from = $period->from;
         $isEmpty = $from === null || $from->gt($period->to);
