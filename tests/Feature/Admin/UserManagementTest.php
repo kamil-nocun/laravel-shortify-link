@@ -267,7 +267,7 @@ test('admin creates a verified user with an unknown password and e-mails a set-p
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)->post(route('admin.users.store'), ['name' => 'New', 'email' => 'new@example.com'])
-        ->assertRedirect();
+        ->assertRedirect(route('admin.users.index'));
 
     $user = User::where('email', 'new@example.com')->firstOrFail();
     expect($user->role)->toBe(UserRole::User)

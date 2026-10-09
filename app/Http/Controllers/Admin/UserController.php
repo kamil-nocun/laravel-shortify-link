@@ -81,7 +81,7 @@ class UserController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User created. A link to set the password was e-mailed.')]);
 
-        return to_route('admin.users.show', $user);
+        return to_route('admin.users.index');
     }
 
     /**
