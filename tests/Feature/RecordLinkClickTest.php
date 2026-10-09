@@ -3,6 +3,7 @@
 use App\Jobs\RecordLinkClick;
 use App\Models\Link;
 use App\Models\LinkClick;
+use App\Support\ClientDetector;
 use App\Support\GeoLocator;
 use Illuminate\Support\Str;
 
@@ -55,4 +56,40 @@ test('does not persist the ip', function () {
     RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now());
 
     expect(json_encode(LinkClick::sole()->getAttributes()))->not->toContain('203.0.113.7');
+});
+
+test('records browser, os and device type of the client', function () {
+    fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
+    $detector = Mockery::mock(ClientDetector::class);
+    $detector->shouldReceive('detect')->with('UA-STRING')->andReturn(['browser' => 'Firefox', 'os' => 'Linux', 'device_type' => 'desktop']);
+    app()->instance(ClientDetector::class, $detector);
+    $link = Link::factory()->create();
+
+    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now(), 'UA-STRING');
+
+    $click = LinkClick::sole();
+    expect($click->browser)->toBe('Firefox')
+        ->and($click->os)->toBe('Linux')
+        ->and($click->device_type)->toBe('desktop');
+});
+
+test('records null client fields when there is no user agent', function () {
+    fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
+    $link = Link::factory()->create();
+
+    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now());
+
+    $click = LinkClick::sole();
+    expect($click->browser)->toBeNull()
+        ->and($click->os)->toBeNull()
+        ->and($click->device_type)->toBeNull();
+});
+
+test('does not persist the user agent', function () {
+    fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
+    $link = Link::factory()->create();
+
+    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now(), 'SecretAgent/1.0');
+
+    expect(json_encode(LinkClick::sole()->getAttributes()))->not->toContain('SecretAgent');
 });

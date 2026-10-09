@@ -16,7 +16,7 @@ class RedirectLinkController extends Controller
     {
         $link = Link::active()->where('code', $code)->firstOrFail();
 
-        RecordLinkClick::dispatch($link->id, (string) $request->ip(), now());
+        RecordLinkClick::dispatch($link->id, (string) $request->ip(), now(), $request->userAgent());
 
         return redirect()->away($link->original_url);
     }

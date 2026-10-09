@@ -83,3 +83,12 @@ test('refused redirects dispatch nothing', function (?string $state) {
     'expired' => 'expired',
     'unknown' => null,
 ]);
+
+test('redirect passes the user agent to the job', function () {
+    Queue::fake();
+    $link = Link::factory()->create();
+
+    $this->withHeader('User-Agent', 'TestAgent/1.0')->get(route('links.redirect', $link->code));
+
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->userAgent === 'TestAgent/1.0');
+});
