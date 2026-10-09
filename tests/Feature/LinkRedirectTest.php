@@ -2,6 +2,7 @@
 
 use App\Jobs\RecordLinkClick;
 use App\Models\Link;
+use App\Models\User;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -112,3 +113,19 @@ test('forwarded ip is used when proxies are trusted', function () {
 
     Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->ip === '89.64.0.1');
 });
+
+test('links disabled by an admin or owned by a blocked user return 404 and record nothing', function (string $scenario) {
+    Queue::fake();
+    $link = $scenario === 'admin'
+        ? Link::factory()->disabledByAdmin()->create()
+        : Link::factory()->for(User::factory()->blocked())->create();
+
+    $this->get(route('links.redirect', $link->code))->assertNotFound();
+    Queue::assertNothingPushed();
+
+    $scenario === 'admin'
+        ? $link->forceFill(['disabled_by_admin_at' => null])->save()
+        : $link->user->forceFill(['blocked_at' => null])->save();
+
+    $this->get(route('links.redirect', $link->code))->assertRedirect($link->original_url);
+})->with(['admin', 'blocked owner']);

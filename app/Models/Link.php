@@ -72,6 +72,8 @@ class Link extends Model
     protected function active(Builder $query): void
     {
         $query->where('is_active', true)
+            ->whereNull('disabled_by_admin_at')
+            ->whereHas('user', fn (Builder $query) => $query->whereNull('blocked_at'))
             ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()));
     }
 
