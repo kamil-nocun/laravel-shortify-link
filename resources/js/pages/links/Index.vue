@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,14 @@ import {
 import { create, destroy, edit, index, stats, toggle } from '@/routes/links';
 import type { Link, Paginated } from '@/types';
 
-defineProps<{ links: Paginated<Link> }>();
+const props = defineProps<{
+    links: Paginated<Link>;
+    quota: { used: number; limit: number | null };
+}>();
+
+const limitReached = computed(
+    () => props.quota.limit !== null && props.quota.used >= props.quota.limit,
+);
 
 defineOptions({
     layout: {
@@ -31,9 +39,21 @@ defineOptions({
     <div class="space-y-6 p-4">
         <div class="flex items-center justify-between">
             <Heading title="Links" description="Manage your short links" />
-            <Button as-child>
-                <InertiaLink :href="create()">New link</InertiaLink>
-            </Button>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-muted-foreground">
+                    {{
+                        quota.limit === null
+                            ? `${quota.used} links, no limit`
+                            : `${quota.used} of ${quota.limit} links`
+                    }}
+                </span>
+                <Button v-if="limitReached" disabled title="Link limit reached"
+                    >New link</Button
+                >
+                <Button v-else as-child>
+                    <InertiaLink :href="create()">New link</InertiaLink>
+                </Button>
+            </div>
         </div>
 
         <p v-if="links.data.length === 0" class="text-sm text-muted-foreground">

@@ -8,6 +8,7 @@ import {
 } from "@inertiajs/vue3";
 import { computed, ref, useTemplateRef } from "vue";
 import ClicksChart from "@/components/ClicksChart.vue";
+import UserPackageCard from "@/components/UserPackageCard.vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ import type {
     AdminUser,
     DailyClicks,
     Link,
+    PackageAssignment,
+    PackageOption,
     Paginated,
     StatsPeriodParams,
 } from "@/types";
@@ -45,6 +48,9 @@ import type {
 const props = defineProps<{
     user: AdminUser;
     assignedAdministrators: AdministratorOption[];
+    packageAssignment: PackageAssignment | null;
+    packages: PackageOption[];
+    effectiveLimit: number | null;
     links: Paginated<Link>;
     period: StatsPeriodParams;
     granularity: "day" | "month";
@@ -244,6 +250,13 @@ setLayoutProps({
                 </Dialog>
             </div>
         </div>
+
+        <UserPackageCard
+            :user-id="user.id"
+            :assignment="packageAssignment"
+            :packages="packages"
+            :effective-limit="effectiveLimit"
+        />
 
         <div v-if="user.can.assignAdministrators" class="space-y-2">
             <h2 class="font-medium">Assigned administrators</h2>
