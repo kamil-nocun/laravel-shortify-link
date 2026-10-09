@@ -107,5 +107,12 @@ export type AdminUser = {
         createLink: boolean;
         delete: boolean;
         changeRole: boolean;
+        assignAdministrators: boolean;
     };
+};
+
+export type AdministratorOption = {
+    id: string;
+    name: string;
+    email: string;
 };

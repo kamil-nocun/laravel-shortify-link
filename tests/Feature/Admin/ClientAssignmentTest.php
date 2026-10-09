@@ -244,3 +244,34 @@ test('resubmitting the same role keeps assignments', function () {
 
     expect(DB::table('client_admin')->where('admin_id', $admin->id)->count())->toBe(1);
 });
+
+test('create form lists administrators for super admin only', function () {
+    $super = User::factory()->superAdmin()->create();
+    $admin = User::factory()->admin()->create();
+    User::factory()->create();
+
+    $this->actingAs($super)->get(route('admin.users.create'))
+        ->assertInertia(fn (Assert $page) => $page->has('administrators', 1)->where('administrators.0.id', $admin->id)->has('administrators.0.email'));
+
+    $this->actingAs($admin)->get(route('admin.users.create'))
+        ->assertInertia(fn (Assert $page) => $page->where('administrators', []));
+});
+
+test('edit and show expose assigned administrators for super admin only', function () {
+    $super = User::factory()->superAdmin()->create();
+    $admin = User::factory()->admin()->create();
+    User::factory()->admin()->create();
+    $client = User::factory()->assignedTo($admin)->create();
+
+    $this->actingAs($super)->get(route('admin.users.edit', $client))
+        ->assertInertia(fn (Assert $page) => $page->has('administrators', 2)->where('assignedAdministratorIds', [$admin->id]));
+
+    $this->actingAs($super)->get(route('admin.users.show', $client))
+        ->assertInertia(fn (Assert $page) => $page->has('assignedAdministrators', 1)->where('assignedAdministrators.0.id', $admin->id)->where('user.can.assignAdministrators', true));
+
+    $this->actingAs($admin)->get(route('admin.users.show', $client))
+        ->assertInertia(fn (Assert $page) => $page->where('assignedAdministrators', [])->where('user.can.assignAdministrators', false));
+
+    $this->actingAs($admin)->get(route('admin.users.edit', $client))
+        ->assertInertia(fn (Assert $page) => $page->where('administrators', [])->where('assignedAdministratorIds', []));
+});

@@ -1,17 +1,26 @@
 <script setup lang="ts">
-import { Form, Head, Link as InertiaLink } from "@inertiajs/vue3";
+import { Form, Head, useForm, Link as InertiaLink } from "@inertiajs/vue3";
+import AdministratorPicker from "@/components/AdministratorPicker.vue";
 import Heading from "@/components/Heading.vue";
 import InputError from "@/components/InputError.vue";
 import PasswordInput from "@/components/PasswordInput.vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { update as updateAdministrators } from "@/actions/App/Http/Controllers/Admin/UserAdministratorController";
 import { dashboard } from "@/routes/admin";
+import type { AdministratorOption } from "@/types";
 import { edit, index, show, update } from "@/routes/admin/users";
 
 const props = defineProps<{
     user: { id: string; name: string; email: string };
+    administrators: AdministratorOption[];
+    assignedAdministratorIds: string[];
 }>();
+
+const administratorsForm = useForm({
+    administrators: [...props.assignedAdministratorIds],
+});
 
 defineOptions({
     layout: {
@@ -90,5 +99,25 @@ defineOptions({
                 </Button>
             </div>
         </Form>
+
+        <form
+            v-if="administrators.length > 0"
+            class="space-y-4"
+            @submit.prevent="
+                administratorsForm.submit(updateAdministrators(props.user.id), {
+                    preserveScroll: true,
+                })
+            "
+        >
+            <Heading title="Assigned administrators" />
+            <AdministratorPicker
+                v-model="administratorsForm.administrators"
+                :administrators="administrators"
+            />
+            <InputError :message="administratorsForm.errors.administrators" />
+            <Button :disabled="administratorsForm.processing">
+                Save administrators
+            </Button>
+        </form>
     </div>
 </template>

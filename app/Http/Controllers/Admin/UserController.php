@@ -50,11 +50,11 @@ class UserController extends Controller
     /**
      * Show the create form.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         Gate::authorize('create', User::class);
 
-        return Inertia::render('admin/users/Create');
+        return Inertia::render('admin/users/Create', ['administrators' => $this->administratorOptions($request->user())]);
     }
 
     /**
@@ -87,6 +87,9 @@ class UserController extends Controller
     {
         return Inertia::render('admin/users/Show', [
             'user' => $this->present($user->loadCount('links'), $request->user()),
+            'assignedAdministrators' => $request->user()->isSuperAdmin()
+                ? $user->assignedAdmins()->orderBy('name')->get(['users.id', 'users.name', 'users.email'])->map->only(['id', 'name', 'email'])->all()
+                : [],
             'links' => $user->links()->withCount('clicks')->latest()->paginate(15)->withQueryString(),
             ...$this->report->build($user, $request),
         ]);
@@ -95,11 +98,17 @@ class UserController extends Controller
     /**
      * Show the profile edit form.
      */
-    public function edit(User $user): Response
+    public function edit(Request $request, User $user): Response
     {
         Gate::authorize('update', $user);
 
-        return Inertia::render('admin/users/Edit', ['user' => $user->only(['id', 'name', 'email'])]);
+        return Inertia::render('admin/users/Edit', [
+            'user' => $user->only(['id', 'name', 'email']),
+            'administrators' => $this->administratorOptions($request->user()),
+            'assignedAdministratorIds' => $request->user()->isSuperAdmin()
+                ? $user->assignedAdmins()->pluck('users.id')->all()
+                : [],
+        ]);
     }
 
     /**
@@ -139,6 +148,21 @@ class UserController extends Controller
     }
 
     /**
+     * Administrators selectable for assignment; empty unless the actor is a super administrator.
+     *
+     * @return list<array{id: string, name: string, email: string}>
+     */
+    private function administratorOptions(User $actor): array
+    {
+        if (! $actor->isSuperAdmin()) {
+            return [];
+        }
+
+        return User::query()->where('role', UserRole::Admin)->orderBy('name')->get(['id', 'name', 'email'])
+            ->map->only(['id', 'name', 'email'])->values()->all();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function present(User $user, User $actor): array
@@ -151,6 +175,7 @@ class UserController extends Controller
                 'delete' => $actor->can('delete', $user),
                 'createLink' => $actor->can('createLink', $user),
                 'changeRole' => $actor->can('changeRole', $user),
+                'assignAdministrators' => $actor->can('assignAdministrators', $user),
             ],
         ];
     }

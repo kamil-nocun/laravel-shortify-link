@@ -23,7 +23,7 @@ test('admin sees users with counts and capability flags', function () {
             ->has('users.data', 1)
             ->where('users.data.0.name', 'Zed')
             ->where('users.data.0.links_count', 2)
-            ->where('users.data.0.can', ['block' => true, 'update' => true, 'createLink' => true, 'delete' => true, 'changeRole' => false]));
+            ->where('users.data.0.can', ['block' => true, 'update' => true, 'createLink' => true, 'delete' => true, 'changeRole' => false, 'assignAdministrators' => false]));
 });
 
 test('super admin can change roles in flags', function () {

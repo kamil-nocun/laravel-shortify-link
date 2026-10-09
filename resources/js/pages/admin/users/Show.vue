@@ -33,6 +33,7 @@ import {
 } from '@/routes/admin/users';
 import type {
     AdminCounters,
+    AdministratorOption,
     AdminUser,
     DailyClicks,
     Link,
@@ -42,6 +43,7 @@ import type {
 
 const props = defineProps<{
     user: AdminUser;
+    assignedAdministrators: AdministratorOption[];
     links: Paginated<Link>;
     period: StatsPeriodParams;
     granularity: 'day' | 'month';
@@ -223,6 +225,24 @@ setLayoutProps({
                     </DialogContent>
                 </Dialog>
             </div>
+        </div>
+
+        <div v-if="user.can.assignAdministrators" class="space-y-2">
+            <h2 class="font-medium">Assigned administrators</h2>
+            <ul
+                v-if="assignedAdministrators.length > 0"
+                class="text-sm"
+            >
+                <li v-for="administrator in assignedAdministrators" :key="administrator.id">
+                    {{ administrator.name }}
+                    <span class="text-muted-foreground">
+                        {{ administrator.email }}
+                    </span>
+                </li>
+            </ul>
+            <p v-else class="text-sm text-muted-foreground">
+                No administrators assigned.
+            </p>
         </div>
 
         <div class="flex flex-wrap items-center justify-between gap-2">
