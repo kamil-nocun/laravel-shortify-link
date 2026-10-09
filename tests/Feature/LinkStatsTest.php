@@ -124,16 +124,17 @@ test('an inverted explicit range is rejected and renders no stats', function () 
         ->assertRedirect();
 });
 
-test('a range in the future returns zeros', function (array $query) {
+test('a range in the future returns zeros', function (Closure $makeQuery) {
+    $query = $makeQuery();
     clickOn($this->link);
 
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, ...$query]))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('total', 0)->where('series', [])->where('countries.rows', [])->where('options.browsers', []));
 })->with([
-    'year' => [['period' => 'year', 'year' => '2030']],
-    'month' => [['period' => 'month', 'month' => '2030-01']],
-    'day' => [['period' => 'day', 'date' => '2030-01-01']],
+    'year' => [fn () => ['period' => 'year', 'year' => (string) now()->addYear()->year]],
+    'month' => [fn () => ['period' => 'month', 'month' => now()->addYear()->format('Y-m')]],
+    'day' => [fn () => ['period' => 'day', 'date' => now()->addYear()->format('Y-m-d')]],
 ]);
 
 test('period applies to totals, tables and options', function () {
@@ -429,11 +430,14 @@ test('a page past the end returns the last page', function () {
 
 test('table pages and per page are independent', function () {
     manyCities(25);
+    foreach (range(1, 30) as $i) {
+        clickOn($this->link, ['country' => "Country {$i}"]);
+    }
 
-    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'countries_page' => 2, 'countries_per_page' => 25]))
+    $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'countries_page' => 2]))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('countries.page', 1)
-            ->where('countries.perPage', 25)
+            ->where('countries.page', 2)
+            ->where('countries.perPage', 10)
             ->where('cities.page', 1)
             ->where('cities.perPage', 10)
             ->has('cities.rows', 10));

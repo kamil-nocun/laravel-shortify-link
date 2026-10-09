@@ -24,6 +24,13 @@ const direction = computed(() => (props.sort.endsWith('asc') ? 'asc' : 'desc'));
 const arrow = (key: string) =>
     column.value === key ? (direction.value === 'asc' ? ' ↑' : ' ↓') : '';
 
+const ariaSort = (key: string) =>
+    column.value === key
+        ? direction.value === 'asc'
+            ? 'ascending'
+            : 'descending'
+        : 'none';
+
 const toggle = (key: 'name' | 'count') => {
     if (column.value === key) {
         emit('sort', `${key}_${direction.value === 'asc' ? 'desc' : 'asc'}`);
@@ -44,12 +51,12 @@ const toggle = (key: 'name' | 'count') => {
         <table v-else class="w-full text-left text-sm">
             <thead>
                 <tr>
-                    <th class="p-2">
+                    <th class="p-2" :aria-sort="ariaSort('name')">
                         <button type="button" @click="toggle('name')">
                             Name{{ arrow('name') }}
                         </button>
                     </th>
-                    <th class="p-2 text-right">
+                    <th class="p-2 text-right" :aria-sort="ariaSort('count')">
                         <button type="button" @click="toggle('count')">
                             Clicks{{ arrow('count') }}
                         </button>

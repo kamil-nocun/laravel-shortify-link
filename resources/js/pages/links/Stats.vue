@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
+import { Head, Link as InertiaLink, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import StatsTable from '@/components/StatsTable.vue';
 import Heading from '@/components/Heading.vue';
@@ -51,6 +51,8 @@ const tableTitles: Record<StatsTableKey, string> = {
     devices: 'Devices',
 };
 
+const rangeDraft = ref<{ from?: string; to?: string }>({});
+
 const customTypes = ['day', 'month', 'year', 'range'];
 
 const customType = ref(
@@ -61,11 +63,24 @@ watch(
     () => props.period.period,
     (value) => {
         customType.value = customTypes.includes(value) ? value : '';
+        rangeDraft.value = {};
     },
 );
 
+watch(customType, () => {
+    rangeDraft.value = {};
+});
+
+const page = usePage();
+
+const periodErrors = computed(() =>
+    ['date', 'month', 'year', 'from', 'to']
+        .map((key) => (page.props.errors as Record<string, string>)?.[key])
+        .filter(Boolean),
+);
+
 const periodLabel = computed(() => {
-    const { period, date, month, year, from, to } = props.period;
+    const { period, from, to } = props.period;
 
     if (/^\d+d$/.test(period)) {
         return `in the last ${period.slice(0, -1)} days`;
@@ -75,7 +90,7 @@ const periodLabel = computed(() => {
         return 'in total';
     }
 
-    return `in ${period === 'range' ? `${from} - ${to}` : (date ?? month ?? year)}`;
+    return `in ${period === 'range' ? `${from} - ${to}` : (props.period[period === 'day' ? 'date' : (period as 'month' | 'year')] ?? '')}`;
 });
 
 const filterFields = computed(() => {
@@ -191,8 +206,6 @@ const visit = (overrides: VisitOverrides = {}) =>
             preserveScroll: true,
         },
     );
-
-const rangeDraft = ref<{ from?: string; to?: string }>({});
 
 const setPeriodValue = (key: keyof StatsPeriodParams, value: string) => {
     if (customType.value !== 'range') {
@@ -349,6 +362,7 @@ defineOptions({
                         aria-label="From"
                         class="rounded-md border bg-background px-2 py-1 text-sm"
                         :value="period.from ?? ''"
+                        :max="rangeDraft.to ?? period.to ?? undefined"
                         @change="
                             setPeriodValue(
                                 'from',
@@ -361,6 +375,7 @@ defineOptions({
                         aria-label="To"
                         class="rounded-md border bg-background px-2 py-1 text-sm"
                         :value="period.to ?? ''"
+                        :min="rangeDraft.from ?? period.from ?? undefined"
                         @change="
                             setPeriodValue(
                                 'to',
@@ -371,6 +386,14 @@ defineOptions({
                 </template>
             </div>
         </div>
+        <p
+            v-for="error in periodErrors"
+            :key="error"
+            class="text-sm text-destructive"
+            role="alert"
+        >
+            {{ error }}
+        </p>
 
         <div class="flex flex-wrap items-end gap-3">
             <label
@@ -437,7 +460,7 @@ defineOptions({
             v-else
             class="flex h-40 items-end gap-px"
             role="img"
-            aria-label="Clicks per day"
+            :aria-label="`Clicks per ${granularity}`"
         >
             <div
                 v-for="day in series"

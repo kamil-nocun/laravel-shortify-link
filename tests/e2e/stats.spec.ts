@@ -188,6 +188,7 @@ test('table paginates, limit changes and resets keep the limit', async ({
     await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
 
     await cities.getByRole('button', { name: 'Next' }).click();
+    await expect(cities.getByText('Page 2 of 3 (25 rows)')).toBeVisible();
     await cities.getByRole('button', { name: /^Name/ }).click();
     await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
 
@@ -200,4 +201,12 @@ test('table paginates, limit changes and resets keep the limit', async ({
 
     await page.getByRole('link', { name: '30 days' }).click();
     await expect(cities.getByLabel('Rows')).toHaveValue('50');
+});
+
+test('an invalid range shows a validation message', async ({ page }) => {
+    await openStats(page, 'Period e2e');
+    await page.getByLabel('Custom period').selectOption('range');
+    await page.getByLabel('From', { exact: true }).fill('2021-06-30');
+    await page.getByLabel('To', { exact: true }).fill('2021-06-01');
+    await expect(page.getByRole('alert')).toBeVisible();
 });
