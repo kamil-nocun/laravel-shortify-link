@@ -62,10 +62,16 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $user = new User($request->validated());
+        $user = new User($request->safe()->except('administrators'));
         $user->password = Str::password(32);
         $user->email_verified_at = now();
         $user->save();
+
+        if ($request->user()->isSuperAdmin()) {
+            $user->assignedAdmins()->sync($request->validated('administrators', []));
+        } else {
+            $user->assignedAdmins()->attach($request->user());
+        }
 
         $user->notify(new AccountCreatedNotification(Password::createToken($user)));
 

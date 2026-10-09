@@ -5,6 +5,8 @@ use App\Models\LinkClick;
 use App\Models\User;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('attach creates pivot row with non-empty id', function () {
@@ -147,4 +149,63 @@ test('dashboard and user list are scoped to assigned clients', function () {
 
     $this->actingAs(User::factory()->superAdmin()->create())->get(route('admin.dashboard'))
         ->assertInertia(fn (Assert $page) => $page->where('counters.clicks', 5)->has('topUsers', 2));
+});
+
+test('administrator creating a client is assigned and extra administrators are ignored', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+    $other = User::factory()->admin()->create();
+
+    $this->actingAs($admin)->post(route('admin.users.store'), [
+        'name' => 'New', 'email' => 'new@example.com', 'administrators' => [$other->id],
+    ])->assertSessionHasNoErrors();
+
+    expect(User::where('email', 'new@example.com')->first()->assignedAdmins->pluck('id')->all())->toBe([$admin->id]);
+});
+
+test('super administrator assigns chosen administrators on creation', function () {
+    Notification::fake();
+    $super = User::factory()->superAdmin()->create();
+    [$a, $b] = User::factory()->admin()->count(2)->create();
+
+    $this->actingAs($super)->post(route('admin.users.store'), [
+        'name' => 'One', 'email' => 'one@example.com', 'administrators' => [$a->id, $b->id],
+    ])->assertSessionHasNoErrors();
+    $this->actingAs($super)->post(route('admin.users.store'), ['name' => 'Two', 'email' => 'two@example.com']);
+
+    expect(User::where('email', 'one@example.com')->first()->assignedAdmins->pluck('id')->sort()->values()->all())
+        ->toBe(collect([$a->id, $b->id])->sort()->values()->all())
+        ->and(User::where('email', 'two@example.com')->first()->assignedAdmins)->toBeEmpty();
+});
+
+test('super administrator cannot assign non-administrators', function (string $kind) {
+    $super = User::factory()->superAdmin()->create();
+    $id = $kind === 'client' ? User::factory()->create()->id : (string) Str::uuid();
+
+    $this->actingAs($super)->post(route('admin.users.store'), [
+        'name' => 'X', 'email' => 'x@example.com', 'administrators' => [$id],
+    ])->assertSessionHasErrors('administrators.0');
+})->with(['client', 'random']);
+
+test('super administrator updates assignments and administrator loses access', function () {
+    $super = User::factory()->superAdmin()->create();
+    $admin = User::factory()->admin()->create();
+    $client = User::factory()->assignedTo($admin)->create();
+    $new = User::factory()->admin()->create();
+
+    $this->actingAs($super)->put(route('admin.users.administrators.update', $client), ['administrators' => [$new->id]])
+        ->assertRedirect();
+    expect($client->assignedAdmins()->pluck('users.id')->all())->toBe([$new->id]);
+    $this->actingAs($admin)->get(route('admin.users.show', $client))->assertNotFound();
+
+    $this->actingAs($super)->put(route('admin.users.administrators.update', $client), ['administrators' => []])->assertRedirect();
+    expect($client->assignedAdmins()->count())->toBe(0);
+    $this->actingAs($super)->get(route('admin.users.show', $client))->assertOk();
+});
+
+test('administrator cannot update assignments', function () {
+    $admin = User::factory()->admin()->create();
+    $client = User::factory()->assignedTo($admin)->create();
+
+    $this->actingAs($admin)->put(route('admin.users.administrators.update', $client), ['administrators' => []])->assertForbidden();
 });

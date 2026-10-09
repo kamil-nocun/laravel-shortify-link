@@ -3,9 +3,11 @@
 namespace App\Http\Requests\Admin;
 
 use App\Concerns\ProfileValidationRules;
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreUserRequest extends FormRequest
 {
@@ -21,6 +23,13 @@ class StoreUserRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->profileRules();
+        $rules = $this->profileRules();
+
+        if ($this->user()->isSuperAdmin()) {
+            $rules['administrators'] = ['nullable', 'array'];
+            $rules['administrators.*'] = ['uuid', Rule::exists('users', 'id')->where('role', UserRole::Admin)];
+        }
+
+        return $rules;
     }
 }

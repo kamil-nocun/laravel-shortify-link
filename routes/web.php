@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdministratorController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LinkDisableController;
 use App\Http\Controllers\Admin\LinkStatsController as AdminLinkStatsController;
+use App\Http\Controllers\Admin\UserAdministratorController;
 use App\Http\Controllers\Admin\UserBlockController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserLinkController;
@@ -36,6 +37,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('users/{user}/links', [UserLinkController::class, 'store'])->name('users.links.store');
     Route::patch('users/{user}/block', [UserBlockController::class, 'store'])->name('users.block');
     Route::delete('users/{user}/block', [UserBlockController::class, 'destroy'])->name('users.unblock');
+    Route::put('users/{user}/administrators', [UserAdministratorController::class, 'update'])->name('users.administrators.update');
     Route::patch('users/{user}/role', UserRoleController::class)->name('users.role');
 });
 
