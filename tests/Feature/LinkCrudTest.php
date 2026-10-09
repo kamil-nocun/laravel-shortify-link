@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Link;
+use App\Models\LinkClick;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -33,6 +34,14 @@ test('index lists only own links, newest first', function () {
             ->where('links.data.1.id', $old->id)
             ->where('links.data.0.short_url', $new->short_url)
             ->has('links.data', 2));
+});
+
+test('index exposes the number of clicks per link', function () {
+    $link = Link::factory()->for($this->user)->create();
+    LinkClick::factory()->count(3)->for($link)->create();
+
+    $this->actingAs($this->user)->get(route('links.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('links.data.0.clicks_count', 3));
 });
 
 test('create and edit render their pages', function () {

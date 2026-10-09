@@ -8,6 +8,14 @@ use App\Models\User;
 class LinkPolicy
 {
     /**
+     * Determine whether the user owns the link and may see its stats.
+     */
+    public function view(User $user, Link $link): bool
+    {
+        return $user->id === $link->user_id;
+    }
+
+    /**
      * Determine whether the user owns the link and may edit it.
      */
     public function update(User $user, Link $link): bool
