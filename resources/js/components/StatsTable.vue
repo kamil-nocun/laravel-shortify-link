@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Button } from '@/components/ui/button';
 import type { StatsTable } from '@/types';
 
 const props = defineProps<{
     title: string;
+    label: string;
+    total: number;
     table: StatsTable;
     sort: string;
     loading?: boolean;
@@ -23,7 +26,10 @@ const column = computed(() =>
 const direction = computed(() => (props.sort.endsWith('asc') ? 'asc' : 'desc'));
 
 const arrow = (key: string) =>
-    column.value === key ? (direction.value === 'asc' ? ' ↑' : ' ↓') : '';
+    column.value === key ? (direction.value === 'asc' ? '↑' : '↓') : '↕';
+
+const share = (count: number) =>
+    props.total > 0 ? (count / props.total) * 100 : 0;
 
 const ariaSort = (key: string) =>
     column.value === key
@@ -45,37 +51,86 @@ const toggle = (key: 'name' | 'count') => {
 
 <template>
     <section
-        class="transition-opacity"
+        class="overflow-hidden rounded-lg border transition-opacity"
         :class="{ 'animate-pulse opacity-50': loading }"
         :aria-busy="loading"
     >
-        <h2 class="mb-2 font-medium">{{ title }}</h2>
-        <p v-if="table.rows.length === 0" class="text-sm text-muted-foreground">
+        <div class="flex items-baseline justify-between px-4 py-3">
+            <h2 class="font-medium">{{ title }}</h2>
+            <span class="text-sm text-muted-foreground tabular-nums"
+                >{{ table.total }} rows</span
+            >
+        </div>
+        <p
+            v-if="table.rows.length === 0"
+            class="border-t p-6 text-center text-sm text-muted-foreground"
+        >
             No data.
         </p>
         <table v-else class="w-full text-left text-sm">
-            <thead>
+            <thead class="bg-muted/50 text-muted-foreground">
                 <tr>
-                    <th class="p-2" :aria-sort="ariaSort('name')">
-                        <button type="button" @click="toggle('name')">
-                            Name{{ arrow('name') }}
+                    <th class="p-2 pl-4" :aria-sort="ariaSort('name')">
+                        <button
+                            type="button"
+                            class="rounded px-1 hover:text-foreground"
+                            @click="toggle('name')"
+                        >
+                            {{ label }}
+                            <span
+                                :class="{ 'opacity-50': column !== 'name' }"
+                                aria-hidden="true"
+                                >{{ arrow('name') }}</span
+                            >
                         </button>
                     </th>
                     <th class="p-2 text-right" :aria-sort="ariaSort('count')">
-                        <button type="button" @click="toggle('count')">
-                            Clicks{{ arrow('count') }}
+                        <button
+                            type="button"
+                            class="rounded px-1 hover:text-foreground"
+                            @click="toggle('count')"
+                        >
+                            Clicks
+                            <span
+                                :class="{ 'opacity-50': column !== 'count' }"
+                                aria-hidden="true"
+                                >{{ arrow('count') }}</span
+                            >
                         </button>
                     </th>
+                    <th class="p-2 pr-4 text-right font-medium">Share</th>
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="row in table.rows" :key="row.name" class="border-t">
-                    <td class="p-2">{{ row.name }}</td>
-                    <td class="p-2 text-right">{{ row.count }}</td>
+                <tr
+                    v-for="row in table.rows"
+                    :key="row.name"
+                    class="border-t hover:bg-muted/30"
+                >
+                    <td
+                        class="p-2 pl-4"
+                        :class="{
+                            'text-muted-foreground italic':
+                                row.name === 'Unknown',
+                        }"
+                    >
+                        {{ row.name }}
+                    </td>
+                    <td class="p-2 text-right tabular-nums">{{ row.count }}</td>
+                    <td class="relative p-2 pr-4 text-right tabular-nums">
+                        {{ share(row.count).toFixed(1) }}%
+                        <span
+                            class="absolute bottom-0 left-0 h-0.5 bg-primary/60"
+                            :style="{ width: `${share(row.count)}%` }"
+                            aria-hidden="true"
+                        />
+                    </td>
                 </tr>
             </tbody>
         </table>
-        <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+        <div
+            class="flex flex-wrap items-center gap-3 border-t px-4 py-3 text-sm"
+        >
             <label class="flex items-center gap-1">
                 Rows
                 <select
@@ -94,24 +149,24 @@ const toggle = (key: 'name' | 'count') => {
                 </select>
             </label>
             <template v-if="table.lastPage > 1">
-                <button
-                    type="button"
-                    class="rounded-md border px-2 py-1 disabled:opacity-50"
+                <Button
+                    variant="outline"
+                    size="sm"
                     :disabled="table.page <= 1"
                     @click="emit('page', table.page - 1)"
                 >
                     Previous
-                </button>
-                <button
-                    type="button"
-                    class="rounded-md border px-2 py-1 disabled:opacity-50"
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
                     :disabled="table.page >= table.lastPage"
                     @click="emit('page', table.page + 1)"
                 >
                     Next
-                </button>
+                </Button>
             </template>
-            <span>{{
+            <span class="tabular-nums">{{
                 `Page ${table.page} of ${table.lastPage} (${table.total} rows)`
             }}</span>
         </div>

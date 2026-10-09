@@ -129,7 +129,7 @@ test('period can be switched to all time, a month and a range', async ({
 test('table can be sorted by name, toggling direction', async ({ page }) => {
     await openStats(page, 'Pages e2e');
     const cities = section(page, 'Cities');
-    const header = cities.getByRole('button', { name: /^Name/ });
+    const header = cities.getByRole('button', { name: /^City/ });
 
     await header.click();
     await expect(cities.getByRole('cell').first()).toHaveText(/^City01/);
@@ -153,7 +153,7 @@ test('table paginates, limit changes and resets keep the limit', async ({
 
     await cities.getByRole('button', { name: 'Next' }).click();
     await expect(cities.getByText('Page 2 of 3 (25 rows)')).toBeVisible();
-    await cities.getByRole('button', { name: /^Name/ }).click();
+    await cities.getByRole('button', { name: /^City/ }).click();
     await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
 
     await cities.getByLabel('Rows').selectOption('50');
@@ -178,7 +178,7 @@ test('interactions never change the URL and reload restores defaults', async ({
 
     await page.getByRole('button', { name: '7 days' }).click();
     await cities.getByRole('button', { name: 'Next' }).click();
-    await cities.getByRole('button', { name: /^Name/ }).click();
+    await cities.getByRole('button', { name: /^City/ }).click();
     await cities.getByLabel('Rows').selectOption('25');
     await expect(cities.getByText('Page 1 of 1 (25 rows)')).toBeVisible();
     await page.getByLabel('Country').selectOption({ index: 1 });
@@ -268,7 +268,7 @@ test('an invalid range shows its error, keeps data and clears on a valid range',
     await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
-test('tables are stacked in one column in order', async ({ page }) => {
+test('tables are shown in two columns in order', async ({ page }) => {
     await openStats(page, 'Period e2e');
     const titles = [
         'Countries',
@@ -285,10 +285,33 @@ test('tables are stacked in one column in order', async ({ page }) => {
                 .boundingBox(),
         );
     }
-    for (let i = 1; i < boxes.length; i++) {
-        expect(boxes[i]!.y).toBeGreaterThan(boxes[i - 1]!.y);
-        expect(boxes[i]!.x).toBe(boxes[0]!.x);
-    }
+    const [countries, cities, browsers, systems, devices] = boxes;
+    expect(cities!.y).toBe(countries!.y);
+    expect(cities!.x).toBeGreaterThan(countries!.x);
+    expect(browsers!.y).toBeGreaterThan(countries!.y);
+    expect(browsers!.x).toBe(countries!.x);
+    expect(systems!.y).toBe(browsers!.y);
+    expect(systems!.x).toBeGreaterThan(browsers!.x);
+    expect(devices!.y).toBeGreaterThan(browsers!.y);
+});
+
+test('share column shows the percentage of period clicks', async ({ page }) => {
+    await openStats(page, 'Filters e2e');
+    const cities = section(page, 'Cities');
+
+    await expect(
+        cities
+            .getByRole('row', { name: /Berlin/ })
+            .getByRole('cell')
+            .nth(2),
+    ).toHaveText('33.3%');
+    await expect(
+        cities
+            .getByRole('row', { name: /Warsaw/ })
+            .getByRole('cell')
+            .nth(2),
+    ).toHaveText('66.7%');
+    await expect(cities.getByText('Page 1 of 1 (2 rows)')).toBeVisible();
 });
 
 test('filter selects follow the state after removing a chip and clearing', async ({
@@ -331,7 +354,7 @@ test('a server-clamped page is not resent by other tables', async ({
     await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
     const request = page.waitForRequest('**/stats/data?*');
     await section(page, 'Countries')
-        .getByRole('button', { name: /^Name/ })
+        .getByRole('button', { name: /^Country/ })
         .click();
     expect(new URL((await request).url()).searchParams.get('cities_page')).toBe(
         '1',

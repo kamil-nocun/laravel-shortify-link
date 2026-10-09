@@ -45,6 +45,14 @@ const tableKeys: StatsTableKey[] = [
     'devices',
 ];
 
+const tableLabels: Record<StatsTableKey, string> = {
+    countries: 'Country',
+    cities: 'City',
+    browsers: 'Browser',
+    systems: 'Operating system',
+    devices: 'Device',
+};
+
 const tableTitles: Record<StatsTableKey, string> = {
     countries: 'Countries',
     cities: 'Cities',
@@ -630,11 +638,13 @@ defineOptions({
             />
         </div>
 
-        <div class="space-y-6">
+        <div class="grid gap-6 md:grid-cols-2">
             <StatsTable
                 v-for="key in tableKeys"
                 :key="key"
                 :title="tableTitles[key]"
+                :label="tableLabels[key]"
+                :total="total"
                 :table="tables[key]"
                 :sort="wanted.sort[key]"
                 :loading="isLoading(key)"
