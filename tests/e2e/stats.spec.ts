@@ -215,7 +215,7 @@ test('table actions request only their section, period requests all', async ({
     expect(url.searchParams.getAll('sections[]').length).not.toBe(1);
 });
 
-test('a newer request cancels a slow in-flight one', async ({ page }) => {
+test('a newer request supersedes a slow in-flight one', async ({ page }) => {
     await openStats(page, 'Period e2e');
     let first = true;
     let slowFinished!: () => void;
@@ -313,7 +313,7 @@ test('filter selects follow the state after removing a chip and clearing', async
     ).toHaveCount(0);
 });
 
-test('a server-clamped page is adopted by the next request', async ({
+test('a server-clamped page is not resent by other tables', async ({
     page,
 }) => {
     await openStats(page, 'Pages e2e');
@@ -330,9 +330,11 @@ test('a server-clamped page is adopted by the next request', async ({
     await cities.getByRole('button', { name: 'Next' }).click();
     await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
     const request = page.waitForRequest('**/stats/data?*');
-    await cities.getByRole('button', { name: 'Next' }).click();
+    await section(page, 'Countries')
+        .getByRole('button', { name: /^Name/ })
+        .click();
     expect(new URL((await request).url()).searchParams.get('cities_page')).toBe(
-        '2',
+        '1',
     );
     await page.unrouteAll({ behavior: 'ignoreErrors' });
 });

@@ -246,7 +246,10 @@ const load = (sections: Section[] | null) => {
             }
 
             merge(response);
-            sort.value = { ...wanted.sort };
+            if (!response.sort) {
+                sort.value = { ...wanted.sort };
+            }
+
             resyncWanted();
             pendingSections.value = new Set();
         })
