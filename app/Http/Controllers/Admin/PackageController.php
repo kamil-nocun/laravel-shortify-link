@@ -98,7 +98,7 @@ class PackageController extends Controller
     {
         DB::transaction(function () use ($package, $attributes) {
             if ($attributes['is_default'] ?? false) {
-                Package::where('is_default', true)->update(['is_default' => false]);
+                Package::where('is_default', true)->lockForUpdate()->get()->each->update(['is_default' => false]);
             }
 
             $package->fill($attributes)->save();

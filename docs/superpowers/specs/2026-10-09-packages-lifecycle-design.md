@@ -9,7 +9,7 @@ Zmiany pakietu (edycja, usunięcie) nie wpływają na użytkowników w trakcie o
 ## Ustalenia
 
 - Pakiet domyślny (Free) nie może zostać usunięty ani wycofany.
-- Tylko jeden pakiet może być domyślnym, gwarantowane także przez bazę danych.
+- Tylko jeden pakiet może być domyślnym, gwarantowane blokadą wiersza przy przełączaniu.
 - Edycja pakietu (limit, ceny) obowiązuje przypisania od ich następnego okresu. Pakiet domyślny nie ma okresów, więc jego edycja działa od razu.
 - Usunięcie pakietu z przypisaniami wycofuje go: obecne okresy dobiegają końca na starych warunkach, potem użytkownik przechodzi na Free. Administrator nie wybiera pakietu zastępczego.
 - Wybór między Free a pakietem płatnym należy do użytkownika końcowego i powstanie w etapie 2 razem z płatnościami (Cashier, Stripe sandbox). Do tego czasu płatny pakiet przypisuje ręcznie super administrator.
@@ -24,7 +24,7 @@ Nowa kolumna `link_limit` (unsigned integer): migawka limitu pakietu z początku
 ### `packages`
 
 - `SoftDeletes` (`deleted_at`). Wycofany pakiet znika z list i nie można go przypisać, ale wiersz zostaje, dopóki przypisania do niego wskazują (klucz obcy `restrictOnDelete` pozostaje).
-- Gwarancja jednego domyślnego w bazie: kolumna generowana `default_marker` (1 gdy `is_default` jest prawdą i pakiet nie jest wycofany, w przeciwnym razie `NULL`) z indeksem unikalnym. Druga próba ustawienia domyślnego kończy się błędem bazy. Zgodność z bazą testową i mysql do sprawdzenia przy implementacji; jeśli któraś nie obsługuje kolumny generowanej z indeksem, zastępnik: `lockForUpdate` w transakcji samego przełączenia.
+- Gwarancja jednego domyślnego przez blokadę wiersza: przełączenie domyślnego odbywa się w transakcji, która najpierw blokuje obecny domyślny pakiet (`lockForUpdate`), potem go odznacza i zaznacza nowy. Równoległy zapis czeka na blokadę, po czym widzi już nowy stan, więc zawsze zostaje dokładnie jeden domyślny. Bez indeksu unikalnego i kolumn generowanych (działa tak samo na mysql i bazie testowej).
 
 ## Reguły domenowe (zmiany)
 
@@ -70,7 +70,7 @@ Gdy aktywne przypisanie wskazuje wycofany pakiet, lista linków pokazuje baner: 
 - Usunięcie pakietu z przypisaniami nie zmienia ich limitu; wycofany pakiet nie pojawia się na liście ani w opcjach przypisania; po odnowieniu użytkownik wraca na Free.
 - Usunięcie i wycofanie pakietu domyślnego jest odrzucone.
 - Odnowienie: nowy okres startuje od poprzedniego `expires_at`; pominięte okresy są nadrabiane; brak ceny okresu kończy przypisanie; przypisanie jednorazowe się nie odnawia; ponowne uruchomienie nic nie zmienia.
-- Dwa pakiety domyślne naraz kończą się błędem bazy; przełączenie domyślnego pozostawia dokładnie jeden.
+- Przełączenie domyślnego pozostawia dokładnie jeden domyślny i blokuje wiersz dotychczasowego domyślnego (`lockForUpdate` w transakcji).
 - Baner pojawia się tylko, gdy aktywne przypisanie wskazuje wycofany pakiet.
 
 ## Poza zakresem
