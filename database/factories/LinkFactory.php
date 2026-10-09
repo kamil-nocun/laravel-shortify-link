@@ -37,6 +37,9 @@ class LinkFactory extends Factory
         return $this->state(['is_active' => false]);
     }
 
+    /**
+     * Indicate that the link was disabled by an admin.
+     */
     public function disabledByAdmin(): static
     {
         return $this->state(['disabled_by_admin_at' => now()]);

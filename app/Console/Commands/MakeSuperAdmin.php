@@ -35,7 +35,7 @@ class MakeSuperAdmin extends Command
                 ], [
                     'email' => 'required|email|max:255',
                     'name' => 'required|string|max:255',
-                    'password' => Password::defaults(),
+                    'password' => ['required', Password::defaults()],
                 ]);
 
                 if ($validator->fails()) {

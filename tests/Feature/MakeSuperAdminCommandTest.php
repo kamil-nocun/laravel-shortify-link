@@ -49,4 +49,5 @@ test('refuses an invalid email or a weak password', function (string $email, str
 })->with([
     ['not-an-email', 'S3cure-pass-word!'],
     ['boss@example.com', '123'],
+    ['boss@example.com', ''],
 ]);
