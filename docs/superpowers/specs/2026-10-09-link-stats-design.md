@@ -72,7 +72,7 @@ Model `LinkClick` (`HasUuids`, `HasFactory`, relacja `link()`), factory z domyś
 - Wartość filtra `Unknown` oznacza `whereNull(kolumna)`, czyli kliknięcia bez rozpoznanej wartości.
 - Filtr miasta działa na samej nazwie miasta (np. `Wroclaw`), choć tabela miast pokazuje `City, Country`.
 - Dodatkowe propsy: `filters` (ustawione wartości, brak = `null`) oraz `options`: dla każdego z pięciu pól lista różnych wartości z wybranego zakresu dni, sortowane alfabetycznie rosnąco, `Unknown` na końcu, gdy występują `null`-e, limit 200 na pole. `options` nie zależy od pozostałych filtrów, żeby nie dało się zawęzić do pustego wyniku bez drogi powrotu.
-- UI filtrów: pięć natywnych `<select>` (pierwsza opcja "All") nad wykresem, zmiana woła `router.get` z `preserveState`. Przycisk "Clear filters" widoczny, gdy jakiś filtr jest ustawiony. Przełącznik 7/30/90 dni zachowuje aktywne filtry.
+- UI filtrów: pięć natywnych `<select>` (pierwsza opcja "All") nad wykresem, zmiana woła `router.get` z `preserveState`. Pod selectami lista aktywnych filtrów jako znaczniki (np. `Browser: Firefox`), każdy z przyciskiem usuwającym tylko ten filtr. Przycisk "Clear all" (reset) widoczny, gdy jakiś filtr jest ustawiony, usuwa wszystkie filtry i zostawia wybrany zakres dni. Usunięcie i reset to zwykłe `router.get` z URL bez odpowiednich parametrów (bez osobnego endpointu). Przełącznik 7/30/90 dni zachowuje aktywne filtry.
 - Lista linków: `withCount('clicks')` i kolumna z liczbą kliknięć oraz link do statystyk.
 - Trasy do frontu przez Wayfinder.
 

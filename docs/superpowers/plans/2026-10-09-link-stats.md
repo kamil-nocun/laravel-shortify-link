@@ -381,9 +381,9 @@ Mapowanie pól: `country` → kolumna `country`, `city` → `city`, `browser` �
 
 **Bierze:** propsy `filters` i `options` z zadania 11; trasa `stats` z Wayfinder.
 
-- [ ] **12.1** Dopisz do `stats.spec.ts` przepływ: seed z klikami z dwóch przeglądarek (np. `Chrome` i `Firefox`, przez factory); wybór `Firefox` w selecie "Browser" zmienia sumę; kliknięcie "7 days" zachowuje `browser=Firefox` w URL; "Clear filters" przywraca pełną sumę
+- [ ] **12.1** Dopisz do `stats.spec.ts` przepływ: seed z klikami z dwóch przeglądarek (np. `Chrome` i `Firefox`, przez factory) i dwóch krajów; wybór `Firefox` w selecie "Browser" zmienia sumę i pokazuje znacznik `Browser: Firefox`; kliknięcie "7 days" zachowuje `browser=Firefox` w URL; ustawienie drugiego filtru (kraj) pokazuje dwa znaczniki; usunięcie znacznika przeglądarki zostawia filtr kraju, usuwa `browser` z URL i zmienia sumę; "Clear all" usuwa wszystkie filtry, przywraca pełną sumę i zostawia `days=7`; bez filtrów brak znaczników i przycisku "Clear all"
 - [ ] **12.2** Uruchom: `npx playwright test tests/e2e/stats.spec.ts`. Oczekiwane: nowy przepływ **FAIL**
-- [ ] **12.3** `Stats.vue`: propsy `filters`, `options`; pięć `<select>` z opcją "All"; zmiana woła `router.get` z aktualnym `days` i filtrami (puste pomijane), `preserveState`, `preserveScroll`; przycisk "Clear filters" widoczny, gdy jakiś filtr jest ustawiony; linki 7/30/90 dni dołączają aktywne filtry do zapytania
+- [ ] **12.3** `Stats.vue`: propsy `filters`, `options`; pięć `<select>` z opcją "All"; jedna funkcja `visit(filters)` woła `router.get` z aktualnym `days` i niepustymi filtrami, `preserveState`, `preserveScroll`; zmiana selecta, usunięcie znacznika i reset korzystają z niej (usunięcie = filtr ustawiony na `null`, reset = wszystkie `null`); pod selectami znaczniki aktywnych filtrów (etykieta pola + wartość) z przyciskiem `×` i dostępną nazwą (np. `aria-label="Remove Browser filter"`); przycisk "Clear all" widoczny tylko gdy jakiś filtr jest ustawiony; linki 7/30/90 dni dołączają aktywne filtry do zapytania
 - [ ] **12.4** `npm run build`, potem `npx playwright test`. Oczekiwane: **PASS**
 - [ ] **12.5** `npx prettier --single-quote --write` na zmienionych plikach, pełne `php artisan test --compact`, potem commit: `Add filters to the link stats page`
 
