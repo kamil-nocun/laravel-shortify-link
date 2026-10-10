@@ -32,11 +32,23 @@ function toggleLink(): void {
         return;
     }
 
-    const url = window.prompt('Link URL (https://, http:// or mailto:)');
+    const url = window
+        .prompt('Link URL (https://, http://, mailto: or /path)')
+        ?.trim();
 
-    if (url) {
-        editor.value.chain().focus().setLink({ href: url }).run();
+    if (!url) {
+        return;
     }
+
+    if (!/^(https?:|mailto:|\/(?!\/))/i.test(url)) {
+        window.alert(
+            'Use https://, http://, mailto: or a path starting with /',
+        );
+
+        return;
+    }
+
+    editor.value.chain().focus().setLink({ href: url }).run();
 }
 </script>
 

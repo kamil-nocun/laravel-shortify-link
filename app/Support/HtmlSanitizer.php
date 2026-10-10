@@ -14,7 +14,7 @@ class HtmlSanitizer
         $config = (new HtmlSanitizerConfig)
             ->allowSafeElements()
             ->allowLinkSchemes(['http', 'https', 'mailto'])
-            ->allowRelativeLinks(false)
+            ->allowRelativeLinks()
             ->allowElement('hr')
             ->allowElement('u')
             ->allowElement('s')

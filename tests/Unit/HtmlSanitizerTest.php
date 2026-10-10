@@ -25,3 +25,7 @@ test('keeps allowed formatting', function () {
 test('repairs unclosed tags', function () {
     expect((new HtmlSanitizer)->sanitize('<p><strong>a'))->toBe('<p><strong>a</strong></p>');
 });
+
+test('keeps relative links to other pages', function () {
+    expect((new HtmlSanitizer)->sanitize('<p><a href="/content/cookies">c</a></p>'))->toContain('href="/content/cookies"');
+});
