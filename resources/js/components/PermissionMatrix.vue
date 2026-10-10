@@ -1,11 +1,6 @@
 <script setup lang="ts">
-import { ChevronDown, Minus } from '@lucide/vue';
+import { Minus } from '@lucide/vue';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import type { PermissionGroup } from '@/types';
 
@@ -21,10 +16,13 @@ function keysOf(group: PermissionGroup): string[] {
     return group.permissions.map((permission) => permission.key);
 }
 
+function selectedCount(group: PermissionGroup): number {
+    return keysOf(group).filter((key) => props.modelValue.includes(key))
+        .length;
+}
+
 function groupState(group: PermissionGroup): boolean | 'indeterminate' {
-    const selected = keysOf(group).filter((key) =>
-        props.modelValue.includes(key),
-    ).length;
+    const selected = selectedCount(group);
 
     if (selected === 0) {
         return false;
@@ -51,14 +49,13 @@ function toggle(key: string, checked: boolean): void {
 </script>
 
 <template>
-    <div class="space-y-3">
-        <Collapsible
+    <div class="grid gap-4 md:grid-cols-2">
+        <section
             v-for="group in groups"
             :key="group.group"
-            :default-open="true"
-            class="rounded-lg border"
+            class="overflow-hidden rounded-lg border"
         >
-            <div class="flex items-center gap-2 p-3">
+            <div class="flex items-center gap-2 border-b bg-muted/40 p-3">
                 <Checkbox
                     :id="`group-${group.group}`"
                     :model-value="groupState(group)"
@@ -75,37 +72,29 @@ function toggle(key: string, checked: boolean): void {
                 <Label :for="`group-${group.group}`" class="font-medium">{{
                     group.group
                 }}</Label>
-                <CollapsibleTrigger as-child>
-                    <button
-                        type="button"
-                        class="ml-auto text-muted-foreground"
-                        :aria-label="`Toggle ${group.group}`"
-                    >
-                        <ChevronDown class="size-4" />
-                    </button>
-                </CollapsibleTrigger>
+                <span class="ml-auto text-xs text-muted-foreground tabular-nums">
+                    {{ selectedCount(group) }} / {{ group.permissions.length }}
+                </span>
             </div>
-            <CollapsibleContent>
-                <div class="grid gap-2 border-t p-3 sm:grid-cols-2">
-                    <div
-                        v-for="permission in group.permissions"
-                        :key="permission.key"
-                        class="flex items-center gap-2"
-                    >
-                        <Checkbox
-                            :id="`perm-${permission.key}`"
-                            :model-value="modelValue.includes(permission.key)"
-                            :disabled="disabled"
-                            @update:model-value="
-                                toggle(permission.key, $event === true)
-                            "
-                        />
-                        <Label :for="`perm-${permission.key}`">{{
-                            permission.label
-                        }}</Label>
-                    </div>
+            <div class="space-y-2 p-3">
+                <div
+                    v-for="permission in group.permissions"
+                    :key="permission.key"
+                    class="flex items-center gap-2"
+                >
+                    <Checkbox
+                        :id="`perm-${permission.key}`"
+                        :model-value="modelValue.includes(permission.key)"
+                        :disabled="disabled"
+                        @update:model-value="
+                            toggle(permission.key, $event === true)
+                        "
+                    />
+                    <Label :for="`perm-${permission.key}`">{{
+                        permission.label
+                    }}</Label>
                 </div>
-            </CollapsibleContent>
-        </Collapsible>
+            </div>
+        </section>
     </div>
 </template>

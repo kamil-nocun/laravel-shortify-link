@@ -22,7 +22,7 @@ defineOptions({
 <template>
     <Head title="Create role" />
 
-    <div class="max-w-3xl space-y-6 p-4">
+    <div class="max-w-6xl space-y-6 p-4">
         <Heading
             title="Create role"
             description="Choose the permissions this role grants"

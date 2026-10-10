@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { ShieldCheck } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import RoleForm from '@/components/RoleForm.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { dashboard } from '@/routes/admin';
 import { index, update } from '@/routes/admin/roles';
 import type { PermissionGroup, Role } from '@/types';
@@ -24,12 +26,15 @@ defineOptions({
 <template>
     <Head title="Edit role" />
 
-    <div class="max-w-3xl space-y-6 p-4">
+    <div class="max-w-6xl space-y-6 p-4">
         <Heading title="Edit role" :description="props.role.name" />
-        <p v-if="props.role.is_super" class="text-sm text-muted-foreground">
-            The Super admin role always has every permission and cannot be
-            edited.
-        </p>
+        <Alert v-if="props.role.is_super">
+            <ShieldCheck />
+            <AlertTitle>Super admin role</AlertTitle>
+            <AlertDescription>
+                It always has every permission and cannot be edited.
+            </AlertDescription>
+        </Alert>
         <RoleForm
             :role="props.role"
             :permission-groups="permissionGroups"
