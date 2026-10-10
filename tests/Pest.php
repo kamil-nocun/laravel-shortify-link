@@ -61,11 +61,11 @@ function roleId(string $name): string
 }
 
 /**
- * A CMS page with one version, published or in draft.
+ * A CMS page with one version, published or in draft, marked as a legal document unless told otherwise.
  */
-function documentPage(string $slug, bool $published = true, bool $withVersion = true): Page
+function documentPage(string $slug, bool $published = true, bool $withVersion = true, bool $legal = true): Page
 {
-    $page = Page::factory()->create(['slug' => $slug, 'status' => $published ? 'published' : 'draft']);
+    $page = Page::factory()->create(['slug' => $slug, 'status' => $published ? 'published' : 'draft', 'is_legal_document' => $legal]);
 
     if ($withVersion) {
         app(SavePageVersion::class)($page, ucfirst($slug), '<p>Text</p>', null);

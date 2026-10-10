@@ -29,6 +29,7 @@ class PageController extends Controller
                 'id' => $page->id,
                 'slug' => $page->slug,
                 'status' => $page->status->value,
+                'is_legal_document' => $page->is_legal_document,
                 'title' => $page->currentVersion?->title,
                 'updated_at' => $page->updated_at,
             ]),
@@ -50,7 +51,7 @@ class PageController extends Controller
      */
     public function store(StorePageRequest $request): RedirectResponse
     {
-        $page = Page::create(['slug' => $request->validated('slug')]);
+        $page = Page::create(['slug' => $request->validated('slug'), 'is_legal_document' => $request->boolean('is_legal_document')]);
 
         ($this->savePageVersion)($page, $request->validated('title'), $request->validated('body'), $request->user());
 
@@ -71,6 +72,7 @@ class PageController extends Controller
                 'id' => $page->id,
                 'slug' => $page->slug,
                 'status' => $page->status->value,
+                'is_legal_document' => $page->is_legal_document,
                 'title' => $page->currentVersion?->title,
                 'body' => $page->currentVersion?->body,
             ],
@@ -82,7 +84,7 @@ class PageController extends Controller
      */
     public function update(UpdatePageRequest $request, Page $page, HtmlSanitizer $sanitizer): RedirectResponse
     {
-        $page->update(['slug' => $request->validated('slug')]);
+        $page->update(['slug' => $request->validated('slug'), 'is_legal_document' => $request->boolean('is_legal_document')]);
 
         $current = $page->currentVersion;
         $title = $request->validated('title');

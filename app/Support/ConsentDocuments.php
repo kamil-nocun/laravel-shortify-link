@@ -13,19 +13,14 @@ use Illuminate\Support\Str;
 class ConsentDocuments
 {
     /**
-     * CMS pages every user has to accept.
-     */
-    public const SLUGS = ['terms', 'privacy-policy', 'cookies-policy'];
-
-    /**
-     * Current versions of the published required pages that have content.
+     * Current versions of the published pages marked as legal documents that have content.
      *
      * @return Collection<int, PageVersion>
      */
     public static function current(): Collection
     {
         return Page::query()
-            ->whereIn('slug', self::SLUGS)
+            ->where('is_legal_document', true)
             ->where('status', PageStatus::Published)
             ->whereNotNull('current_version_id')
             ->with('currentVersion')

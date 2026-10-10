@@ -10,9 +10,16 @@ use Illuminate\Database\QueryException;
 test('current returns the current versions of published required pages only', function () {
     $terms = documentPage('terms');
     documentPage('privacy-policy', published: false);
-    documentPage('imprint');
+    documentPage('imprint', legal: false);
 
     expect(ConsentDocuments::current()->pluck('id')->all())->toBe([$terms->current_version_id]);
+});
+
+test('any published page marked as a legal document is required, whatever its slug', function () {
+    $notice = documentPage('legal-notice');
+    documentPage('about-us', legal: false);
+
+    expect(ConsentDocuments::current()->pluck('id')->all())->toBe([$notice->current_version_id]);
 });
 
 test('a published required page without a version is skipped', function () {

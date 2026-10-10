@@ -49,3 +49,9 @@ test('cookies policy lists cookies in a table and policies use lists', function 
     expect(Page::firstWhere('slug', 'cookies-policy')->currentVersion->body)->toContain('<table>', '<th>')
         ->and(Page::firstWhere('slug', 'privacy-policy')->currentVersion->body)->toContain('<ul>', '<li>');
 });
+
+test('seeded documents are marked as legal documents', function () {
+    $this->seed(LegalPagesSeeder::class);
+
+    expect(Page::where('is_legal_document', true)->pluck('slug')->all())->toEqualCanonicalizing(['privacy-policy', 'cookies-policy', 'terms']);
+});

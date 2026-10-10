@@ -146,3 +146,26 @@ test('users without pages.manage get 403', function (string $role) {
     $this->actingAs($actor)->patch(route('admin.pages.status', $page), ['status' => 'published'])->assertForbidden();
     $this->actingAs($actor)->post(route('admin.pages.versions.restore', [$page, $version]))->assertForbidden();
 })->with(['admin', 'client']);
+
+test('the legal document flag is stored on create and toggled on update', function () {
+    $this->actingAs($this->super)->post(route('admin.pages.store'), ['slug' => 'terms', 'title' => 'Terms', 'body' => '<p>a</p>', 'is_legal_document' => true]);
+    $page = Page::firstWhere('slug', 'terms');
+
+    expect($page->is_legal_document)->toBeTrue();
+
+    $this->actingAs($this->super)->put(route('admin.pages.update', $page), ['slug' => 'terms', 'title' => 'Terms', 'body' => '<p>a</p>', 'is_legal_document' => false]);
+    expect($page->fresh()->is_legal_document)->toBeFalse();
+
+    $this->actingAs($this->super)->post(route('admin.pages.store'), ['slug' => 'about', 'title' => 'About', 'body' => '<p>a</p>']);
+    expect(Page::firstWhere('slug', 'about')->is_legal_document)->toBeFalse();
+});
+
+test('the edit and index props expose the legal document flag', function () {
+    $page = pageWithVersion('terms');
+    $page->update(['is_legal_document' => true]);
+
+    $this->actingAs($this->super)->get(route('admin.pages.edit', $page))
+        ->assertInertia(fn (Assert $inertia) => $inertia->where('page.is_legal_document', true));
+    $this->actingAs($this->super)->get(route('admin.pages.index'))
+        ->assertInertia(fn (Assert $inertia) => $inertia->where('pages.0.is_legal_document', true));
+});

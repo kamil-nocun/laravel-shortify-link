@@ -22,6 +22,7 @@ class StorePageRequest extends FormRequest
             'slug' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', 'unique:pages,slug'],
             'title' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string'],
+            'is_legal_document' => ['boolean'],
         ];
     }
 }

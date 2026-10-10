@@ -16,7 +16,7 @@ Poza zakresem: strona "Prywatność" w ustawieniach poza przyciskiem eksportu, a
 
 ## Założenia
 
-- Wymagane dokumenty: strony `terms`, `privacy-policy` i `cookies-policy`.
+- Wymagane dokumenty: opublikowane strony CMS z zaznaczonym checkboxem "Legal document" (`pages.is_legal_document`, ustawiany w edycji strony). Strony regulaminu, polityki prywatności i cookies z seedera mają go domyślnie, a migracja oznacza istniejące strony o tych slugach.
 - Edycja dokumentu w CMS tworzy nową wersję i wymusza ponowną akceptację przez wszystkich użytkowników.
 - Eksport jest generowany na żądanie i pobierany natychmiast (dane jednego konta są małe).
 - Format eksportu: ZIP z osobnym plikiem CSV na zbiór danych. Bez nowych zależności (rozszerzenie PHP `zip` jest dostępne).
@@ -27,8 +27,7 @@ Poza zakresem: strona "Prywatność" w ustawieniach poza przyciskiem eksportu, a
 **Model danych** — `user_consents` (UUID): `id`, `user_id` (FK cascade), `page_version_id` (FK restrict; wersje nie są nigdy usuwane), `accepted_at`; unikalny `(user_id, page_version_id)`. IP i User-Agent nie są zapisywane.
 
 **`App\Support\ConsentDocuments`:**
-- `SLUGS = ['terms', 'privacy-policy', 'cookies-policy']`.
-- `current(): Collection<PageVersion>` zwraca aktualne wersje opublikowanych stron z listy, które mają wersję; pozostałe są pomijane (nic do zaakceptowania, nic nie blokuje).
+- `current(): Collection<PageVersion>` zwraca aktualne wersje opublikowanych stron oznaczonych jako dokument prawny, które mają wersję; pozostałe są pomijane (nic do zaakceptowania, nic nie blokuje).
 - `pendingFor(User $user): Collection<PageVersion>` zwraca aktualne wersje, których użytkownik nie zaakceptował.
 - `accept(User $user): void` zapisuje zgody na wszystkie aktualne wersje (`insertOrIgnore` po kluczu unikalnym).
 

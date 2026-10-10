@@ -16,11 +16,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $id
  * @property string $slug
  * @property PageStatus $status
+ * @property bool $is_legal_document
  * @property string|null $current_version_id
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  */
-#[Fillable(['slug', 'status', 'current_version_id'])]
+#[Fillable(['slug', 'status', 'is_legal_document', 'current_version_id'])]
 class Page extends Model
 {
     /** @use HasFactory<PageFactory> */
@@ -35,6 +36,7 @@ class Page extends Model
     {
         return [
             'status' => PageStatus::class,
+            'is_legal_document' => 'boolean',
         ];
     }
 

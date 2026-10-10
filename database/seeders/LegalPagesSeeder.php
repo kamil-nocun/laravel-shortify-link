@@ -43,7 +43,7 @@ class LegalPagesSeeder extends Seeder
     public function run(SavePageVersion $savePageVersion): void
     {
         foreach (self::DOCUMENTS as $slug => $document) {
-            $page = Page::firstOrCreate(['slug' => $slug], ['status' => PageStatus::Published]);
+            $page = Page::firstOrCreate(['slug' => $slug], ['status' => PageStatus::Published, 'is_legal_document' => true]);
 
             if ($page->wasRecentlyCreated) {
                 $savePageVersion($page, $document['title'], $this->render($document), null);

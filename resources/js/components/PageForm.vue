@@ -3,6 +3,7 @@ import { useForm } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import RichTextEditor from '@/components/RichTextEditor.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { PageContent } from '@/types';
@@ -18,6 +19,7 @@ function usePageForm() {
         slug: props.page?.slug ?? '',
         title: props.page?.title ?? '',
         body: props.page?.body ?? '',
+        is_legal_document: props.page?.is_legal_document ?? false,
     });
 }
 
@@ -50,6 +52,23 @@ const form = usePageForm();
             <Label>Content</Label>
             <RichTextEditor v-model="form.body" />
             <InputError :message="form.errors.body" />
+        </div>
+
+        <div class="grid gap-2">
+            <div class="flex items-start gap-2">
+                <Checkbox
+                    id="is_legal_document"
+                    :model-value="form.is_legal_document"
+                    @update:model-value="
+                        form.is_legal_document = $event === true
+                    "
+                />
+                <Label for="is_legal_document" class="leading-normal"
+                    >Legal document: signed-in users must accept the current
+                    version on the "Accept the current documents" page</Label
+                >
+            </div>
+            <InputError :message="form.errors.is_legal_document" />
         </div>
 
         <Button type="submit" :disabled="form.processing">{{

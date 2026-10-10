@@ -4,6 +4,7 @@ export type PageListItem = {
     id: string;
     slug: string;
     status: PageStatus;
+    is_legal_document: boolean;
     title: string | null;
     updated_at: string;
 };
@@ -12,6 +13,7 @@ export type PageContent = {
     id: string;
     slug: string;
     status: PageStatus;
+    is_legal_document: boolean;
     title: string | null;
     body: string | null;
 };

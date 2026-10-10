@@ -53,7 +53,15 @@ defineOptions({
                 </thead>
                 <tbody>
                     <tr v-for="page in pages" :key="page.id" class="border-t">
-                        <td class="p-3">{{ page.title ?? '—' }}</td>
+                        <td class="p-3">
+                            {{ page.title ?? '—' }}
+                            <Badge
+                                v-if="page.is_legal_document"
+                                variant="outline"
+                                class="ml-2"
+                                >Legal</Badge
+                            >
+                        </td>
                         <td class="p-3">/content/{{ page.slug }}</td>
                         <td class="p-3">
                             <Badge

@@ -22,6 +22,7 @@ class UpdatePageRequest extends FormRequest
             'slug' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('pages', 'slug')->ignore($this->route('page'))],
             'title' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string'],
+            'is_legal_document' => ['boolean'],
         ];
     }
 }
