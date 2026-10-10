@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\PageStatus;
 use App\Models\Page;
+use App\Support\PublicPageData;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,6 +20,7 @@ class ContentPageController extends Controller
 
         return Inertia::render('content/Show', [
             'page' => ['title' => $version->title, 'body' => $version->body],
+            'legalDocuments' => PublicPageData::legalDocuments(),
         ]);
     }
 }

@@ -212,8 +212,10 @@
 
 @layer components {
     .cms-content {
+        @apply break-words;
+
         & table {
-            @apply my-4 w-full border-collapse;
+            @apply my-4 block w-full max-w-full overflow-x-auto border-collapse md:table;
         }
         & th,
         & td {

@@ -25,6 +25,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomainCheckController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\DomainVerifyController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\LinkQrController;
 use App\Http\Controllers\LinkStatsController;
@@ -38,7 +39,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
-Route::inertia('/', 'FrontApp')->name('front_app');
+Route::get('/', HomeController::class)->name('front_app');
 
 Route::middleware('auth')->group(function () {
     Route::get('consent', [ConsentController::class, 'show'])->name('consent.show');
