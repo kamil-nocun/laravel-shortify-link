@@ -89,6 +89,16 @@ class Domain extends Model
         };
     }
 
+    /**
+     * Public address of the domain; the scheme and port come from APP_URL.
+     */
+    public function url(): string
+    {
+        $port = parse_url((string) config('app.url'), PHP_URL_PORT);
+
+        return parse_url((string) config('app.url'), PHP_URL_SCHEME).'://'.$this->host.($port ? ':'.$port : '');
+    }
+
     public function txtName(): string
     {
         return '_shortify-verify.'.$this->host;

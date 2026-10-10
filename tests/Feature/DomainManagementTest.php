@@ -136,6 +136,7 @@ test('index lists only own domains with status and quota', function () {
             ->where('domains.0.txt_name', '_shortify-verify.'.$pending->host)
             ->where('domains.0.txt_value', 'shortify-verify='.$pending->verification_token)
             ->where('domains.1.status', 'active')
+            ->where('domains.1.url', $active->url())
             ->where('domains.2.status', 'disabled')
             ->where('quota', ['used' => 3, 'limit' => 5])
             ->where('cnameTarget', config('shortify.cname_target')));

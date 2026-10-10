@@ -67,6 +67,14 @@ test('short_url uses the domain host', function () {
         ->and(Link::factory()->create(['code' => 'main12'])->short_url)->toBe('http://shortify.test/main12');
 });
 
+test('short_url on a custom domain keeps the app url port', function () {
+    config(['app.url' => 'http://localhost:8000']);
+    $domain = Domain::factory()->verified()->create(['host' => 'go.example.com']);
+    $link = Link::factory()->for($domain->user)->create(['domain_id' => $domain->id, 'code' => 'abc123']);
+
+    expect($link->short_url)->toBe('http://go.example.com:8000/abc123');
+});
+
 test('host matching ignores case', function () {
     $domain = Domain::factory()->verified()->create(['host' => 'example.com']);
     Link::factory()->for($domain->user)->create(['domain_id' => $domain->id, 'code' => 'abc123']);

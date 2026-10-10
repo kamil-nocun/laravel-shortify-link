@@ -7,6 +7,7 @@ use App\Support\LinkCodeGenerator;
 use Illuminate\Database\UniqueConstraintViolationException;
 
 test('user creates a link on their active domain', function () {
+    config(['app.url' => 'http://shortify.test']);
     $user = User::factory()->create();
     $domain = Domain::factory()->verified()->for($user)->create(['host' => 'go.example.com']);
 

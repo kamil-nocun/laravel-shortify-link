@@ -58,9 +58,9 @@ const form = useLinkForm();
             <select
                 id="domain_id"
                 v-model="form.domain_id"
-                class="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                class="h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
-                <option value="">Main domain</option>
+                <option value=""></option>
                 <option v-for="d in domains" :key="d.id" :value="d.id">
                     {{ d.host }}
                 </option>

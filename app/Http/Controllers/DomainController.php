@@ -25,6 +25,7 @@ class DomainController extends Controller
             'domains' => $user->domains()->oldest()->get()->map(fn (Domain $domain) => [
                 'id' => $domain->id,
                 'host' => $domain->host,
+                'url' => $domain->url(),
                 'status' => $domain->status(),
                 'txt_name' => $domain->txtName(),
                 'txt_value' => $domain->txtValue(),

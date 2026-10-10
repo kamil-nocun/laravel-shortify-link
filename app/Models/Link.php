@@ -56,7 +56,7 @@ class Link extends Model
     }
 
     /**
-     * Full public address of the short link; derived, never stored; the scheme comes from APP_URL.
+     * Full public address of the short link; derived, never stored; the scheme and port come from APP_URL.
      *
      * @return Attribute<string, never>
      */
@@ -66,7 +66,7 @@ class Link extends Model
             $base = Str::of(config('app.url'))->rtrim('/');
 
             if ($this->domain_id !== null) {
-                $base = Str::of(parse_url((string) $base, PHP_URL_SCHEME).'://'.$this->domain->host);
+                $base = Str::of($this->domain->url());
             }
 
             return $base->append('/', $this->code)->toString();

@@ -14,6 +14,7 @@ import { show as billingPackage } from '@/routes/billing/package';
 type DomainRow = {
     id: string;
     host: string;
+    url: string;
     status: 'pending' | 'active' | 'disabled';
     txt_name: string;
     txt_value: string;
@@ -119,7 +120,15 @@ defineOptions({
         <div v-for="domain in domains" :key="domain.id" class="rounded-lg border p-4">
             <div class="flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                    <span class="font-mono">{{ domain.host }}</span>
+                    <a
+                        v-if="domain.status === 'active'"
+                        :href="domain.url"
+                        target="_blank"
+                        rel="noopener"
+                        class="font-mono underline"
+                        >{{ domain.host }}</a
+                    >
+                    <span v-else class="font-mono">{{ domain.host }}</span>
                     <Badge
                         :variant="
                             domain.status === 'active'
