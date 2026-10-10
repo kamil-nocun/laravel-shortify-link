@@ -12,13 +12,18 @@ use App\Http\Controllers\Admin\UserLinkController;
 use App\Http\Controllers\Admin\UserPackageController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\DomainCheckController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\DomainVerifyController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\LinkStatsController;
 use App\Http\Controllers\LinkToggleController;
 use App\Http\Controllers\RedirectLinkController;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 Route::inertia('/', 'FrontApp')->name('front_app');
 
@@ -54,5 +59,13 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 });
 
 require __DIR__.'/settings.php';
+
+Route::get('internal/domain-check', DomainCheckController::class)->name('domains.check')
+    ->withoutMiddleware([
+        StartSession::class,
+        AddQueuedCookiesToResponse::class,
+        ShareErrorsFromSession::class,
+        PreventRequestForgery::class,
+    ]);
 
 Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z]+')->name('links.redirect');
