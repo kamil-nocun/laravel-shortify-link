@@ -3,6 +3,7 @@ import { Link, usePage } from "@inertiajs/vue3";
 import {
     BookOpen,
     CreditCard,
+    Globe,
     FolderGit2,
     Link2,
     Package,
@@ -28,6 +29,7 @@ import { index as administratorsIndex } from "@/routes/admin/administrators";
 import { index as packagesIndex } from "@/routes/admin/packages";
 import { show as billingPackage } from "@/routes/billing/package";
 import { index as usersIndex } from "@/routes/admin/users";
+import { index as domainsIndex } from "@/routes/domains";
 import { index as linksIndex } from "@/routes/links";
 import type { NavItem } from "@/types";
 
@@ -38,6 +40,11 @@ const baseNavItems: NavItem[] = [
         title: "My links",
         href: linksIndex(),
         icon: Link2,
+    },
+    {
+        title: "Domains",
+        href: domainsIndex(),
+        icon: Globe,
     },
 ];
 

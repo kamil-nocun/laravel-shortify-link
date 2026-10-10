@@ -12,6 +12,8 @@ use App\Http\Controllers\Admin\UserLinkController;
 use App\Http\Controllers\Admin\UserPackageController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\DomainController;
+use App\Http\Controllers\DomainVerifyController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\LinkStatsController;
 use App\Http\Controllers\LinkToggleController;
@@ -26,6 +28,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('links/{link}/stats/data', [LinkStatsController::class, 'data'])->name('links.stats.data');
     Route::patch('links/{link}/toggle', LinkToggleController::class)->name('links.toggle');
     Route::resource('links', LinkController::class)->except('show');
+    Route::resource('domains', DomainController::class)->only(['index', 'store', 'destroy']);
+    Route::post('domains/{domain}/verify', DomainVerifyController::class)->name('domains.verify');
     Route::get('billing/package', [BillingController::class, 'show'])->name('billing.package.show');
     Route::delete('billing/package', [BillingController::class, 'cancel'])->name('billing.package.cancel');
     Route::post('billing/package/checkout', [BillingController::class, 'checkout'])->name('billing.package.checkout');
