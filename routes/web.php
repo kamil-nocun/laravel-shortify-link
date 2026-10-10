@@ -29,6 +29,7 @@ use App\Http\Controllers\LinkQrController;
 use App\Http\Controllers\LinkStatsController;
 use App\Http\Controllers\LinkToggleController;
 use App\Http\Controllers\RedirectLinkController;
+use App\Http\Middleware\EnsureAccountIsNotBlocked;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Session\Middleware\StartSession;
@@ -96,6 +97,7 @@ Route::get('content/{slug}', ContentPageController::class)->where('slug', '[a-z0
 
 Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z_-]+')->name('links.redirect')
     ->withoutMiddleware([
+        EnsureAccountIsNotBlocked::class,
         StartSession::class,
         AddQueuedCookiesToResponse::class,
         ShareErrorsFromSession::class,

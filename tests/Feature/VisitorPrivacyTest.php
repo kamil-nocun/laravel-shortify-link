@@ -3,7 +3,9 @@
 use App\Jobs\RecordLinkClick;
 use App\Models\Link;
 use App\Models\LinkClick;
+use App\Models\User;
 use App\Support\GeoLocator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
@@ -52,4 +54,19 @@ test('the redirect sets no cookies', function () {
 test('unknown codes still render the NotFound page without cookies', function () {
     $this->get('/zzzzzz')->assertNotFound()->assertHeaderMissing('Set-Cookie');
     $this->get('/zzzzzz')->assertNotFound()->assertSee('errors\/NotFound', false);
+});
+
+test('a blocked user with a remember cookie is still redirected', function () {
+    $user = User::factory()->create();
+    $recaller = Auth::guard('web')->getRecallerName();
+    $cookie = $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password', 'remember' => true])->getCookie($recaller, false);
+    $user->forceFill(['blocked_at' => now()])->save();
+    Auth::guard('web')->forgetUser();
+    $link = Link::factory()->create();
+
+    $this->flushSession()
+        ->withServerVariables(['REMOTE_ADDR' => VISITOR_IP])
+        ->withUnencryptedCookie($recaller, $cookie->getValue())
+        ->get(route('links.redirect', $link->code))
+        ->assertRedirect($link->original_url);
 });
