@@ -27,6 +27,12 @@ class MakeSuperAdmin extends Command
             return self::FAILURE;
         }
 
+        if ($this->argument('email') === null && ! $this->canPrompt()) {
+            $this->error('The email argument is required when no terminal is available.');
+
+            return self::FAILURE;
+        }
+
         $email = $this->argument('email') ?? text('Email', required: true, validate: fn (string $value): ?string => $this->firstError('email', $value));
 
         if (($error = $this->firstError('email', $email)) !== null) {
@@ -43,6 +49,10 @@ class MakeSuperAdmin extends Command
 
                 return self::FAILURE;
             }
+        } elseif (! $this->canPrompt()) {
+            $this->error('A new account needs a name and password, so run the command in a terminal.');
+
+            return self::FAILURE;
         } else {
             $attributes = [
                 'email' => $email,
@@ -70,6 +80,14 @@ class MakeSuperAdmin extends Command
 
             return self::SUCCESS;
         });
+    }
+
+    /**
+     * Whether prompts can be shown, mirroring how Laravel switches them to the non-interactive mode.
+     */
+    private function canPrompt(): bool
+    {
+        return $this->input->isInteractive() && (stream_isatty(STDIN) || $this->laravel->runningUnitTests());
     }
 
     /**

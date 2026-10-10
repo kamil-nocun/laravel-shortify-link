@@ -92,3 +92,19 @@ test('promoting a blocked account clears blocked_at', function () {
 
     expect($user->refresh()->blocked_at)->toBeNull();
 });
+
+test('without a terminal it asks for the email argument instead of failing in a prompt', function () {
+    $this->artisan('user:make-super-admin', ['--no-interaction' => true])
+        ->expectsOutputToContain('The email argument is required when no terminal is available.')
+        ->assertExitCode(1);
+
+    expect(User::count())->toBe(0);
+});
+
+test('without a terminal a missing account is not created', function () {
+    $this->artisan('user:make-super-admin', ['email' => 'boss@example.com', '--no-interaction' => true])
+        ->expectsOutputToContain('A new account needs a name and password, so run the command in a terminal.')
+        ->assertExitCode(1);
+
+    expect(User::count())->toBe(0);
+});
