@@ -40,7 +40,7 @@ Poza zakresem: strona "Prywatność" w ustawieniach poza przyciskiem eksportu, a
 
 ## Eksport danych
 
-`GET settings/privacy/export` (`privacy.export`, tylko zalogowany, z potwierdzeniem hasła jak przy usuwaniu konta) zwraca `shortify-export-YYYY-MM-DD.zip` z plikami CSV (UTF-8, separator `,`, nagłówki angielskie):
+`GET settings/privacy/export` (`privacy.export`, tylko zalogowany; sesja wystarcza, bo aplikacja nie ma ekranu potwierdzania hasła, a użytkownik pobiera własne dane) zwraca `shortify-export-YYYY-MM-DD.zip` z plikami CSV (UTF-8, separator `,`, nagłówki angielskie):
 - `profile.csv`: nazwa, e-mail, rola, data utworzenia, data weryfikacji e-maila, aktualny pakiet,
 - `links.csv`: tytuł, kod, alias, adres docelowy, domena, aktywność, wygaśnięcie, data utworzenia, liczba kliknięć,
 - `domains.csv`: host, status weryfikacji, data utworzenia,
