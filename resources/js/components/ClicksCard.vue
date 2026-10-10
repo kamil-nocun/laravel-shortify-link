@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ChartColumn, Table } from '@lucide/vue';
+import { ChartColumn, ChartLine, Table } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
 import ClicksChart from '@/components/ClicksChart.vue';
+import ClicksLineChart from '@/components/ClicksLineChart.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -14,19 +15,24 @@ const props = defineProps<{
 }>();
 
 const storageKey = 'clicks-card-view';
-const view = ref<'table' | 'chart'>('table');
+type View = 'table' | 'chart' | 'line';
+
+const views: View[] = ['table', 'chart', 'line'];
+const view = ref<View>('table');
 const hideEmpty = ref(true);
 
 onMounted(() => {
     try {
+        const stored = localStorage.getItem(storageKey) as View | null;
+
         view.value =
-            localStorage.getItem(storageKey) === 'chart' ? 'chart' : 'table';
+            stored !== null && views.includes(stored) ? stored : 'table';
     } catch {
         // storage unavailable: keep the default view
     }
 });
 
-function setView(next: 'table' | 'chart'): void {
+function setView(next: View): void {
     view.value = next;
 
     try {
@@ -104,10 +110,20 @@ function formatDate(date: string): string {
                         size="sm"
                         :variant="view === 'chart' ? 'default' : 'ghost'"
                         :aria-pressed="view === 'chart'"
-                        aria-label="Chart view"
+                        aria-label="Bar chart view"
                         @click="setView('chart')"
                     >
                         <ChartColumn />
+                    </Button>
+                    <Button
+                        type="button"
+                        size="sm"
+                        :variant="view === 'line' ? 'default' : 'ghost'"
+                        :aria-pressed="view === 'line'"
+                        aria-label="Line chart view"
+                        @click="setView('line')"
+                    >
+                        <ChartLine />
                     </Button>
                 </div>
             </div>
@@ -115,8 +131,17 @@ function formatDate(date: string): string {
         <p v-if="total === 0" class="px-4 pb-4 text-sm text-muted-foreground">
             No clicks in this period yet.
         </p>
-        <div v-else-if="view === 'chart'" class="space-y-2 px-4 pb-4">
-            <ClicksChart :series="series" :granularity="granularity" />
+        <div v-else-if="view !== 'table'" class="space-y-2 px-4 pb-4">
+            <ClicksChart
+                v-if="view === 'chart'"
+                :series="series"
+                :granularity="granularity"
+            />
+            <ClicksLineChart
+                v-else
+                :series="series"
+                :granularity="granularity"
+            />
             <div class="flex justify-between text-xs text-muted-foreground">
                 <span>{{ formatDate(series[0].date) }}</span>
                 <span>{{ formatDate(series[series.length - 1].date) }}</span>
