@@ -12,6 +12,7 @@ const props = defineProps<{
     table: StatsTable;
     sort: string;
     loading?: boolean;
+    tableOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -66,7 +67,10 @@ const toggle = (key: 'name' | 'count') => {
                     >{{ table.total }} rows</span
                 >
             </div>
-            <div class="flex items-center gap-1 rounded-lg border p-1">
+            <div
+                v-if="!tableOnly"
+                class="flex items-center gap-1 rounded-lg border p-1"
+            >
                 <Button
                     type="button"
                     size="sm"
@@ -95,7 +99,10 @@ const toggle = (key: 'name' | 'count') => {
         >
             No data.
         </p>
-        <div v-else-if="view === 'chart'" class="space-y-2 px-4 pb-4">
+        <div
+            v-else-if="view === 'chart' && !tableOnly"
+            class="space-y-2 px-4 pb-4"
+        >
             <BreakdownChart
                 type="doughnut"
                 :items="

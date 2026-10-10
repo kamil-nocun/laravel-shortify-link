@@ -5,6 +5,7 @@ import ClicksCard from '@/components/ClicksCard.vue';
 import StatsTable from '@/components/StatsTable.vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
+import { useViewMode } from '@/composables/useViewMode';
 import { queryParams } from '@/wayfinder';
 import type { RouteQueryOptions } from '@/wayfinder';
 import type {
@@ -74,6 +75,7 @@ type StatsQuery = NonNullable<RouteQueryOptions['query']>;
 
 type Section = 'summary' | 'options' | StatsTableKey;
 
+const { isAdminMode } = useViewMode();
 const link = computed(() => initial.link);
 const period = ref(initial.period);
 const granularity = ref(initial.granularity);
@@ -632,6 +634,7 @@ const pageTable = (key: StatsTableKey, delta: number) => {
             <StatsTable
                 v-for="key in tableKeys"
                 :key="key"
+                :table-only="isAdminMode"
                 :title="tableTitles[key]"
                 :label="tableLabels[key]"
                 :total="total"

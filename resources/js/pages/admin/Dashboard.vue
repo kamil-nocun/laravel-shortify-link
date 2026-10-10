@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link as InertiaLink } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { Activity, Link2, MousePointerClick, Users } from '@lucide/vue';
-import BreakdownChart from '@/components/BreakdownChart.vue';
 import ClicksCard from '@/components/ClicksCard.vue';
 import Heading from '@/components/Heading.vue';
-import LinkStatusChart from '@/components/LinkStatusChart.vue';
 import PeriodSelector from '@/components/PeriodSelector.vue';
 import StatCards from '@/components/StatCards.vue';
-import TopLinksChart from '@/components/TopLinksChart.vue';
+import TopLinks from '@/components/TopLinks.vue';
 import { periodLabel } from '@/lib/periodLabel';
 import { dashboard } from '@/routes/admin';
 import { stats as linkStats } from '@/routes/admin/links';
@@ -66,45 +64,54 @@ defineOptions({
 
         <StatCards :cards="cards" />
 
-        <div class="grid items-start gap-6 lg:grid-cols-3">
-            <ClicksCard
-                class="lg:col-span-2"
-                :series="series"
-                :granularity="granularity"
-                :total="total"
-            />
-            <div class="space-y-6">
-                <TopLinksChart :links="topLinks" :href="linkStats" />
+        <ClicksCard
+            :series="series"
+            :granularity="granularity"
+            :total="total"
+        />
 
-                <section class="rounded-lg border">
-                    <h2 class="px-4 py-3 font-medium">Top users</h2>
-                    <p
-                        v-if="topUsers.length === 0"
-                        class="px-4 pb-4 text-sm text-muted-foreground"
-                    >
-                        No data
-                    </p>
-                    <div v-else class="px-4 pb-4">
-                        <BreakdownChart
-                            type="bar"
-                            :items="
-                                topUsers.map((user) => ({
-                                    label: user.name,
-                                    value: user.clicks,
-                                }))
-                            "
-                            :urls="
-                                topUsers.map((user) => showUser(user.id).url)
-                            "
-                        />
-                    </div>
-                </section>
-                <LinkStatusChart
-                    v-if="counters.links > 0"
-                    :active="counters.activeLinks"
-                    :disabled="counters.disabledLinks"
-                />
-            </div>
+        <div class="grid items-start gap-6 lg:grid-cols-2">
+            <TopLinks as-table :links="topLinks" :href="linkStats" />
+
+            <section class="overflow-hidden rounded-lg border">
+                <h2 class="px-4 py-3 font-medium">Top users</h2>
+                <p
+                    v-if="topUsers.length === 0"
+                    class="px-4 pb-4 text-sm text-muted-foreground"
+                >
+                    No data
+                </p>
+                <table v-else class="w-full text-left text-sm">
+                    <thead class="bg-muted/50 text-muted-foreground">
+                        <tr>
+                            <th class="p-3">User</th>
+                            <th class="p-3 text-right">Clicks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="user in topUsers"
+                            :key="user.id"
+                            class="border-t"
+                        >
+                            <td class="p-3">
+                                <InertiaLink
+                                    :href="showUser(user.id)"
+                                    class="underline-offset-4 hover:underline"
+                                >
+                                    {{ user.name }}
+                                </InertiaLink>
+                                <span class="block text-muted-foreground">
+                                    {{ user.email }}
+                                </span>
+                            </td>
+                            <td class="p-3 text-right tabular-nums">
+                                {{ user.clicks }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
         </div>
     </div>
 </template>

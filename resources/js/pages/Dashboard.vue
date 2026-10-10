@@ -8,7 +8,7 @@ import LinkStatusChart from '@/components/LinkStatusChart.vue';
 import PackageCard from '@/components/PackageCard.vue';
 import PeriodSelector from '@/components/PeriodSelector.vue';
 import StatCards from '@/components/StatCards.vue';
-import TopLinksChart from '@/components/TopLinksChart.vue';
+import TopLinks from '@/components/TopLinks.vue';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { periodLabel } from '@/lib/periodLabel';
@@ -98,7 +98,7 @@ defineOptions({
                     :total="total"
                 />
                 <div class="space-y-6">
-                    <TopLinksChart :links="topLinks" :href="linkStats" />
+                    <TopLinks :links="topLinks" :href="linkStats" />
                     <LinkStatusChart
                         :active="counters.activeLinks"
                         :disabled="counters.disabledLinks"
