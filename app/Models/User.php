@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Permission;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Laravel\Cashier\Billable;
 
 /**
@@ -32,6 +34,7 @@ use Laravel\Cashier\Billable;
  * @property UserRole $role
  * @property Carbon|null $blocked_at
  * @property string|null $blocked_by
+ * @property string|null $role_id
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -61,6 +64,70 @@ class User extends Authenticatable implements MustVerifyEmail
             'role' => UserRole::class,
             'blocked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @var Collection<int, string>|null
+     */
+    private ?Collection $cachedPermissionKeys = null;
+
+    /**
+     * @return BelongsTo<Role, $this>
+     */
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * @return BelongsToMany<PermissionRecord, $this>
+     */
+    public function permissionOverrides(): BelongsToMany
+    {
+        return $this->belongsToMany(PermissionRecord::class, 'permission_user', 'user_id', 'permission_id')->withPivot('granted');
+    }
+
+    /**
+     * Effective permission keys: the role's, plus granted overrides, minus revoked ones; every key for a super role.
+     *
+     * @return Collection<int, string>
+     */
+    public function permissionKeys(): Collection
+    {
+        return $this->cachedPermissionKeys ??= $this->resolvePermissionKeys();
+    }
+
+    public function hasPermission(Permission|string $key): bool
+    {
+        return $this->permissionKeys()->contains($key instanceof Permission ? $key->value : $key);
+    }
+
+    public function forgetPermissions(): void
+    {
+        $this->cachedPermissionKeys = null;
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function resolvePermissionKeys(): Collection
+    {
+        $role = $this->role()->first();
+
+        if ($role === null) {
+            return collect();
+        }
+
+        if ($role->is_super) {
+            return $role->permissionKeys();
+        }
+
+        $overrides = $this->permissionOverrides()->get();
+
+        return $role->permissionKeys()
+            ->merge($overrides->filter(fn (PermissionRecord $permission) => $permission->pivot->granted)->pluck('key'))
+            ->diff($overrides->reject(fn (PermissionRecord $permission) => $permission->pivot->granted)->pluck('key'))
+            ->unique()->values();
     }
 
     public function isAdmin(): bool
