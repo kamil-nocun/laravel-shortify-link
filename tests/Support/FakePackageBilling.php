@@ -19,6 +19,11 @@ class FakePackageBilling implements PackageBilling
 
     public ?string $pendingInvoiceUrl = null;
 
+    /**
+     * @var array<string, list<array<string, mixed>>>
+     */
+    public array $invoices = [];
+
     public function syncPackage(Package $package): void
     {
         $this->calls[] = ['syncPackage', [$package->id]];
@@ -48,6 +53,11 @@ class FakePackageBilling implements PackageBilling
     public function pendingInvoiceUrl(User $user): ?string
     {
         return $this->pendingInvoiceUrl;
+    }
+
+    public function invoicesFor(User $user): iterable
+    {
+        return $this->invoices[$user->id] ?? [];
     }
 
     /**

@@ -109,6 +109,19 @@ class StripePackageBilling implements PackageBilling
         return Cashier::stripe()->invoices->all(['customer' => $user->stripe_id, 'status' => 'open', 'limit' => 1])->data[0]->hosted_invoice_url ?? null;
     }
 
+    public function invoicesFor(User $user): iterable
+    {
+        StripeSandboxGuard::assertTestMode();
+
+        if ($user->stripe_id === null) {
+            return;
+        }
+
+        foreach (Cashier::stripe()->invoices->all(['customer' => $user->stripe_id, 'limit' => 100])->autoPagingIterator() as $invoice) {
+            yield $invoice->toArray();
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */

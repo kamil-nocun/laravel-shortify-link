@@ -32,4 +32,11 @@ interface PackageBilling
      * Stripe-hosted page where the user pays their open invoice, or null when none is waiting.
      */
     public function pendingInvoiceUrl(User $user): ?string;
+
+    /**
+     * Every Stripe invoice of the user, as arrays shaped like the Stripe invoice object.
+     *
+     * @return iterable<int, array<string, mixed>>
+     */
+    public function invoicesFor(User $user): iterable;
 }
