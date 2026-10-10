@@ -40,7 +40,7 @@
 
 ---
 
-### Zadanie 1: Katalog uprawnień, tabele i modele (zmiana addytywna)
+### Task 1: Katalog uprawnień, tabele i modele (zmiana addytywna)
 
 **Files:**
 - Create: `app/Enums/Permission.php`, `app/Support/PermissionCatalog.php`, `app/Models/Role.php`, `app/Models/PermissionRecord.php` (tabela `permissions`; nazwa unika kolizji z enumem), `database/factories/RoleFactory.php`
@@ -65,7 +65,7 @@
 
 ---
 
-### Zadanie 2: Przełączenie źródła roli na `role_id` (zachowanie bez zmian)
+### Task 2: Przełączenie źródła roli na `role_id` (zachowanie bez zmian)
 
 **Files:**
 - Create: migracja `drop_role_from_users_table` (ustawia `role_id` na `NOT NULL` po sprawdzeniu, że nie ma pustych; usuwa kolumnę `role`; `down()` przywraca kolumnę z mapowaniem zwrotnym)
@@ -100,7 +100,7 @@
 
 ---
 
-### Zadanie 3: Policy i middleware na uprawnieniach
+### Task 3: Policy i middleware na uprawnieniach
 
 **Files:**
 - Modify: `app/Policies/UserPolicy.php`, `LinkPolicy.php`, `DomainPolicy.php`, `PackagePolicy.php`, `app/Http/Middleware/EnsureUserIsAdmin.php`, `app/Http/Middleware/HandleInertiaRequests.php`, `app/Http/Controllers/Admin/LinkDisableController.php`, `DomainDisableController.php`, `UserController.php` (index/show/`present`), `UserPackageController`/`UpdateUserPackageRequest` (bez zmian, korzystają z `assignPackage`)
@@ -126,7 +126,7 @@
 
 ---
 
-### Zadanie 4: CRUD ról (backend)
+### Task 4: CRUD ról (backend)
 
 **Files:**
 - Create: `app/Http/Controllers/Admin/RoleController.php`, `app/Http/Requests/Admin/StoreRoleRequest.php`, `UpdateRoleRequest.php`, `app/Policies/RolePolicy.php`
@@ -151,7 +151,7 @@
 
 ---
 
-### Zadanie 5: Nadpisania uprawnień użytkownika (backend)
+### Task 5: Nadpisania uprawnień użytkownika (backend)
 
 **Files:**
 - Create: `app/Http/Controllers/Admin/UserPermissionController.php`, `app/Http/Requests/Admin/UpdateUserPermissionsRequest.php`
@@ -171,7 +171,7 @@
 
 ---
 
-### Zadanie 6: `usePermissions`, menu i typy
+### Task 6: `usePermissions`, menu i typy
 
 **Files:**
 - Create: `resources/js/composables/usePermissions.ts`
@@ -185,7 +185,7 @@
 
 ---
 
-### Zadanie 7: Ekran ról
+### Task 7: Ekran ról
 
 **Files:**
 - Create: `resources/js/pages/admin/roles/Index.vue`, `Create.vue`, `Edit.vue`, `resources/js/components/RoleForm.vue`, `resources/js/components/PermissionMatrix.vue`
@@ -199,7 +199,7 @@
 
 ---
 
-### Zadanie 8: Rozbicie `Show.vue` i karta uprawnień użytkownika
+### Task 8: Rozbicie `Show.vue` i karta uprawnień użytkownika
 
 **Files:**
 - Create: `resources/js/components/admin/user/UserHeader.vue`, `UserPackageCard.vue`, `UserLinksTable.vue`, `UserDomainsTable.vue`, `UserAdministratorsCard.vue`, `UserPermissionsCard.vue`
@@ -213,7 +213,7 @@
 
 ---
 
-### Zadanie 9: Wybór roli przy tworzeniu kont i nazwa roli na listach
+### Task 9: Wybór roli przy tworzeniu kont i nazwa roli na listach
 
 **Files:**
 - Modify: `resources/js/pages/admin/users/Create.vue`, `resources/js/pages/admin/administrators/Create.vue`, `resources/js/pages/admin/users/Index.vue`, `resources/js/pages/admin/administrators/Index.vue`, `app/Http/Controllers/Admin/UserController.php` (create), `AdministratorController.php` (create/index)
@@ -227,7 +227,7 @@
 
 ---
 
-### Zadanie 10: Weryfikacja końcowa
+### Task 10: Weryfikacja końcowa
 
 - [ ] **Krok 1:** `vendor/bin/pint --dirty --format agent`, `npm run build`, `php artisan wayfinder:generate --with-form --no-interaction` – bez zmian po ponownym uruchomieniu.
 - [ ] **Krok 2:** `grep -rn "UserRole\|'role'" app database/factories routes resources/js/pages resources/js/components` – brak odwołań do starego enumu i kolumny (poza starymi migracjami).
