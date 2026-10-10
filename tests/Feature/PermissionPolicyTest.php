@@ -94,6 +94,7 @@ test('auth.can shares every permission key, true only for the user\'s own', func
     $this->actingAs(userWithPermissions([Permission::LinksManage, Permission::LinksStats]))
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
+            ->missing('auth.user.role')
             ->where('auth.can', collect(Permission::cases())->mapWithKeys(fn (Permission $permission) => [
                 $permission->value => in_array($permission, [Permission::LinksManage, Permission::LinksStats], true),
             ])->all()));

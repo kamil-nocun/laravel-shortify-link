@@ -40,7 +40,7 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->withoutRelations(),
                 'isAdmin' => (bool) $request->user()?->isAdmin(),
                 'isSuperAdmin' => (bool) $request->user()?->isSuperAdmin(),
                 'can' => $request->user()
