@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Domain;
+use App\Models\User;
 
 beforeEach(function () {
     config(['shortify.domain_check_secret' => 'proxy-secret']);
@@ -47,4 +48,16 @@ test('host is matched case-insensitively', function () {
     Domain::factory()->verified()->create(['host' => 'links.example.com']);
 
     checkDomain('  Links.EXAMPLE.com ')->assertOk();
+});
+
+test('a malformed domain parameter returns 404', function () {
+    test()->withHeaders(['X-Domain-Check-Secret' => 'proxy-secret'])
+        ->get(route('domains.check').'?domain[]=x')
+        ->assertNotFound();
+});
+
+test('a verified domain of a blocked owner returns 404', function () {
+    Domain::factory()->verified()->for(User::factory()->blocked())->create(['host' => 'links.example.com']);
+
+    checkDomain('links.example.com')->assertNotFound();
 });
