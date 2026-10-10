@@ -20,6 +20,15 @@ Poza zakresem: zwroty, windykacja, eksport PDF (etap 2b).
 - Fallback: gdy konto czeka na płatność (niedokończona subskrypcja albo otwarta płatność), a w tabeli nie ma `invoice_url`, link pobiera `PackageBilling::pendingInvoiceUrl`. Konta bez oczekującej płatności nie wywołują Stripe. Błąd Stripe w fallbacku jest logowany i strona pokazuje się bez linku. `pendingInvoiceUrl` zostaje w interfejsie.
 - Stripe jest dalej dostępny wyłącznie przez `PackageBilling`; testy nie wywołują prawdziwego API.
 
+## Zmiana wstępna: koniec płatności jednorazowej
+
+Okres `one_time` jest usuwany z aplikacji. Płatność jednorazowa jest zastąpiona okresem `monthly` (płatność za jeden miesiąc, odnawiana przez Stripe jak pozostałe okresy cykliczne).
+
+- Migracja przenosi `price_one_time` do `price_monthly` pakietów, które nie mają ceny miesięcznej, i usuwa kolumny `price_one_time` oraz `stripe_price_id_one_time`.
+- Istniejące przypisania z okresem `one_time` dostają okres `monthly`; ich daty ważności zostają bez zmian.
+- Przeniesione ceny miesięczne nie mają jeszcze obiektu Price w Stripe; powstaje przy ponownej synchronizacji pakietu (`syncPackage`).
+- Enum `BillingPeriod` traci `OneTime`; `PackageBilling::invoice` i `checkout` obsługują wyłącznie subskrypcje.
+
 ## Model danych
 
 Tabela `payments` (klucze UUID, w tym `user_id` i `package_id` jako `foreignUuid`):
