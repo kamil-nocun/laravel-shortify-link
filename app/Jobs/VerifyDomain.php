@@ -11,16 +11,24 @@ class VerifyDomain implements ShouldQueue
 {
     use Queueable;
 
+    public int $tries = 0;
+
     public function __construct(public string $domainId) {}
 
     /**
-     * Check the DNS record; retry every five minutes until the domain is 72 hours old.
+     * Check the DNS record; retry every five minutes; an unverified domain is deleted after 72 hours so the host is freed.
      */
     public function handle(DomainVerifier $verifier): void
     {
         $domain = Domain::find($this->domainId);
 
-        if ($domain === null || $domain->isVerified() || $domain->created_at->lt(now()->subHours(72))) {
+        if ($domain === null || $domain->isVerified()) {
+            return;
+        }
+
+        if ($domain->created_at->lt(now()->subHours(72))) {
+            $domain->delete();
+
             return;
         }
 
@@ -30,6 +38,6 @@ class VerifyDomain implements ShouldQueue
             return;
         }
 
-        self::dispatch($this->domainId)->delay(now()->addMinutes(5));
+        $this->release(300);
     }
 }

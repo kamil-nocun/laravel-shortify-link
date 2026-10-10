@@ -30,6 +30,8 @@ class Domain extends Model
     /** @use HasFactory<DomainFactory> */
     use HasFactory, HasUuids;
 
+    protected $hidden = ['verification_token'];
+
     /**
      * @return array<string, string>
      */
@@ -81,10 +83,20 @@ class Domain extends Model
     public function status(): string
     {
         return match (true) {
-            ! $this->isVerified() => 'pending',
             $this->disabled_by_admin_at !== null => 'disabled',
+            ! $this->isVerified() => 'pending',
             default => 'active',
         };
+    }
+
+    public function txtName(): string
+    {
+        return '_shortify-verify.'.$this->host;
+    }
+
+    public function txtValue(): string
+    {
+        return 'shortify-verify='.$this->verification_token;
     }
 
     public function isVerified(): bool

@@ -133,9 +133,26 @@ test('index lists only own domains with status and quota', function () {
             ->has('domains', 3)
             ->where('domains.0.id', $pending->id)
             ->where('domains.0.status', 'pending')
-            ->where('domains.0.verification_token', $pending->verification_token)
+            ->where('domains.0.txt_name', '_shortify-verify.'.$pending->host)
+            ->where('domains.0.txt_value', 'shortify-verify='.$pending->verification_token)
             ->where('domains.1.status', 'active')
             ->where('domains.2.status', 'disabled')
             ->where('quota', ['used' => 3, 'limit' => 5])
             ->where('cnameTarget', config('shortify.cname_target')));
+});
+
+test('link props never leak a domain verification token', function () {
+    $user = userWithDomainSlots(1);
+    $domain = Domain::factory()->verified()->for($user)->create();
+    Link::factory()->for($user)->create(['domain_id' => $domain->id]);
+
+    $response = $this->actingAs($user)->get(route('links.index'));
+
+    expect($response->getContent())->not->toContain($domain->verification_token);
+});
+
+test('an admin-disabled pending domain reports disabled', function () {
+    $domain = Domain::factory()->disabledByAdmin()->create();
+
+    expect($domain->status())->toBe('disabled');
 });

@@ -122,7 +122,7 @@ test('show lists the user\'s domains only for admins who manage them', function 
     $client = clientWithDomainSlots(3, $this->admin);
     $disabler = User::factory()->superAdmin()->create(['name' => 'Boss']);
     $pending = Domain::factory()->for($client)->create(['host' => 'p.example.com']);
-    $disabled = Domain::factory()->verified()->for($client)->create(['host' => 'd.example.com', 'disabled_by_admin_at' => now(), 'disabled_by' => $disabler->id]);
+    $disabled = Domain::factory()->for($client)->create(['host' => 'd.example.com', 'disabled_by_admin_at' => now(), 'disabled_by' => $disabler->id]);
     Link::factory()->for($client)->create(['domain_id' => $disabled->id]);
 
     $this->actingAs($this->admin)->get(route('admin.users.show', $client))
@@ -135,8 +135,32 @@ test('show lists the user\'s domains only for admins who manage them', function 
             ->where('domains.1.links_count', 1)
             ->missing('domains.0.verification_token'));
 
+    expect($disabled->fresh()->status())->toBe('disabled');
+
     $other = User::factory()->admin()->create();
     $client->assignedAdmins()->detach($this->admin);
     $client->assignedAdmins()->attach($other);
     $this->actingAs($this->admin)->get(route('admin.users.show', $client))->assertNotFound();
+});
+
+test('an admin cannot manage the domains of another admin or their own', function () {
+    $peer = User::factory()->admin()->create();
+    $peer->assignedAdmins()->attach($this->admin);
+    $this->admin->assignedAdmins()->attach($this->admin);
+
+    foreach ([$peer, $this->admin] as $target) {
+        $domain = Domain::factory()->for($target)->create();
+
+        $responses = [
+            $this->actingAs($this->admin)->post(route('admin.users.domains.store', $target), ['host' => 'x'.$target->id.'.example.com']),
+            $this->actingAs($this->admin)->delete(route('admin.domains.destroy', $domain)),
+            $this->actingAs($this->admin)->patch(route('admin.domains.disable', $domain)),
+        ];
+
+        foreach ($responses as $response) {
+            expect($response->status())->toBeIn([403, 404]);
+        }
+
+        expect($domain->fresh())->not->toBeNull()->disabled_by_admin_at->toBeNull();
+    }
 });

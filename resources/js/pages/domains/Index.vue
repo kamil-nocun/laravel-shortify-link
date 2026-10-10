@@ -15,7 +15,8 @@ type DomainRow = {
     id: string;
     host: string;
     status: 'pending' | 'active' | 'disabled';
-    verification_token: string;
+    txt_name: string;
+    txt_value: string;
 };
 
 const props = defineProps<{
@@ -174,9 +175,9 @@ defineOptions({
                     <tbody>
                         <tr>
                             <td class="py-1">TXT</td>
-                            <td class="py-1">_shortify-verify.{{ domain.host }}</td>
+                            <td class="py-1">{{ domain.txt_name }}</td>
                             <td class="py-1 break-all">
-                                {{ domain.verification_token }}
+                                {{ domain.txt_value }}
                             </td>
                         </tr>
                         <tr>

@@ -14,27 +14,34 @@ test('job verifies a domain whose token is present', function () {
     expect($domain->fresh()->verified_at)->not->toBeNull();
 });
 
-test('job requeues itself with a five minute delay while the token is missing', function () {
-    Queue::fake();
-    $this->freezeTime();
+test('job releases itself for five minutes while the token is missing', function () {
     $domain = Domain::factory()->create();
+    $job = (new VerifyDomain($domain->id))->withFakeQueueInteractions();
 
-    (new VerifyDomain($domain->id))->handle($this->verifier);
+    $job->handle($this->verifier);
 
     expect($domain->fresh()->verified_at)->toBeNull();
-    Queue::assertPushed(VerifyDomain::class, fn (VerifyDomain $job) => $job->domainId === $domain->id
-        && $job->delay->equalTo(now()->addMinutes(5)));
+    $job->assertReleased(300);
 });
 
-test('job gives up on domains older than 72 hours', function () {
-    Queue::fake();
+test('job deletes an unverified domain older than 72 hours', function () {
     $domain = Domain::factory()->create(['created_at' => now()->subHours(73)]);
-    $this->verifier->verified[] = $domain->id;
+    $job = (new VerifyDomain($domain->id))->withFakeQueueInteractions();
 
-    (new VerifyDomain($domain->id))->handle($this->verifier);
+    $job->handle($this->verifier);
 
-    expect($domain->fresh()->verified_at)->toBeNull();
-    Queue::assertNothingPushed();
+    expect($domain->fresh())->toBeNull();
+    $job->assertNotReleased();
+});
+
+test('job keeps younger unverified domains and never deletes verified ones', function () {
+    $young = Domain::factory()->create(['created_at' => now()->subHours(71)]);
+    $old = Domain::factory()->verified()->create(['created_at' => now()->subDays(30)]);
+
+    (new VerifyDomain($young->id))->withFakeQueueInteractions()->handle($this->verifier);
+    (new VerifyDomain($old->id))->withFakeQueueInteractions()->handle($this->verifier);
+
+    expect($young->fresh())->not->toBeNull()->and($old->fresh())->not->toBeNull();
 });
 
 test('job ignores verified and deleted domains', function () {
@@ -50,6 +57,13 @@ test('job ignores verified and deleted domains', function () {
 
     expect($verified->fresh()->verified_at->equalTo($verifiedAt))->toBeTrue();
     Queue::assertNothingPushed();
+});
+
+test('the TXT record shown to the user is exactly what the verifier accepts', function () {
+    $domain = Domain::factory()->make(['host' => 'a.example.com', 'verification_token' => 'tok']);
+
+    expect($domain->txtName())->toBe('_shortify-verify.a.example.com')
+        ->and((new DnsDomainVerifier)->matches([['txt' => $domain->txtValue()]], $domain))->toBeTrue();
 });
 
 test('DnsDomainVerifier matches only the exact TXT value', function () {
