@@ -106,3 +106,34 @@ test('a job queued before user agents were recorded still runs', function () {
 
     expect(LinkClick::sole()->browser)->toBeNull();
 });
+
+test('records which entry the click came through', function () {
+    fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
+    $link = Link::factory()->create();
+
+    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now(), 'UA', 'Alias');
+
+    expect(LinkClick::sole()->entry)->toBe('Alias');
+});
+
+test('records a null entry when none is given', function () {
+    fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
+    $link = Link::factory()->create();
+
+    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now());
+
+    expect(LinkClick::sole()->entry)->toBeNull();
+});
+
+test('a job queued before entries were recorded still runs', function () {
+    fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
+    $link = Link::factory()->create();
+    $job = (new ReflectionClass(RecordLinkClick::class))->newInstanceWithoutConstructor();
+    $job->linkId = $link->id;
+    $job->ip = '203.0.113.7';
+    $job->clickedAt = now();
+
+    app()->call([$job, 'handle']);
+
+    expect(LinkClick::sole()->entry)->toBeNull();
+});

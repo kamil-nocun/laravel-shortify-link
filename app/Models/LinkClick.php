@@ -20,8 +20,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $browser
  * @property string|null $os
  * @property string|null $device_type
+ * @property string|null $entry
  */
-#[Fillable(['link_id', 'clicked_at', 'country_code', 'country', 'city', 'browser', 'os', 'device_type'])]
+#[Fillable(['link_id', 'clicked_at', 'country_code', 'country', 'city', 'browser', 'os', 'device_type', 'entry'])]
 class LinkClick extends Model
 {
     /** @use HasFactory<LinkClickFactory> */

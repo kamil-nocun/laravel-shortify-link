@@ -19,6 +19,11 @@ class RecordLinkClick implements ShouldQueue
     public ?string $userAgent = null;
 
     /**
+     * Not promoted: jobs queued before this property existed are restored without it.
+     */
+    public ?string $entry = null;
+
+    /**
      * The IP and User-Agent are only used for lookups and are never stored with the click.
      */
     public function __construct(
@@ -26,8 +31,10 @@ class RecordLinkClick implements ShouldQueue
         public string $ip,
         public CarbonInterface $clickedAt,
         ?string $userAgent = null,
+        ?string $entry = null,
     ) {
         $this->userAgent = $userAgent;
+        $this->entry = $entry;
     }
 
     /**
@@ -45,6 +52,7 @@ class RecordLinkClick implements ShouldQueue
             ...$geoLocator->locate($this->ip),
             ...$clientDetector->detect($this->userAgent),
             'clicked_at' => $this->clickedAt,
+            'entry' => $this->entry,
         ]);
     }
 }

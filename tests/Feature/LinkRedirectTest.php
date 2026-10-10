@@ -129,3 +129,14 @@ test('links disabled by an admin or owned by a blocked user return 404 and recor
 
     $this->get(route('links.redirect', $link->code))->assertRedirect($link->original_url);
 })->with(['admin', 'blocked owner']);
+
+test('redirect records whether the code or the alias was used', function () {
+    Queue::fake();
+    $link = Link::factory()->create(['alias' => 'my-alias']);
+
+    $this->get('/'.$link->code);
+    $this->get('/'.$link->alias);
+
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Code');
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Alias');
+});

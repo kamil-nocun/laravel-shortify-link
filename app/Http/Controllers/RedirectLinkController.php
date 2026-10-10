@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LinkEntry;
 use App\Jobs\RecordLinkClick;
 use App\Models\Domain;
 use App\Models\Link;
@@ -26,7 +27,9 @@ class RedirectLinkController extends Controller
 
         $link = $links->firstOrFail();
 
-        RecordLinkClick::dispatch($link->id, (string) $request->ip(), now(), $request->userAgent());
+        $entry = $link->code === $code ? LinkEntry::Code : LinkEntry::Alias;
+
+        RecordLinkClick::dispatch($link->id, (string) $request->ip(), now(), $request->userAgent(), $entry->value);
 
         return redirect()->away($link->original_url);
     }
