@@ -10,9 +10,11 @@ use App\Models\Link;
 use App\Models\Package;
 use App\Models\User;
 use App\Support\LinkCodeGenerator;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -46,7 +48,7 @@ class LinkController extends Controller
     {
         Gate::authorize('create', Link::class);
 
-        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host']), 'canSetAlias' => $request->user()->allowsCustomAlias(), 'mainHost' => parse_url(config('app.url'), PHP_URL_HOST).(parse_url(config('app.url'), PHP_URL_PORT) ? ':'.parse_url(config('app.url'), PHP_URL_PORT) : '')]);
+        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host']), 'canSetAlias' => $request->user()->allowsCustomAlias(), 'mainHost' => $this->mainHost()]);
     }
 
     /**
@@ -70,7 +72,7 @@ class LinkController extends Controller
     {
         Gate::authorize('update', $link);
 
-        return Inertia::render('links/Edit', ['link' => $link]);
+        return Inertia::render('links/Edit', ['link' => $link, 'canSetAlias' => $link->user->allowsCustomAlias(), 'mainHost' => $this->mainHost()]);
     }
 
     /**
@@ -78,7 +80,11 @@ class LinkController extends Controller
      */
     public function update(UpdateLinkRequest $request, Link $link): RedirectResponse
     {
-        $link->update($request->validated());
+        try {
+            $link->update($request->validated());
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages(['alias' => __('This alias is already taken.')]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link updated.')]);
 
@@ -97,6 +103,11 @@ class LinkController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link deleted.')]);
 
         return to_route('links.index');
+    }
+
+    private function mainHost(): string
+    {
+        return parse_url(config('app.url'), PHP_URL_HOST).(parse_url(config('app.url'), PHP_URL_PORT) ? ':'.parse_url(config('app.url'), PHP_URL_PORT) : '');
     }
 
     /**

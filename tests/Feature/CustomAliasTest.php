@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\LinkController;
+use App\Http\Requests\Links\UpdateLinkRequest;
 use App\Models\Domain;
 use App\Models\Link;
 use App\Models\Package;
@@ -77,9 +79,10 @@ test('an alias on one domain does not redirect from another domain', function ()
 test('invalid aliases are rejected', function (string $alias) {
     $user = userWithAlias();
     Link::factory()->create(['code' => 'taken1', 'domain_id' => null]);
+    Link::factory()->create(['alias' => 'aliased1', 'domain_id' => null]);
 
     storeLink($user, ['alias' => $alias])->assertSessionHasErrors('alias');
-    expect(Link::count())->toBe(1);
+    expect(Link::count())->toBe(2);
 })->with([
     'too short' => 'ab',
     'too long' => str_repeat('a', 51),
@@ -89,6 +92,7 @@ test('invalid aliases are rejected', function (string $alias) {
     'reserved case' => 'Admin',
     'reserved route' => 'dashboard',
     'duplicate' => 'taken1',
+    'alias of another link' => 'aliased1',
 ]);
 
 test('the same alias is allowed on different domains and case differs', function () {
@@ -144,6 +148,100 @@ test('update never changes the code', function () {
     expect($link->fresh()->code)->toBe('keepme');
 });
 
+function updateLink(User $user, Link $link, array $extra = [])
+{
+    return test()->actingAs($user)->patch(route('links.update', $link), ['original_url' => 'https://example.com/n', 'is_active' => true, ...$extra]);
+}
+
+test('an owner with permission sets, changes and clears the alias', function () {
+    $user = userWithAlias();
+    $link = Link::factory()->for($user)->create(['code' => 'keepme', 'alias' => null, 'domain_id' => null]);
+
+    updateLink($user, $link, ['alias' => 'first'])->assertSessionHasNoErrors();
+    expect($link->fresh()->alias)->toBe('first');
+
+    updateLink($user, $link, ['alias' => 'second'])->assertSessionHasNoErrors();
+    $this->get('/first')->assertNotFound();
+    $this->get('/second')->assertRedirect('https://example.com/n');
+    $this->get('/keepme')->assertRedirect();
+
+    updateLink($user, $link, ['alias' => ''])->assertSessionHasNoErrors();
+    expect($link->fresh()->alias)->toBeNull();
+    $this->get('/keepme')->assertRedirect();
+});
+
+test('resending the own alias passes', function () {
+    $user = userWithAlias();
+    $link = Link::factory()->for($user)->create(['alias' => 'mine123', 'domain_id' => null]);
+
+    updateLink($user, $link, ['alias' => 'mine123', 'title' => 'New'])->assertSessionHasNoErrors();
+
+    expect($link->fresh()->title)->toBe('New');
+});
+
+test('an edited alias cannot collide or be reserved', function (string $value) {
+    $user = userWithAlias();
+    $link = Link::factory()->for($user)->create(['domain_id' => null]);
+    Link::factory()->create(['code' => 'theircode', 'alias' => 'theiralias', 'domain_id' => null]);
+
+    updateLink($user, $link, ['alias' => $value])->assertSessionHasErrors('alias');
+})->with(['code' => 'theircode', 'alias' => 'theiralias', 'reserved' => 'admin']);
+
+test('a user without permission cannot change or clear an alias', function (string $value) {
+    $user = User::factory()->create();
+    $link = Link::factory()->for($user)->create(['alias' => 'kept123', 'domain_id' => null]);
+
+    updateLink($user, $link, ['alias' => $value])->assertSessionHasErrors('alias');
+
+    expect($link->fresh()->alias)->toBe('kept123');
+})->with(['change' => 'changed', 'empty' => '']);
+
+test('a user without permission can edit other fields', function () {
+    $user = User::factory()->create();
+    $link = Link::factory()->for($user)->create(['alias' => 'kept123', 'domain_id' => null]);
+    $plain = Link::factory()->for($user)->create(['alias' => null, 'domain_id' => null]);
+
+    updateLink($user, $link, ['alias' => 'kept123', 'title' => 'A'])->assertSessionHasNoErrors();
+    updateLink($user, $link, ['title' => 'B'])->assertSessionHasNoErrors();
+    updateLink($user, $plain, ['alias' => ''])->assertSessionHasNoErrors();
+
+    expect($link->fresh())->title->toBe('B')->alias->toBe('kept123');
+});
+
+test('after losing the permission the title can still be edited', function () {
+    $user = userWithAlias();
+    $link = Link::factory()->for($user)->create(['alias' => 'lasting', 'domain_id' => null]);
+    PackageAssignment::where('user_id', $user->id)->update(['allows_custom_alias' => false]);
+
+    updateLink($user, $link, ['alias' => 'lasting', 'title' => 'T'])->assertSessionHasNoErrors();
+
+    expect($link->fresh()->title)->toBe('T');
+});
+
+test('an alias race on update becomes a validation error on alias', function () {
+    $user = userWithAlias();
+    $link = Link::factory()->for($user)->create(['domain_id' => null]);
+    Link::factory()->create(['alias' => 'racing', 'domain_id' => null]);
+    $request = new class extends UpdateLinkRequest
+    {
+        public function validated($key = null, $default = null)
+        {
+            return ['alias' => 'racing'];
+        }
+    };
+
+    expect(fn () => app(LinkController::class)->update($request, $link))
+        ->toThrow(fn (ValidationException $e) => expect($e->errors())->toHaveKey('alias'));
+});
+
+test('the edit page exposes alias props', function () {
+    $user = userWithAlias();
+    $link = Link::factory()->for($user)->create();
+
+    $this->actingAs($user)->get(route('links.edit', $link))
+        ->assertInertia(fn ($page) => $page->where('canSetAlias', true)->has('mainHost'));
+});
+
 test('an alias keeps redirecting after the permission is lost', function () {
     $user = userWithAlias();
     storeLink($user, ['alias' => 'lasting']);
@@ -178,3 +276,9 @@ test('the create pages expose whether the alias field is allowed', function () {
     $this->actingAs($admin)->get(route('admin.users.links.create', User::factory()->create()))
         ->assertInertia(fn ($page) => $page->where('canSetAlias', false));
 });
+
+test('an inactive or expired link is not reachable via its alias', function (string $state) {
+    Link::factory()->{$state}()->create(['alias' => 'hidden1', 'domain_id' => null]);
+
+    $this->get('/hidden1')->assertNotFound();
+})->with(['inactive', 'expired']);

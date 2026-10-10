@@ -31,6 +31,13 @@ test('search matches title, code and part of the url', function () {
         ->and(listedIds(['search' => 'needle']))->toBe([$byUrl->id]);
 });
 
+test('search matches the alias', function () {
+    $byAlias = makeLink(['alias' => 'summerdeal']);
+    makeLink(['title' => 'Other', 'code' => 'qqqqqq']);
+
+    expect(listedIds(['search' => 'summerd']))->toBe([$byAlias->id]);
+});
+
 test('search escapes LIKE wildcards', function () {
     $literal = makeLink(['title' => '100%']);
     makeLink(['title' => '100x']);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Links;
 
+use App\Models\Link;
 use App\Models\User;
 use App\Support\ReservedAliases;
 use Closure;
@@ -30,7 +31,7 @@ class StoreLinkRequest extends FormRequest
             'alias' => $this->linkOwner()->allowsCustomAlias() ? [
                 'nullable', 'string', 'min:3', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/',
                 fn (string $attribute, mixed $value, Closure $fail) => ReservedAliases::isReserved((string) $value) ? $fail(__('This alias is reserved.')) : null,
-                Rule::unique('links', 'code')->where('domain_id', $this->input('domain_id')),
+                fn (string $attribute, mixed $value, Closure $fail) => Link::isCodeOrAliasTaken($this->aliasDomainId(), (string) $value, $this->ignoredLinkId()) ? $fail(__('This alias is already taken.')) : null,
             ] : ['prohibited'],
         ];
     }
@@ -41,6 +42,16 @@ class StoreLinkRequest extends FormRequest
     public function messages(): array
     {
         return ['alias.prohibited' => __('Your package does not include custom aliases.')];
+    }
+
+    protected function aliasDomainId(): ?string
+    {
+        return $this->input('domain_id') ?: null;
+    }
+
+    protected function ignoredLinkId(): ?string
+    {
+        return null;
     }
 
     /**
