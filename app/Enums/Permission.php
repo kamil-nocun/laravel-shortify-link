@@ -24,6 +24,7 @@ enum Permission: string
     case LinksStats = 'links.stats';
     case DomainsManage = 'domains.manage';
     case BillingManage = 'billing.manage';
+    case PagesManage = 'pages.manage';
 
     public function label(): string
     {
@@ -48,6 +49,7 @@ enum Permission: string
             self::LinksStats => 'View link statistics',
             self::DomainsManage => 'Manage own domains',
             self::BillingManage => 'Manage billing',
+            self::PagesManage => 'Manage pages',
         };
     }
 
@@ -61,6 +63,7 @@ enum Permission: string
             self::DomainsManageForUser, self::DomainsDisable => 'Domains (admin)',
             self::PackagesManage, self::PackagesAssign => 'Packages',
             self::RolesManage => 'Roles',
+            self::PagesManage => 'Pages',
             self::LinksManage, self::LinksStats, self::DomainsManage, self::BillingManage => 'Client features',
         };
     }
