@@ -4,6 +4,7 @@ import {
     Link as InertiaLink,
     router,
     setLayoutProps,
+    useForm,
     usePage,
 } from "@inertiajs/vue3";
 import { computed, ref, useTemplateRef } from "vue";
@@ -13,7 +14,10 @@ import PaymentHistory from "@/components/PaymentHistory.vue";
 import UserPackageCard from "@/components/UserPackageCard.vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
+import InputError from "@/components/InputError.vue";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
     Dialog,
     DialogClose,
@@ -25,6 +29,12 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { dashboard } from "@/routes/admin";
+import {
+    destroy as destroyDomain,
+    disable as disableDomain,
+    enable as enableDomain,
+} from "@/routes/admin/domains";
+import { store as storeDomain } from "@/routes/admin/users/domains";
 import { disable, enable, stats as linkStats } from "@/routes/admin/links";
 import {
     block,
@@ -59,12 +69,35 @@ const props = defineProps<{
     assignments: Paginated<AssignmentRow> | null;
     paymentState: "awaiting_payment" | "active" | "expired" | null;
     links: Paginated<Link>;
+    domains: DomainRow[];
+    domainLimit: number | null;
     period: StatsPeriodParams;
     granularity: "day" | "month";
     total: number;
     series: DailyClicks[];
     counters: AdminCounters;
 }>();
+
+type DomainRow = {
+    id: string;
+    host: string;
+    status: "pending" | "active" | "disabled";
+    disabled_by_name: string | null;
+    links_count: number;
+};
+
+const domainForm = useForm({ host: "" });
+
+const addDomain = () =>
+    domainForm.post(storeDomain(props.user.id).url, {
+        preserveScroll: true,
+        onSuccess: () => domainForm.reset(),
+    });
+
+const toggleDomain = (domain: DomainRow) =>
+    domain.status === "disabled"
+        ? router.delete(enableDomain(domain.id).url, { preserveScroll: true })
+        : router.patch(disableDomain(domain.id).url, {}, { preserveScroll: true });
 
 const ranges = [7, 30, 90];
 
@@ -306,6 +339,105 @@ setLayoutProps({
         <PackageHistory v-if="assignments" :assignments="assignments" />
 
         <PaymentHistory v-if="payments" :payments="payments" />
+
+        <div v-if="user.can.manageDomains" class="space-y-3 rounded-lg border p-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-medium">Domains</h2>
+                <span class="text-sm text-muted-foreground tabular-nums">
+                    {{ domains.length }} /
+                    {{ domainLimit ?? "unlimited" }}
+                </span>
+            </div>
+
+            <form
+                v-if="user.can.createDomain"
+                class="flex max-w-xl items-start gap-2"
+                @submit.prevent="addDomain"
+            >
+                <div class="grid flex-1 gap-2">
+                    <Label for="domain-host">Domain</Label>
+                    <Input
+                        id="domain-host"
+                        v-model="domainForm.host"
+                        required
+                        placeholder="links.example.com"
+                    />
+                    <InputError :message="domainForm.errors.host" />
+                </div>
+                <Button
+                    type="submit"
+                    class="mt-6"
+                    :disabled="domainForm.processing"
+                    >Add domain</Button
+                >
+            </form>
+            <p v-else class="text-sm text-muted-foreground">
+                Domain limit reached for the user's package.
+            </p>
+
+            <p
+                v-if="domains.length === 0"
+                class="text-sm text-muted-foreground"
+            >
+                No domains.
+            </p>
+            <ul v-else class="divide-y text-sm">
+                <li
+                    v-for="domain in domains"
+                    :key="domain.id"
+                    class="flex flex-wrap items-center justify-between gap-2 py-2"
+                >
+                    <div class="flex items-center gap-2">
+                        <span class="font-mono">{{ domain.host }}</span>
+                        <Badge
+                            :variant="
+                                domain.status === 'active'
+                                    ? 'default'
+                                    : domain.status === 'disabled'
+                                      ? 'destructive'
+                                      : 'secondary'
+                            "
+                        >
+                            {{
+                                domain.status === "disabled"
+                                    ? `Disabled by ${domain.disabled_by_name ?? "admin"}`
+                                    : domain.status === "active"
+                                      ? "Active"
+                                      : "Pending"
+                            }}
+                        </Badge>
+                    </div>
+                    <div class="space-x-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            :aria-label="`${domain.status === 'disabled' ? 'Enable' : 'Disable'} domain ${domain.host}`"
+                            @click="toggleDomain(domain)"
+                        >
+                            {{ domain.status === "disabled" ? "Enable" : "Disable" }}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            :disabled="domain.links_count > 0"
+                            :title="
+                                domain.links_count > 0
+                                    ? 'Used by links'
+                                    : undefined
+                            "
+                            :aria-label="`Delete domain ${domain.host}`"
+                            @click="
+                                router.delete(destroyDomain(domain.id).url, {
+                                    preserveScroll: true,
+                                })
+                            "
+                        >
+                            Delete
+                        </Button>
+                    </div>
+                </li>
+            </ul>
+        </div>
 
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 class="font-medium">Statistics</h2>

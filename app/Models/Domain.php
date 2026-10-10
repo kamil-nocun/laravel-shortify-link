@@ -54,6 +54,39 @@ class Domain extends Model
             ->whereHas('user', fn (Builder $query) => $query->whereNull('blocked_at'));
     }
 
+    /**
+     * Narrow to domains whose owner the actor may see.
+     *
+     * @param  Builder<Domain>  $query
+     */
+    #[Scope]
+    protected function visibleTo(Builder $query, User $actor): void
+    {
+        if ($actor->isSuperAdmin()) {
+            return;
+        }
+
+        if (! $actor->isAdmin()) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->whereHas('user', fn (Builder $query) => $query->visibleTo($actor));
+    }
+
+    /**
+     * @return 'pending'|'active'|'disabled'
+     */
+    public function status(): string
+    {
+        return match (true) {
+            ! $this->isVerified() => 'pending',
+            $this->disabled_by_admin_at !== null => 'disabled',
+            default => 'active',
+        };
+    }
+
     public function isVerified(): bool
     {
         return $this->verified_at !== null;

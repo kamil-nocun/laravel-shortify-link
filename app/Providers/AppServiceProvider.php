@@ -6,6 +6,7 @@ use App\Billing\PackageBilling;
 use App\Billing\ProjectStripeEvents;
 use App\Billing\RecordInvoicePayment;
 use App\Billing\StripePackageBilling;
+use App\Models\Domain;
 use App\Models\Link;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
@@ -61,7 +62,7 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function scopeAdminRouteBindings(): void
     {
-        foreach (['user' => User::class, 'link' => Link::class] as $key => $model) {
+        foreach (['user' => User::class, 'link' => Link::class, 'domain' => Domain::class] as $key => $model) {
             Route::bind($key, function (string $value) use ($model): Model {
                 $actor = request()->user();
 

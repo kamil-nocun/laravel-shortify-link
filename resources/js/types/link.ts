@@ -107,6 +107,8 @@ export type AdminUser = {
     links_count: number;
     can: {
         block: boolean;
+        manageDomains: boolean;
+        createDomain: boolean;
         update: boolean;
         createLink: boolean;
         delete: boolean;

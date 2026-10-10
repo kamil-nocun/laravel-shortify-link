@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminStatsRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
+use App\Models\Domain;
 use App\Models\Link;
 use App\Models\Package;
 use App\Models\User;
@@ -106,6 +107,8 @@ class UserController extends Controller
             'assignments' => $request->user()->can('manages', $user) ? $this->packagePageData->assignmentsFor($user) : null,
             'packageAssignment' => $request->user()->can('assignPackage', $user) ? $this->presentAssignment($user) : null,
             'packages' => $request->user()->can('assignPackage', $user) ? $this->packageOptions() : [],
+            'domains' => $request->user()->can('manages', $user) ? $this->presentDomains($user) : [],
+            'domainLimit' => $user->domainLimit(),
             'links' => $user->links()->withCount('clicks')->with(['domain', 'disabledBy:id,name'])->latest()->paginate(15)->withQueryString()
                 ->through(fn (Link $link) => [...$link->toArray(), 'disabled_by_name' => $link->disabledBy?->name]),
             ...$this->report->build($user, $request),
@@ -162,6 +165,21 @@ class UserController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User deleted.')]);
 
         return to_route('admin.users.index');
+    }
+
+    /**
+     * @return list<array{id: string, host: string, status: string, disabled_by_name: string|null, links_count: int}>
+     */
+    private function presentDomains(User $user): array
+    {
+        return $user->domains()->with('disabledBy:id,name')->withCount('links')->oldest()->get()
+            ->map(fn (Domain $domain) => [
+                'id' => $domain->id,
+                'host' => $domain->host,
+                'status' => $domain->status(),
+                'disabled_by_name' => $domain->disabledBy?->name,
+                'links_count' => $domain->links_count,
+            ])->all();
     }
 
     /**
@@ -248,6 +266,8 @@ class UserController extends Controller
                 'update' => $actor->can('update', $user),
                 'delete' => $actor->can('delete', $user),
                 'createLink' => $actor->can('createLink', $user),
+                'manageDomains' => $actor->can('manageDomains', $user),
+                'createDomain' => $actor->can('createDomain', $user),
                 'changeRole' => $actor->can('changeRole', $user),
                 'assignAdministrators' => $this->isAssignable($actor, $user),
             ],

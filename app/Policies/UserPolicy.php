@@ -36,6 +36,26 @@ class UserPolicy
     }
 
     /**
+     * Determine whether the actor may add, delete or disable the target's domains.
+     */
+    public function manageDomains(User $actor, User $target): bool
+    {
+        return $this->outranks($actor, $target) && $this->manages($actor, $target);
+    }
+
+    /**
+     * Determine whether the actor may add a domain on the target's behalf, within the target's package limit.
+     */
+    public function createDomain(User $actor, User $target): Response|bool
+    {
+        if (! $this->manageDomains($actor, $target)) {
+            return false;
+        }
+
+        return $target->canAddDomain() ?: Response::deny(__('Domain limit reached for the user\'s package.'));
+    }
+
+    /**
      * Determine whether the actor may block or unblock the target.
      */
     public function block(User $actor, User $target): bool

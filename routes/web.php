@@ -2,12 +2,14 @@
 
 use App\Http\Controllers\Admin\AdministratorController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DomainDisableController;
 use App\Http\Controllers\Admin\LinkDisableController;
 use App\Http\Controllers\Admin\LinkStatsController as AdminLinkStatsController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\UserAdministratorController;
 use App\Http\Controllers\Admin\UserBlockController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\UserDomainController;
 use App\Http\Controllers\Admin\UserLinkController;
 use App\Http\Controllers\Admin\UserPackageController;
 use App\Http\Controllers\Admin\UserRoleController;
@@ -51,6 +53,10 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
     Route::get('users/{user}/links/create', [UserLinkController::class, 'create'])->name('users.links.create');
     Route::post('users/{user}/links', [UserLinkController::class, 'store'])->name('users.links.store');
+    Route::post('users/{user}/domains', [UserDomainController::class, 'store'])->name('users.domains.store');
+    Route::delete('domains/{domain}', [UserDomainController::class, 'destroy'])->name('domains.destroy');
+    Route::patch('domains/{domain}/disable', [DomainDisableController::class, 'store'])->name('domains.disable');
+    Route::delete('domains/{domain}/disable', [DomainDisableController::class, 'destroy'])->name('domains.enable');
     Route::patch('users/{user}/block', [UserBlockController::class, 'store'])->name('users.block');
     Route::delete('users/{user}/block', [UserBlockController::class, 'destroy'])->name('users.unblock');
     Route::put('users/{user}/administrators', [UserAdministratorController::class, 'update'])->name('users.administrators.update');

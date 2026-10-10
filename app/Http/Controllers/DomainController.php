@@ -25,11 +25,7 @@ class DomainController extends Controller
             'domains' => $user->domains()->oldest()->get()->map(fn (Domain $domain) => [
                 'id' => $domain->id,
                 'host' => $domain->host,
-                'status' => match (true) {
-                    ! $domain->isVerified() => 'pending',
-                    $domain->disabled_by_admin_at !== null => 'disabled',
-                    default => 'active',
-                },
+                'status' => $domain->status(),
                 'verification_token' => $domain->verification_token,
             ]),
             'quota' => ['used' => $user->domains()->count(), 'limit' => $user->domainLimit()],
