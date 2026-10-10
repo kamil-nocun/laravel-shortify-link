@@ -31,9 +31,11 @@ class PermissionCatalog
             ->filter(fn (Permission $permission) => in_array($permission->group(), $administratorGroups, true) && $permission !== Permission::UsersChangeRole)
             ->map->value;
 
+        $clientKeys = array_map(fn (Permission $permission) => $permission->value, Permission::forClients());
+
         self::createRole(self::SUPER_ADMIN_ROLE, ['is_super' => true], []);
-        self::createRole(self::ADMINISTRATOR_ROLE, [], [...$administratorKeys->all(), ...array_map(fn (Permission $permission) => $permission->value, Permission::forClients())]);
-        self::createRole(self::CLIENT_ROLE, ['is_default' => true], array_map(fn (Permission $permission) => $permission->value, Permission::forClients()));
+        self::createRole(self::ADMINISTRATOR_ROLE, [], [...$administratorKeys->all(), ...$clientKeys]);
+        self::createRole(self::CLIENT_ROLE, ['is_default' => true], $clientKeys);
     }
 
     /**

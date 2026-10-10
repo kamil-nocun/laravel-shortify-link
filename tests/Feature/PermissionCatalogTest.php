@@ -28,6 +28,16 @@ test('sync creates the starting roles', function () {
         ->and($keys)->not->toContain('users.change_role', 'packages.manage', 'roles.manage');
 });
 
+test('sync gives a recreated administrator role the admin and client permissions', function () {
+    Role::where('name', PermissionCatalog::ADMINISTRATOR_ROLE)->delete();
+    PermissionCatalog::sync();
+
+    $keys = Role::where('name', PermissionCatalog::ADMINISTRATOR_ROLE)->firstOrFail()->permissionKeys();
+
+    expect($keys)->toContain('admin.access', 'users.block', 'links.manage', 'links.stats', 'domains.manage', 'billing.manage')
+        ->and($keys)->not->toContain('users.change_role', 'packages.manage', 'roles.manage', 'administrators.manage');
+});
+
 test('client role has the client permissions', function () {
     expect(Role::where('name', PermissionCatalog::CLIENT_ROLE)->firstOrFail()->permissionKeys()->sort()->values()->all())
         ->toBe(collect(Permission::forClients())->map->value->sort()->values()->all());
@@ -72,6 +82,7 @@ test('data migration restores client permissions on the administrator role once'
     $keys = ['links.manage', 'links.stats', 'domains.manage', 'billing.manage'];
     $role = Role::where('name', PermissionCatalog::ADMINISTRATOR_ROLE)->firstOrFail();
     $role->permissions()->detach(PermissionRecord::whereIn('key', $keys)->pluck('id'));
+    $before = $role->permissions()->count();
     $migration = require database_path('migrations/2026_10_10_113410_add_client_permissions_to_administrator_role.php');
 
     $migration->up();
@@ -79,5 +90,5 @@ test('data migration restores client permissions on the administrator role once'
 
     $attached = $role->permissionKeys();
     expect($attached)->toContain(...$keys)
-        ->and($attached->count())->toBe($attached->unique()->count());
+        ->and($role->permissions()->count())->toBe($before + count($keys));
 });
