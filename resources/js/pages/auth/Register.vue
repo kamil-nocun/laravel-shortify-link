@@ -4,14 +4,17 @@ import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
+import { show } from '@/routes/content';
 import { store } from '@/routes/register';
 
 defineProps<{
     passwordRules: string;
+    consentDocuments: { title: string; slug: string }[];
 }>();
 
 defineOptions({
@@ -89,10 +92,41 @@ defineOptions({
                 <InputError :message="errors.password_confirmation" />
             </div>
 
+            <div v-if="consentDocuments.length" class="grid gap-2">
+                <div class="flex items-start gap-2">
+                    <Checkbox
+                        id="accept_terms"
+                        name="accept_terms"
+                        value="1"
+                        required
+                        :tabindex="5"
+                    />
+                    <Label for="accept_terms" class="leading-normal">
+                        I accept
+                        <template
+                            v-for="(document, index) in consentDocuments"
+                            :key="document.slug"
+                        >
+                            <a
+                                :href="show(document.slug).url"
+                                target="_blank"
+                                rel="noopener"
+                                class="underline"
+                                >{{ document.title }}</a
+                            ><template
+                                v-if="index < consentDocuments.length - 1"
+                                >,
+                            </template>
+                        </template>
+                    </Label>
+                </div>
+                <InputError :message="errors.accept_terms" />
+            </div>
+
             <Button
                 type="submit"
                 class="mt-2 w-full"
-                tabindex="5"
+                tabindex="6"
                 :disabled="processing"
                 data-test="register-user-button"
             >
@@ -106,7 +140,7 @@ defineOptions({
             <TextLink
                 :href="login()"
                 class="underline underline-offset-4"
-                :tabindex="6"
+                :tabindex="7"
                 >Log in</TextLink
             >
         </div>
