@@ -3,20 +3,17 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Billing\PackagePageData;
-use App\Enums\BillingPeriod;
 use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminStatsRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
-use App\Models\Domain;
 use App\Models\Link;
-use App\Models\Package;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
 use App\Support\AdminStatsReport;
-use App\Support\PermissionCatalog;
+use App\Support\UserPageData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +25,7 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function __construct(private readonly AdminStatsReport $report, private readonly PackagePageData $packagePageData) {}
+    public function __construct(private readonly AdminStatsReport $report, private readonly PackagePageData $packagePageData, private readonly UserPageData $page) {}
 
     /**
      * List regular users, optionally filtered by name or e-mail.
@@ -55,7 +52,7 @@ class UserController extends Controller
             ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString()
-            ->through(fn (User $user) => $this->present($user, $request->user()));
+            ->through(fn (User $user) => $this->page->present($user, $request->user()));
 
         return Inertia::render('admin/users/Index', ['users' => $users, 'search' => $search]);
     }
@@ -70,7 +67,7 @@ class UserController extends Controller
         $roles = $request->user()->hasPermission(Permission::UsersChangeRole) ? Role::assignableBy($request->user(), false) : collect();
 
         return Inertia::render('admin/users/Create', [
-            'administrators' => $this->administratorOptions($request->user()),
+            'administrators' => $this->page->administratorOptions($request->user()),
             'roles' => $roles->map->only(['id', 'name'])->all(),
             'defaultRoleId' => $roles->firstWhere('is_default', true)?->id,
         ]);
@@ -109,49 +106,29 @@ class UserController extends Controller
     {
         Gate::authorize('view', $user);
 
+        $actor = $request->user();
+        $manages = $actor->can('manages', $user);
+        $assignsPackage = $actor->can('assignPackage', $user);
+
         return Inertia::render('admin/users/Show', [
-            'user' => $this->present($user->loadCount('links')->load('blockedBy:id,name'), $request->user()),
-            'assignedAdministrators' => $this->isAssignable($request->user(), $user)
+            'user' => $this->page->present($user->loadCount('links')->load('blockedBy:id,name'), $request->user()),
+            'assignedAdministrators' => $this->page->isAssignable($request->user(), $user)
                 ? $user->assignedAdmins()->orderBy('name')->get(['users.id', 'users.name', 'users.email'])->map->only(['id', 'name', 'email'])->all()
                 : [],
             'effectiveLimit' => $user->linkLimit(),
-            'paymentState' => $request->user()->can('assignPackage', $user) ? $this->paymentState($user) : null,
-            'invoiceUrl' => $request->user()->can('manages', $user) ? $this->packagePageData->invoiceUrlFor($user) : null,
-            'payments' => $request->user()->can('manages', $user) ? $this->packagePageData->paymentsFor($user) : null,
-            'assignments' => $request->user()->can('manages', $user) ? $this->packagePageData->assignmentsFor($user) : null,
-            'packageAssignment' => $request->user()->can('assignPackage', $user) ? $this->presentAssignment($user) : null,
-            'packages' => $request->user()->can('assignPackage', $user) ? $this->packageOptions() : [],
-            'domains' => $request->user()->can('manages', $user) ? $this->presentDomains($user) : [],
+            'paymentState' => $assignsPackage ? $this->page->paymentState($user) : null,
+            'invoiceUrl' => $manages ? $this->packagePageData->invoiceUrlFor($user) : null,
+            'payments' => $manages ? $this->packagePageData->paymentsFor($user) : null,
+            'assignments' => $manages ? $this->packagePageData->assignmentsFor($user) : null,
+            'packageAssignment' => $assignsPackage ? $this->page->presentAssignment($user) : null,
+            'packages' => $assignsPackage ? $this->page->packageOptions() : [],
+            'domains' => $manages ? $this->page->presentDomains($user) : [],
             'domainLimit' => $user->domainLimit(),
             'links' => $user->links()->withCount('clicks')->with(['domain', 'disabledBy:id,name'])->latest()->paginate(15)->withQueryString()
                 ->through(fn (Link $link) => [...$link->toArray(), 'disabled_by_name' => $link->disabledBy?->name]),
-            ...$this->permissionOverrideData($request->user(), $user),
+            ...$this->page->permissionOverrideData($request->user(), $user),
             ...$this->report->build($user, $request),
         ]);
-    }
-
-    /**
-     * Data for the per-user permission overrides card; empty unless the actor may change the user's role.
-     *
-     * @return array{permissionOverrides: array{granted: list<string>, revoked: list<string>}, rolePermissions: list<string>, permissionGroups: list<array<string, mixed>>, roles: list<array{id: string, name: string}>}
-     */
-    private function permissionOverrideData(User $actor, User $user): array
-    {
-        if (! $actor->can('changeRole', $user)) {
-            return ['permissionOverrides' => ['granted' => [], 'revoked' => []], 'rolePermissions' => [], 'permissionGroups' => [], 'roles' => []];
-        }
-
-        $overrides = $user->permissionOverrides()->get();
-
-        return [
-            'permissionOverrides' => [
-                'granted' => $overrides->filter(fn ($permission) => $permission->pivot->granted)->pluck('key')->values()->all(),
-                'revoked' => $overrides->reject(fn ($permission) => $permission->pivot->granted)->pluck('key')->values()->all(),
-            ],
-            'rolePermissions' => $user->role?->permissionKeys()->values()->all() ?? [],
-            'permissionGroups' => PermissionCatalog::groups(),
-            'roles' => Role::where('is_super', false)->orderBy('name')->get(['id', 'name'])->map->only(['id', 'name'])->all(),
-        ];
     }
 
     /**
@@ -163,8 +140,8 @@ class UserController extends Controller
 
         return Inertia::render('admin/users/Edit', [
             'user' => $user->only(['id', 'name', 'email']),
-            'administrators' => $this->isAssignable($request->user(), $user) ? $this->administratorOptions($request->user()) : [],
-            'assignedAdministratorIds' => $this->isAssignable($request->user(), $user)
+            'administrators' => $this->page->isAssignable($request->user(), $user) ? $this->page->administratorOptions($request->user()) : [],
+            'assignedAdministratorIds' => $this->page->isAssignable($request->user(), $user)
                 ? $user->assignedAdmins()->pluck('users.id')->all()
                 : [],
         ]);
@@ -204,115 +181,5 @@ class UserController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User deleted.')]);
 
         return to_route('admin.users.index');
-    }
-
-    /**
-     * @return list<array{id: string, host: string, status: string, disabled_by_name: string|null, links_count: int}>
-     */
-    private function presentDomains(User $user): array
-    {
-        return $user->domains()->with('disabledBy:id,name')->withCount('links')->oldest()->get()
-            ->map(fn (Domain $domain) => [
-                'id' => $domain->id,
-                'host' => $domain->host,
-                'status' => $domain->status(),
-                'disabled_by_name' => $domain->disabledBy?->name,
-                'links_count' => $domain->links_count,
-            ])->all();
-    }
-
-    /**
-     * Whether the actor may assign administrators to the target, which must be a client.
-     */
-    private function isAssignable(User $actor, User $user): bool
-    {
-        return $actor->can('assignAdministrators', User::class) && $user->isClient();
-    }
-
-    /**
-     * @return array{package_id: string, package_name: string, billing_period: string, price: int, starts_at: string, expires_at: string, active: bool, package_withdrawn: bool}|null
-     */
-    private function presentAssignment(User $user): ?array
-    {
-        $assignment = $user->packageAssignment()->with('package')->first();
-
-        return $assignment ? [
-            'package_id' => $assignment->package_id,
-            'package_name' => $assignment->package->name,
-            'billing_period' => $assignment->billing_period->value,
-            'price' => $assignment->price,
-            'starts_at' => $assignment->starts_at->toIso8601String(),
-            'expires_at' => $assignment->expires_at->toIso8601String(),
-            'active' => $assignment->isActive(),
-            'package_withdrawn' => $assignment->package->trashed(),
-        ] : null;
-    }
-
-    /**
-     * Where the user's package stands: invoice unpaid, running, or ended.
-     */
-    private function paymentState(User $user): ?string
-    {
-        return match (true) {
-            $user->subscriptions()->incomplete()->exists() => 'awaiting_payment',
-            $user->activeAssignment() !== null => 'active',
-            $user->packageAssignment()->exists() => 'expired',
-            default => null,
-        };
-    }
-
-    /**
-     * Packages selectable for assignment, with the periods that have a price.
-     *
-     * @return list<array{id: string, name: string, link_limit: int, available_periods: list<string>}>
-     */
-    private function packageOptions(): array
-    {
-        return Package::where('is_default', false)->orderBy('name')->get()->filter(fn (Package $package) => array_filter($package->availablePeriods(), fn (BillingPeriod $period) => $package->stripePriceId($period) !== null) !== [])->map(fn (Package $package) => [
-            'id' => $package->id,
-            'name' => $package->name,
-            'link_limit' => $package->link_limit,
-            'available_periods' => array_values(array_map(fn (BillingPeriod $period) => $period->value, array_filter($package->availablePeriods(), fn (BillingPeriod $period) => $package->stripePriceId($period) !== null))),
-        ])->values()->all();
-    }
-
-    /**
-     * Administrators selectable for assignment; empty unless the actor is a super administrator.
-     *
-     * @return list<array{id: string, name: string, email: string}>
-     */
-    private function administratorOptions(User $actor): array
-    {
-        if (! $actor->isSuperAdmin()) {
-            return [];
-        }
-
-        return User::query()->administrators()->orderBy('name')->get(['id', 'name', 'email'])
-            ->map->only(['id', 'name', 'email'])->values()->all();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function present(User $user, User $actor): array
-    {
-        return [
-            ...$user->only(['id', 'name', 'email', 'role_id', 'blocked_at', 'created_at', 'links_count']),
-            'role' => $user->role?->name,
-            'blocked_by_id' => $user->blocked_by,
-            'blocked_by_name' => $user->blockedBy?->name,
-            'can' => [
-                'block' => $actor->can('block', $user),
-                'update' => $actor->can('update', $user),
-                'delete' => $actor->can('delete', $user),
-                'createLink' => $actor->can('createLink', $user),
-                'manageDomains' => $actor->can('manageDomains', $user),
-                'createDomain' => $actor->can('createDomain', $user),
-                'disableLinks' => $actor->can('disableLinks', $user),
-                'disableDomains' => $actor->can('disableDomains', $user),
-                'changeRole' => $actor->can('changeRole', $user),
-                'assignAdministrators' => $this->isAssignable($actor, $user),
-            ],
-        ];
     }
 }
