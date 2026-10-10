@@ -46,8 +46,9 @@ test('download adds an attachment header named after the code or alias', functio
         ->assertHeader('Content-Disposition', 'attachment; filename="moj-alias.svg"');
 });
 
-test('other users cannot get the qr of a foreign link and guests are sent to login', function () {
-    $this->actingAs(User::factory()->create())->get(route('links.qr', [$this->link, 'code']))->assertForbidden();
+test('other users and admins are redirected to the list from a foreign link qr and guests to login', function () {
+    $this->actingAs(User::factory()->create())->get(route('links.qr', [$this->link, 'code']))->assertRedirect(route('links.index'));
+    $this->actingAs(User::factory()->admin()->create())->get(route('links.qr', [$this->link, 'code']))->assertRedirect(route('links.index'));
     auth()->logout();
     $this->get(route('links.qr', [$this->link, 'code']))->assertRedirect(route('login'));
 });
