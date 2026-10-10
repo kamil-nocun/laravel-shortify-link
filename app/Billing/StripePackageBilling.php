@@ -8,6 +8,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Support\StripeSandboxGuard;
 use Laravel\Cashier\Cashier;
+use Stripe\StripeClient;
 
 class StripePackageBilling implements PackageBilling
 {
@@ -15,9 +16,7 @@ class StripePackageBilling implements PackageBilling
 
     public function syncPackage(Package $package): void
     {
-        StripeSandboxGuard::assertTestMode();
-
-        $stripe = Cashier::stripe();
+        $stripe = $this->stripe();
 
         if ($package->stripe_product_id === null) {
             $package->forceFill([
@@ -30,7 +29,7 @@ class StripePackageBilling implements PackageBilling
         foreach (BillingPeriod::cases() as $period) {
             $column = 'stripe_price_id_'.$period->value;
             $amount = $package->priceFor($period);
-            $existing = $package->{$column};
+            $existing = $package->stripePriceId($period);
 
             if ($existing !== null && $amount !== null && $stripe->prices->retrieve($existing)->unit_amount === $amount) {
                 continue;
@@ -48,10 +47,8 @@ class StripePackageBilling implements PackageBilling
 
     public function retirePackage(Package $package): void
     {
-        StripeSandboxGuard::assertTestMode();
-
-        $stripe = Cashier::stripe();
-        $priceIds = array_filter(array_map(fn (BillingPeriod $period) => $package->{'stripe_price_id_'.$period->value}, BillingPeriod::cases()));
+        $stripe = $this->stripe();
+        $priceIds = array_filter(array_map(fn (BillingPeriod $period) => $package->stripePriceId($period), BillingPeriod::cases()));
 
         Subscription::whereIn('stripe_price', $priceIds)->whereNull('ends_at')->get()->each->cancel();
 
@@ -75,7 +72,7 @@ class StripePackageBilling implements PackageBilling
     {
         StripeSandboxGuard::assertTestMode();
 
-        $priceId = $package->{'stripe_price_id_'.$period->value};
+        $priceId = $package->stripePriceId($period);
         $options = ['success_url' => $successUrl, 'cancel_url' => $cancelUrl];
 
         $checkout = $period === BillingPeriod::OneTime
@@ -89,7 +86,7 @@ class StripePackageBilling implements PackageBilling
     {
         StripeSandboxGuard::assertTestMode();
 
-        $priceId = $package->{'stripe_price_id_'.$period->value};
+        $priceId = $package->stripePriceId($period);
 
         if ($period !== BillingPeriod::OneTime) {
             $user->newSubscription('default', $priceId)->createAndSendInvoice([], ['days_until_due' => self::INVOICE_DAYS_UNTIL_DUE]);
@@ -97,7 +94,7 @@ class StripePackageBilling implements PackageBilling
             return;
         }
 
-        $stripe = Cashier::stripe();
+        $stripe = $this->stripe();
         $customer = $user->createOrGetStripeCustomer()->id;
 
         $stripe->invoiceItems->create(['customer' => $customer, 'pricing' => ['price' => $priceId]]);
@@ -127,6 +124,13 @@ class StripePackageBilling implements PackageBilling
         foreach (Cashier::stripe()->invoices->all(['customer' => $user->stripe_id, 'limit' => 100])->autoPagingIterator() as $invoice) {
             yield $invoice->toArray();
         }
+    }
+
+    private function stripe(): StripeClient
+    {
+        StripeSandboxGuard::assertTestMode();
+
+        return Cashier::stripe();
     }
 
     /**
