@@ -12,7 +12,7 @@ class EnsureConsentsAccepted
     /**
      * Routes that must work without consent, so that the user's rights never depend on accepting anything.
      */
-    private const EXEMPT = ['consent.*', 'logout', 'privacy.export', 'profile.destroy', 'verification.*'];
+    private const EXEMPT = ['consent.*', 'content.show', 'logout', 'privacy.export', 'profile.destroy', 'verification.*'];
 
     public function handle(Request $request, Closure $next): Response
     {

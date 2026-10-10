@@ -95,3 +95,10 @@ test('accepting twice does not fail or duplicate', function () {
 test('guests cannot open the consent page', function () {
     $this->get(route('consent.show'))->assertRedirect(route('login'));
 });
+
+test('the documents themselves stay readable while consent is pending', function () {
+    documentPage('terms');
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get(route('content.show', 'terms'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('content/Show'));
+});

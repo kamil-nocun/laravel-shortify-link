@@ -14,7 +14,7 @@
 
 - Wymagane dokumenty: slugi `terms` i `privacy-policy` (stała `ConsentDocuments::SLUGS`); pomijane, gdy strona nie jest opublikowana lub nie ma wersji.
 - `user_consents`: UUID PK; `user_id` FK cascade; `page_version_id` FK restrict; `accepted_at`; unikalny `(user_id, page_version_id)`; bez IP i User-Agent.
-- Wyjątki middleware (nazwy tras): `consent.show`, `consent.store`, `logout`, `privacy.export`, `profile.destroy`, `verification.*`. Trasy `links.redirect` i `domains.check` wyłączone z tego middleware (bez sesji).
+- Wyjątki middleware (nazwy tras): `consent.show`, `consent.store`, `content.show`, `logout`, `privacy.export`, `profile.destroy`, `verification.*`. Trasy `links.redirect` i `domains.check` wyłączone z tego middleware (bez sesji).
 - Eksport: `GET settings/privacy/export`, nazwa trasy `privacy.export`, plik `shortify-export-YYYY-MM-DD.zip` z `profile.csv`, `links.csv`, `domains.csv`, `payments.csv`, `consents.csv` (UTF-8, `,`, nagłówki angielskie); komórki zaczynające się od `=`, `+`, `-`, `@`, tabulatora lub CR poprzedzane `'`. Bez statystyk odwiedzających.
 - Usuwanie: błąd Stripe zostawia konto i dane nietknięte; komunikat "Could not delete the account right now, try again later".
 - Konwencje repo: UUID, cienkie kontrolery, logika w `app/Actions` i `app/Support`, Form Requests, teksty UI po angielsku, Pest feature tests, `vendor/bin/pint --dirty --format agent` po zmianach PHP, `npx vp fmt` tylko na własnych plikach Vue/TS.
