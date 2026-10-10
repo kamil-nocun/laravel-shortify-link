@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link as InertiaLink, router, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -30,6 +30,22 @@ const noDomainsAllowed = computed(() => props.quota.limit === 0);
 const limitReached = computed(
     () => props.quota.limit !== null && props.quota.used >= props.quota.limit,
 );
+
+const verifyError = ref<{ id: string; message: string } | null>(null);
+
+function checkAgain(domain: DomainRow) {
+    verifyError.value = null;
+    router.post(
+        verify(domain.id).url,
+        {},
+        {
+            preserveScroll: true,
+            onError: (errors) => {
+                verifyError.value = { id: domain.id, message: errors.host };
+            },
+        },
+    );
+}
 
 function submit() {
     form.post(store().url, { onSuccess: () => form.reset() });
@@ -125,18 +141,14 @@ defineOptions({
                         v-if="domain.status === 'pending'"
                         variant="outline"
                         size="sm"
-                        @click="
-                            router.post(
-                                verify(domain.id).url,
-                                {},
-                                { preserveScroll: true },
-                            )
-                        "
+                        :aria-label="`Check ${domain.host} again`"
+                        @click="checkAgain(domain)"
                         >Check again</Button
                     >
                     <Button
                         variant="destructive"
                         size="sm"
+                        :aria-label="`Delete ${domain.host}`"
                         @click="router.delete(destroy(domain.id).url)"
                         >Delete</Button
                     >
@@ -174,7 +186,13 @@ defineOptions({
                         </tr>
                     </tbody>
                 </table>
-                <InputError :message="form.errors.host" />
+                <InputError
+                    :message="
+                        verifyError?.id === domain.id
+                            ? verifyError.message
+                            : undefined
+                    "
+                />
             </div>
         </div>
     </div>
