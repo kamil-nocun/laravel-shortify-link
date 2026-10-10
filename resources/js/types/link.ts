@@ -55,7 +55,8 @@ export type StatsFilterKey =
     | 'browser'
     | 'os'
     | 'device_type'
-    | 'entry';
+    | 'entry'
+    | 'source';
 
 export type StatsFilters = Record<StatsFilterKey, string | null>;
 
@@ -66,6 +67,7 @@ export type StatsOptions = {
     systems: string[];
     devices: string[];
     entries: string[];
+    sources: string[];
 };
 
 export type StatsTableKey =
@@ -74,7 +76,8 @@ export type StatsTableKey =
     | 'browsers'
     | 'systems'
     | 'devices'
-    | 'entries';
+    | 'entries'
+    | 'sources';
 
 export type StatsSorts = Record<StatsTableKey, string>;
 
