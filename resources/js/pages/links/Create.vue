@@ -9,7 +9,7 @@ defineProps<{ domains: { id: string; host: string }[] }>();
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Links', href: index() },
+            { title: 'My links', href: index() },
             { title: 'Create', href: create() },
         ],
     },

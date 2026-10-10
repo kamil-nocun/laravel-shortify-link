@@ -9,7 +9,7 @@ const props = defineProps<{ link: Link }>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Links', href: index() }],
+        breadcrumbs: [{ title: 'My links', href: index() }],
     },
 });
 </script>

@@ -55,18 +55,18 @@ function submit() {
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Domains', href: index() }],
+        breadcrumbs: [{ title: 'My domains', href: index() }],
     },
 });
 </script>
 
 <template>
-    <Head title="Domains" />
+    <Head title="My domains" />
 
     <div class="space-y-6 p-4">
         <div class="flex items-center justify-between">
             <Heading
-                title="Domains"
+                title="My domains"
                 description="Use your own domain for short links"
             />
             <span class="text-sm text-muted-foreground">

@@ -42,7 +42,7 @@ const baseNavItems: NavItem[] = [
         icon: Link2,
     },
     {
-        title: "Domains",
+        title: "My domains",
         href: domainsIndex(),
         icon: Globe,
     },

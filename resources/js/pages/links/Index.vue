@@ -34,17 +34,17 @@ const limitReached = computed(
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Links', href: index() }],
+        breadcrumbs: [{ title: 'My links', href: index() }],
     },
 });
 </script>
 
 <template>
-    <Head title="Links" />
+    <Head title="My links" />
 
     <div class="space-y-6 p-4">
         <div class="flex items-center justify-between">
-            <Heading title="Links" description="Manage your short links" />
+            <Heading title="My links" description="Manage your short links" />
             <div class="flex items-center gap-3">
                 <span class="text-sm text-muted-foreground">
                     {{
