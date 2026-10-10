@@ -1,20 +1,48 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { CreditCard } from '@lucide/vue';
-import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import ClicksChart from '@/components/ClicksChart.vue';
+import Heading from '@/components/Heading.vue';
+import PackageCard from '@/components/PackageCard.vue';
+import PeriodSelector from '@/components/PeriodSelector.vue';
+import StatCards from '@/components/StatCards.vue';
+import TopLinksTable from '@/components/TopLinksTable.vue';
+import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
-import { show as billingPackage } from '@/routes/billing/package';
+import { create as createLink, stats as linkStats } from '@/routes/links';
+import type {
+    AdminCounters,
+    DailyClicks,
+    DashboardPackage,
+    StatsPeriodParams,
+    TopLink,
+} from '@/types';
 
-const page = usePage();
+const props = defineProps<{
+    period: StatsPeriodParams;
+    granularity: 'day' | 'month';
+    total: number;
+    series: DailyClicks[];
+    counters: AdminCounters;
+    topLinks: TopLink[];
+    package: DashboardPackage | null;
+}>();
+
+const { can } = usePermissions();
+
+const cards = computed(() => [
+    { label: 'Links', value: props.counters.links },
+    {
+        label: 'Active / disabled links',
+        value: `${props.counters.activeLinks} / ${props.counters.disabledLinks}`,
+    },
+    { label: 'Clicks', value: props.counters.clicks },
+]);
 
 defineOptions({
     layout: {
-        breadcrumbs: [
-            {
-                title: 'Dashboard',
-                href: dashboard(),
-            },
-        ],
+        breadcrumbs: [{ title: 'Dashboard', href: dashboard() }],
     },
 });
 </script>
@@ -22,38 +50,30 @@ defineOptions({
 <template>
     <Head title="Dashboard" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
-        <Link
-            v-if="!page.props.auth.isSuperAdmin"
-            :href="billingPackage()"
-            class="flex items-center gap-3 rounded-xl border p-4 hover:bg-muted"
-        >
-            <CreditCard class="size-5" />
-            <span class="font-medium">My package and payments</span>
-        </Link>
-        <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-            >
-                <PlaceholderPattern />
-            </div>
-            <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-            >
-                <PlaceholderPattern />
-            </div>
-            <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-            >
-                <PlaceholderPattern />
+    <div class="space-y-6 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <Heading title="Dashboard" description="Your links at a glance" />
+            <div class="flex flex-wrap items-center gap-2">
+                <PeriodSelector
+                    :current="period.period"
+                    :url="dashboard().url"
+                />
+                <Button v-if="can('links.manage')" size="sm" as-child>
+                    <Link :href="createLink()">New link</Link>
+                </Button>
             </div>
         </div>
-        <div
-            class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border"
-        >
-            <PlaceholderPattern />
+
+        <StatCards :cards="cards" />
+
+        <p v-if="total === 0" class="text-sm text-muted-foreground">
+            No clicks in this period yet.
+        </p>
+        <ClicksChart v-else :series="series" :granularity="granularity" />
+
+        <div class="grid gap-6 md:grid-cols-2">
+            <TopLinksTable :links="topLinks" :href="linkStats" />
+            <PackageCard v-if="package" :package="package" />
         </div>
     </div>
 </template>

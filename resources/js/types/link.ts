@@ -133,3 +133,13 @@ export type AdminDomainRow = {
     disabled_by_name: string | null;
     links_count: number;
 };
+
+export type DashboardPackage = {
+    package_name: string | null;
+    link_limit: number | null;
+    links_used: number;
+    domain_limit: number | null;
+    domains_used: number;
+    billing_period: string | null;
+    expires_at: string | null;
+};
