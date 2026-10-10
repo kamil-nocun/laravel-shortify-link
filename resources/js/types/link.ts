@@ -143,3 +143,9 @@ export type DashboardPackage = {
     billing_period: string | null;
     expires_at: string | null;
 };
+
+export type LinkFilters = {
+    search: string | null;
+    status: string | null;
+    domain: string | null;
+};

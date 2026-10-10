@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import Heading from '@/components/Heading.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Head, Link as InertiaLink, router } from "@inertiajs/vue3";
+import { computed, ref } from "vue";
+import Heading from "@/components/Heading.vue";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogClose,
@@ -14,12 +14,15 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from '@/components/ui/dialog';
-import { create, destroy, edit, index, stats, toggle } from '@/routes/links';
-import type { Link, Paginated } from '@/types';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { create, destroy, edit, index, stats, toggle } from "@/routes/links";
+import type { Link, LinkFilters, Paginated } from "@/types";
 
 const props = defineProps<{
     links: Paginated<Link>;
+    filters: LinkFilters;
+    domains: { id: string; host: string }[];
     quota: { used: number; limit: number | null };
     packageNotice: {
         package_name: string;
@@ -32,9 +35,52 @@ const limitReached = computed(
     () => props.quota.limit !== null && props.quota.used >= props.quota.limit,
 );
 
+const search = ref(props.filters.search ?? "");
+const status = ref(props.filters.status ?? "");
+const domain = ref(props.filters.domain ?? "");
+
+const hasFilters = computed(
+    () =>
+        !!(
+            props.filters.search ||
+            props.filters.status ||
+            props.filters.domain
+        ),
+);
+
+function applyFilters(): void {
+    const params = Object.fromEntries(
+        Object.entries({
+            search: search.value,
+            status: status.value,
+            domain: domain.value,
+        }).filter(([, value]) => value !== ""),
+    );
+
+    router.get(index().url, params, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+}
+
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+function onSearchInput(): void {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 300);
+}
+
+function clearFilters(): void {
+    search.value = "";
+    status.value = "";
+    domain.value = "";
+    applyFilters();
+}
+
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'My links', href: index() }],
+        breadcrumbs: [{ title: "My links", href: index() }],
     },
 });
 </script>
@@ -68,11 +114,60 @@ defineOptions({
                 Package {{ packageNotice.package_name }} is being withdrawn.
                 From
                 {{ new Date(packageNotice.ends_at).toLocaleDateString() }}
-                {{ packageNotice.default_package_name ?? 'default' }} package applies.
+                {{ packageNotice.default_package_name ?? "default" }} package
+                applies.
             </AlertDescription>
         </Alert>
 
-        <p v-if="links.data.length === 0" class="text-sm text-muted-foreground">
+        <div class="flex flex-wrap gap-2">
+            <Input
+                v-model="search"
+                type="search"
+                placeholder="Search title, code or URL"
+                class="max-w-xs"
+                @input="onSearchInput"
+            />
+            <select
+                v-model="status"
+                aria-label="Status"
+                class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                @change="applyFilters"
+            >
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="expired">Expired</option>
+                <option value="disabled">Blocked by admin</option>
+            </select>
+            <select
+                v-if="domains.length"
+                v-model="domain"
+                aria-label="Domain"
+                class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                @change="applyFilters"
+            >
+                <option value="">All domains</option>
+                <option value="main">Main domain</option>
+                <option v-for="d in domains" :key="d.id" :value="d.id">
+                    {{ d.host }}
+                </option>
+            </select>
+        </div>
+
+        <div
+            v-if="links.data.length === 0 && hasFilters"
+            class="flex items-center gap-3 text-sm text-muted-foreground"
+        >
+            <p>No links match your filters.</p>
+            <Button variant="outline" size="sm" @click="clearFilters"
+                >Clear filters</Button
+            >
+        </div>
+
+        <p
+            v-else-if="links.data.length === 0"
+            class="text-sm text-muted-foreground"
+        >
             You have no links yet.
         </p>
 
@@ -95,7 +190,7 @@ defineOptions({
                         :key="link.id"
                         class="border-t"
                     >
-                        <td class="p-3">{{ link.title ?? '—' }}</td>
+                        <td class="p-3">{{ link.title ?? "—" }}</td>
                         <td class="max-w-64 truncate p-3">
                             {{ link.original_url }}
                         </td>
@@ -143,7 +238,7 @@ defineOptions({
                             {{
                                 link.expires_at
                                     ? new Date(link.expires_at).toLocaleString()
-                                    : '—'
+                                    : "—"
                             }}
                         </td>
                         <td class="space-x-2 p-3 text-right">

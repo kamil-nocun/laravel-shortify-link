@@ -102,3 +102,14 @@ test('other users links never show', function () {
 
     expect(listedIds(['search' => 'secret']))->toBe([]);
 });
+
+test('domains prop lists only own domains', function () {
+    $own = Domain::factory()->for($this->user)->create();
+    Domain::factory()->create();
+
+    $this->get(route('links.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('domains', 1)
+            ->where('domains.0.id', $own->id)
+            ->where('domains.0.host', $own->host));
+});
