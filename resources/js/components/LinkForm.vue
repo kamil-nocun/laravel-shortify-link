@@ -14,6 +14,7 @@ const props = defineProps<{
     link?: Link;
     domains?: { id: string; host: string }[];
     canSetAlias?: boolean;
+    mainHost?: string;
     submitLabel: string;
     action: (form: ReturnType<typeof useLinkForm>) => void;
 }>();
@@ -53,7 +54,7 @@ const form = useLinkForm();
 const aliasHost = computed(
     () =>
         props.domains?.find((d) => d.id === form.domain_id)?.host ??
-        window.location.host,
+        props.mainHost,
 );
 </script>
 

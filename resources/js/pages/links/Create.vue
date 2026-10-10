@@ -4,7 +4,7 @@ import Heading from '@/components/Heading.vue';
 import LinkForm from '@/components/LinkForm.vue';
 import { create, index, store } from '@/routes/links';
 
-defineProps<{ domains: { id: string; host: string }[]; canSetAlias: boolean }>();
+defineProps<{ domains: { id: string; host: string }[]; canSetAlias: boolean; mainHost: string }>();
 
 defineOptions({
     layout: {
@@ -24,6 +24,7 @@ defineOptions({
         <LinkForm
             :domains="domains"
             :can-set-alias="canSetAlias"
+            :main-host="mainHost"
             submit-label="Create link"
             :action="(form) => form.post(store().url)"
         />

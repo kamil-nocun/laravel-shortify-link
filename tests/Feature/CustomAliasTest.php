@@ -76,7 +76,7 @@ test('a race-condition collision becomes a validation error on alias', function 
     Link::factory()->create(['code' => 'racing', 'domain_id' => null]);
 
     expect(fn () => app(LinkCodeGenerator::class)->createFor($user, ['original_url' => 'https://example.com', 'alias' => 'racing']))
-        ->toThrow(ValidationException::class);
+        ->toThrow(fn (ValidationException $e) => expect($e->errors())->toHaveKey('alias'));
 });
 
 test('an admin creating a link checks the client permission', function () {
@@ -117,12 +117,15 @@ test('every static route prefix is reserved', function () {
         ->reject(fn (string $segment) => ReservedAliases::isReserved($segment))
         ->values()->all();
 
-    expect($missing)->toBe([]);
+    $publicDirs = collect(glob(public_path('*'), GLOB_ONLYDIR))->map(fn ($dir) => basename($dir))
+        ->reject(fn (string $name) => str_contains($name, '.') || ReservedAliases::isReserved($name))->values()->all();
+
+    expect($missing)->toBe([])->and($publicDirs)->toBe([]);
 });
 
 test('the create pages expose whether the alias field is allowed', function () {
     $this->actingAs(userWithAlias())->get(route('links.create'))
-        ->assertInertia(fn ($page) => $page->where('canSetAlias', true));
+        ->assertInertia(fn ($page) => $page->where('canSetAlias', true)->where('mainHost', parse_url(config('app.url'), PHP_URL_HOST).(parse_url(config('app.url'), PHP_URL_PORT) ? ':'.parse_url(config('app.url'), PHP_URL_PORT) : '')));
     $this->actingAs(User::factory()->create())->get(route('links.create'))
         ->assertInertia(fn ($page) => $page->where('canSetAlias', false));
 

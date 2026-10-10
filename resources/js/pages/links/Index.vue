@@ -124,6 +124,7 @@ defineOptions({
             <Input
                 v-model="search"
                 type="search"
+                aria-label="Search links"
                 placeholder="Search title, code or URL"
                 class="max-w-xs"
                 @input="onSearchInput"

@@ -113,3 +113,10 @@ test('domains prop lists only own domains', function () {
             ->where('domains.0.id', $own->id)
             ->where('domains.0.host', $own->host));
 });
+
+test('searching for zero is not treated as an empty search', function () {
+    $hit = makeLink(['title' => 'Plan 0']);
+    makeLink(['title' => 'Plan A', 'code' => 'abcdef', 'original_url' => 'https://example.com/a']);
+
+    expect(listedIds(['search' => '0']))->toBe([$hit->id]);
+});

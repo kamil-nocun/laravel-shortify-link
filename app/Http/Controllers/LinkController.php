@@ -26,7 +26,7 @@ class LinkController extends Controller
         $filters = $request->safe()->only(['search', 'status', 'domain']) + ['search' => null, 'status' => null, 'domain' => null];
 
         $links = $request->user()->links()->with('domain')->withCount('clicks')->latest()
-            ->when($filters['search'], fn ($query, string $search) => $query->matching($search))
+            ->when(filled($filters['search']), fn ($query) => $query->matching($filters['search']))
             ->when($filters['status'], fn ($query, string $status) => $query->withStatus(LinkStatus::from($status)))
             ->when($filters['domain'], fn ($query, string $domain) => $domain === 'main' ? $query->whereNull('domain_id') : $query->where('domain_id', $domain));
 
@@ -46,7 +46,7 @@ class LinkController extends Controller
     {
         Gate::authorize('create', Link::class);
 
-        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host']), 'canSetAlias' => $request->user()->allowsCustomAlias()]);
+        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host']), 'canSetAlias' => $request->user()->allowsCustomAlias(), 'mainHost' => parse_url(config('app.url'), PHP_URL_HOST).(parse_url(config('app.url'), PHP_URL_PORT) ? ':'.parse_url(config('app.url'), PHP_URL_PORT) : '')]);
     }
 
     /**
