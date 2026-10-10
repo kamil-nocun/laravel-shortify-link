@@ -170,3 +170,42 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer components {
+    .cms-content {
+        & h1,
+        & h2,
+        & h3,
+        & h4 {
+            @apply mt-6 mb-3 font-semibold;
+        }
+        & h2 {
+            @apply text-2xl;
+        }
+        & h3 {
+            @apply text-xl;
+        }
+        & p,
+        & ul,
+        & ol,
+        & blockquote,
+        & pre {
+            @apply my-3;
+        }
+        & ul {
+            @apply list-disc pl-6;
+        }
+        & ol {
+            @apply list-decimal pl-6;
+        }
+        & a {
+            @apply underline;
+        }
+        & blockquote {
+            @apply border-l-4 pl-4 opacity-80;
+        }
+        & code {
+            @apply rounded bg-muted px-1 font-mono text-sm;
+        }
+    }
+}

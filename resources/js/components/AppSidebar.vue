@@ -3,6 +3,7 @@ import { Link, usePage } from "@inertiajs/vue3";
 import {
     BookOpen,
     CreditCard,
+    FileText,
     Globe,
     LayoutDashboard,
     FolderGit2,
@@ -32,6 +33,7 @@ import { dashboard } from "@/routes";
 import { dashboard as adminDashboard } from "@/routes/admin";
 import { index as administratorsIndex } from "@/routes/admin/administrators";
 import { index as packagesIndex } from "@/routes/admin/packages";
+import { index as pagesIndex } from "@/routes/admin/pages";
 import { index as rolesIndex } from "@/routes/admin/roles";
 import { show as billingPackage } from "@/routes/billing/package";
 import { index as usersIndex } from "@/routes/admin/users";
@@ -62,6 +64,12 @@ const mainNavItems = computed<NavItem[]>(() =>
             href: packagesIndex(),
             icon: Package,
             visible: isAdminMode.value && can("packages.manage"),
+        },
+        {
+            title: "Pages",
+            href: pagesIndex(),
+            icon: FileText,
+            visible: isAdminMode.value && can("pages.manage"),
         },
         {
             title: "Roles",

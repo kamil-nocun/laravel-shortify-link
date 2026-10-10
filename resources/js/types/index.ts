@@ -4,3 +4,4 @@ export * from './ui';
 export * from './link';
 export * from './package';
 export * from './role';
+export * from './page';
