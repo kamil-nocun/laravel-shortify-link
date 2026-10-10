@@ -180,6 +180,7 @@ defineOptions({
                         <th class="p-3">Title</th>
                         <th class="p-3">Target URL</th>
                         <th class="p-3">Short URL</th>
+                        <th class="p-3">Alias URL</th>
                         <th class="p-3">Clicks</th>
                         <th class="p-3">Status</th>
                         <th class="p-3">Expires</th>
@@ -198,12 +199,9 @@ defineOptions({
                         </td>
                         <td class="p-3 font-mono">
                             {{ link.short_url }}
-                            <div
-                                v-if="link.alias_url"
-                                class="text-xs text-muted-foreground"
-                            >
-                                {{ link.alias_url }}
-                            </div>
+                        </td>
+                        <td class="p-3 font-mono">
+                            {{ link.alias_url ?? '—' }}
                         </td>
                         <td class="p-3">{{ link.clicks_count ?? 0 }}</td>
                         <td class="p-3">
