@@ -8,7 +8,7 @@ Poza zakresem: PNG (wymaga rozszerzenia `gd` lub `imagick`), własne kolory i lo
 
 ## Decyzje
 
-- **Obraz QR generuje backend** (`chillerlan/php-qrcode`, nowa zależność composer zatwierdzona przez użytkownika). Odrzucone: biblioteka npm po stronie frontendu oraz `bacon/qr-code`.
+- **Obraz QR generuje backend** (`chillerlan/php-qrcode`, nowa zależność composer zatwierdzona przez użytkownika). Odrzucone: biblioteka npm po stronie frontendu oraz `bacon/qr-code`. Wymóg projektu: zewnętrzne biblioteki mają być na licencji MIT; `chillerlan/php-qrcode` 6.x jest wydane na MIT lub Apache-2.0 (do wyboru), więc spełnia wymóg.
 - **Tylko SVG.** Nie wymaga rozszerzeń PHP, jest skalowalny. Obrazu nie zapisujemy ani nie cache'ujemy, bo generowanie jest tanie.
 - **Osobny kod QR dla kodu i dla aliasu.** Każdy koduje własny adres.
 - **Skany liczymy w osobnej kolumnie `source`**, niezależnej od `entry` (Code/Alias). Dzięki temu skan QR zachowuje informację, którym adresem wszedł odwiedzający, a w statystykach działa osobna sekcja "Source". Odrzucone: dodatkowe wartości `entry` ("QR Code", "QR Alias") oraz kolumna boolean (raport grupuje po tekście).
