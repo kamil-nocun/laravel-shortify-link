@@ -15,6 +15,7 @@ void createInertiaApp({
             case name.startsWith('content/'):
                 return null;
             case name.startsWith('auth/'):
+            case name.startsWith('consent/'):
             case name.startsWith('errors/'):
                 return AuthLayout;
             case name.startsWith('settings/'):

@@ -8,17 +8,6 @@ use App\Models\UserConsent;
 use App\Support\ConsentDocuments;
 use Illuminate\Database\QueryException;
 
-function documentPage(string $slug, bool $published = true, bool $withVersion = true): Page
-{
-    $page = Page::factory()->create(['slug' => $slug, 'status' => $published ? 'published' : 'draft']);
-
-    if ($withVersion) {
-        app(SavePageVersion::class)($page, ucfirst($slug), '<p>Text</p>', null);
-    }
-
-    return $page->fresh();
-}
-
 test('current returns the current versions of published required pages only', function () {
     $terms = documentPage('terms');
     documentPage('privacy-policy', published: false);

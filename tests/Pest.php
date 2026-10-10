@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\SavePageVersion;
+use App\Models\Page;
 use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -56,4 +58,18 @@ function something()
 function roleId(string $name): string
 {
     return Role::where('name', $name)->value('id');
+}
+
+/**
+ * A CMS page with one version, published or in draft.
+ */
+function documentPage(string $slug, bool $published = true, bool $withVersion = true): Page
+{
+    $page = Page::factory()->create(['slug' => $slug, 'status' => $published ? 'published' : 'draft']);
+
+    if ($withVersion) {
+        app(SavePageVersion::class)($page, ucfirst($slug), '<p>Text</p>', null);
+    }
+
+    return $page->fresh();
 }

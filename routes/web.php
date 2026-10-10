@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\UserPackageController;
 use App\Http\Controllers\Admin\UserPermissionController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\ConsentController;
 use App\Http\Controllers\ContentPageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomainCheckController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\LinkStatsController;
 use App\Http\Controllers\LinkToggleController;
 use App\Http\Controllers\RedirectLinkController;
 use App\Http\Middleware\EnsureAccountIsNotBlocked;
+use App\Http\Middleware\EnsureConsentsAccepted;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Session\Middleware\StartSession;
@@ -37,6 +39,11 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 Route::inertia('/', 'FrontApp')->name('front_app');
+
+Route::middleware('auth')->group(function () {
+    Route::get('consent', [ConsentController::class, 'show'])->name('consent.show');
+    Route::post('consent', [ConsentController::class, 'store'])->name('consent.store');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -88,6 +95,7 @@ require __DIR__.'/settings.php';
 Route::get('internal/domain-check', DomainCheckController::class)->name('domains.check')
     ->withoutMiddleware([
         EnsureAccountIsNotBlocked::class,
+        EnsureConsentsAccepted::class,
         StartSession::class,
         AddQueuedCookiesToResponse::class,
         ShareErrorsFromSession::class,
@@ -99,6 +107,7 @@ Route::get('content/{slug}', ContentPageController::class)->where('slug', '[a-z0
 Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z_-]+')->name('links.redirect')
     ->withoutMiddleware([
         EnsureAccountIsNotBlocked::class,
+        EnsureConsentsAccepted::class,
         StartSession::class,
         AddQueuedCookiesToResponse::class,
         ShareErrorsFromSession::class,

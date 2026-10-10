@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\PageVersion;
+use App\Support\ConsentDocuments;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class ConsentController extends Controller
+{
+    /**
+     * Show the documents the user still has to accept.
+     */
+    public function show(Request $request): Response|RedirectResponse
+    {
+        $pending = ConsentDocuments::pendingFor($request->user());
+
+        if ($pending->isEmpty()) {
+            return to_route('dashboard');
+        }
+
+        return Inertia::render('consent/Show', [
+            'documents' => $pending->map(fn (PageVersion $version): array => [
+                'id' => $version->id,
+                'title' => $version->title,
+                'slug' => $version->page->slug,
+            ])->all(),
+        ]);
+    }
+
+    /**
+     * Record the acceptance of the current documents.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        ConsentDocuments::accept($request->user());
+
+        return redirect()->intended(route('dashboard'));
+    }
+}
