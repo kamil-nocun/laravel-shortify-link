@@ -90,6 +90,7 @@ test('sections can request only entries and invalid input is rejected', function
 
     entryData($this->user, $this->link, ['sort' => ['entries' => 'bogus']])->assertJsonValidationErrors('sort.entries');
     entryData($this->user, $this->link, ['entries_per_page' => 7])->assertJsonValidationErrors('entries_per_page');
+    entryData($this->user, $this->link, ['entries_page' => 0])->assertJsonValidationErrors('entries_page');
 });
 
 test('admin stats of another user link include entries', function () {

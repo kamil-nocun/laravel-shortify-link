@@ -95,9 +95,9 @@
 
 - [ ] **Step 1: Typy** — w `link.ts` dodaj `'entry'` do `StatsFilterKey`, `'entries'` do `StatsTableKey`, `entries: string[]` do `StatsOptions`; pozostałe rekordy typów (`StatsFilters`, `StatsSorts`) obejmą nowy klucz przez te unie.
 
-- [ ] **Step 2: `Stats.vue`** — dodaj `entries` do propsów, `tableKeys` (po `devices`), `tableLabels` ("Short URL"), `tableTitles` ("Short URL used"), stanu `tables`, listy `filterFields` (`key: 'entry'`, etykieta "Short URL", opcje `options.value.entries`) i wartości początkowej `filters` (`entry: null`), tak aby karta renderowała się jak pozostałe (wykres kołowy / tabela, klik w wiersz ustawia filtr `entry`, czyszczenie filtra, zmiana filtra odświeża pozostałe sekcje).
+- [ ] **Step 2: `Stats.vue`** — dodaj `entries` do propsów, `tableKeys` (po `devices`), `tableLabels` ("Short URL"), `tableTitles` ("Short URL used"), stanu `tables`, listy `filterFields` (`key: 'entry'`, etykieta "Short URL", opcje `options.value.entries`) i wartości początkowej `filters` (`entry: null`), tak aby karta renderowała się jak pozostałe (wykres kołowy / tabela, wybór `entry` w liście filtrów, czyszczenie filtra, zmiana filtra odświeża pozostałe sekcje).
 
-- [ ] **Step 3: Weryfikacja** — `npm run build`; `npm run types:check` bez nowych błędów w zmienionych plikach; `grep` potwierdza, że każde użyte API Vue jest zaimportowane; `php artisan test --compact tests/Feature/LinkStatsEntryTest.php`. Kontrola w przeglądarce jest po stronie użytkownika (implementer nie ma przeglądarki): strona statystyk linku z kliknięciami przez kod i alias pokazuje kartę, klik w wiersz filtruje resztę; ta sama karta na stronie admina.
+- [ ] **Step 3: Weryfikacja** — `npm run build`; `npm run types:check` bez nowych błędów w zmienionych plikach; `grep` potwierdza, że każde użyte API Vue jest zaimportowane; `php artisan test --compact tests/Feature/LinkStatsEntryTest.php`. Kontrola w przeglądarce jest po stronie użytkownika (implementer nie ma przeglądarki): strona statystyk linku z kliknięciami przez kod i alias pokazuje kartę, wybór filtra Short URL zawęża resztę; ta sama karta na stronie admina.
 
 - [ ] **Step 4: Commit** — `Show the Short URL used card on the link statistics page`.
 

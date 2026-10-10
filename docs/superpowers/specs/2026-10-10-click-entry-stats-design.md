@@ -4,7 +4,7 @@
 
 Link ma standardowy kod i opcjonalny alias, a oba przekierowują na ten sam cel (`2026-10-10-custom-alias-and-link-filters-design.md`). Statystyki liczą jednak kliknięcia tylko po `link_id`, więc nie widać, którym adresem wszedł odwiedzający.
 
-Cel: na stronie statystyk linku (użytkownika i admina) pojawia się nowy podział "Short URL used": ile kliknięć przyszło przez **kod**, a ile przez **alias**. Podział działa tak jak pozostałe (tabela lub wykres kołowy, sortowanie, paginacja, filtrowanie po kliknięciu wiersza, opcje filtrów) i łączy się z istniejącymi filtrami i okresem.
+Cel: na stronie statystyk linku (użytkownika i admina) pojawia się nowy podział "Short URL used": ile kliknięć przyszło przez **kod**, a ile przez **alias**. Podział działa tak jak pozostałe (tabela lub wykres kołowy, sortowanie, paginacja, filtr (lista wyboru), opcje filtrów) i łączy się z istniejącymi filtrami i okresem.
 
 Poza zakresem: podział po konkretnych wartościach aliasu (kliknięcia przez wcześniejsze aliasy łączą się w "Alias"), statystyki zbiorcze panelu admina (`AdminStatsReport`), uzupełnianie starych kliknięć.
 
@@ -36,7 +36,7 @@ W `LinkStatsReport` i `LinkStatsRequest` dochodzi sekcja `entries` według istni
 
 ## Interfejs
 
-`links/Stats.vue` i typy w `resources/js/types/link.ts`: nowy klucz tabeli `entries` ("Short URL used", etykieta kolumny "Short URL"), nowy filtr `entry` oraz opcje `entries`. Karta wygląda i zachowuje się jak karty przeglądarek i systemów (`StatsTable`, wykres kołowy / tabela, klik w wiersz ustawia filtr, czyszczenie filtra). Strona admina korzysta z tego samego komponentu.
+`links/Stats.vue` i typy w `resources/js/types/link.ts`: nowy klucz tabeli `entries` ("Short URL used", etykieta kolumny "Short URL"), nowy filtr `entry` oraz opcje `entries`. Karta wygląda i zachowuje się jak karty przeglądarek i systemów (`StatsTable`, wykres kołowy / tabela, filtr wybierany z listy, czyszczenie filtra). Strona admina korzysta z tego samego komponentu.
 
 ## Testy (Pest, feature)
 
