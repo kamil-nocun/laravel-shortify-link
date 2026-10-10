@@ -72,6 +72,13 @@ test('roles manager creates a role with permissions', function () {
         ->and($role->permissions()->pluck('key')->sort()->values()->all())->toBe(['admin.access', 'users.view']);
 });
 
+test('role description may be up to 1000 characters long', function () {
+    $this->actingAs($this->super)->post(route('admin.roles.store'), ['name' => 'Support', 'description' => str_repeat('a', 1000), 'permissions' => []])
+        ->assertSessionHasNoErrors();
+
+    expect(mb_strlen(Role::where('name', 'Support')->value('description')))->toBe(1000);
+});
+
 test('roles manager updates a role and syncs its permissions', function () {
     $role = roleGranting([Permission::LinksManage, Permission::LinksStats]);
 
