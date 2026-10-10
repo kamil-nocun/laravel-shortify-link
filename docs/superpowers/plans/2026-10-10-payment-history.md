@@ -2,7 +2,7 @@
 
 > **Dla agentów wykonawczych:** WYMAGANY SUB-SKILL: użyj superpowers:subagent-driven-development (zalecane) albo superpowers:executing-plans, żeby wykonać plan zadanie po zadaniu. Kroki używają checkboxów (`- [ ]`).
 
-**Cel:** Zastąpić okres `one_time` okresem `monthly`, a potem zapisywać faktury Stripe w tabeli `payments` i pokazywać historię płatności zgodnie z zakresem widoczności ról.
+**Cel:** Nazwać okres `one_time` jednorazową płatnością za jeden miesiąc, a potem zapisywać faktury Stripe w tabeli `payments` i pokazywać historię płatności zgodnie z zakresem widoczności ról.
 
 **Architektura:** Listener na `WebhookReceived` robi upsert faktur do `payments` (klucz `stripe_invoice_id`, ochrona przed starszymi zdarzeniami przez `stripe_event_at`). Komenda `payments:backfill` zasila tabelę tym samym mapperem przez `PackageBilling::invoicesFor`. Link „Pay invoice” pochodzi z tabeli, a gdy go brak przy oczekującej płatności, z fallbacku `pendingInvoiceUrl`.
 
@@ -32,32 +32,25 @@
 - Starsze zdarzenie (mniejszy `stripe_event_at`) nie cofa statusu faktury (Zadanie 3).
 - Faktura na 0 zł i szkic nie trafiają do `payments` (Zadanie 3).
 - Faktura nieznanego klienta lub ceny nie zwraca 500 i nic nie zapisuje (Zadanie 3).
-- Istniejące przypisania `one_time` po migracji mają `monthly` i zachowują daty (Zadanie 1).
+- Okres `one_time` w historii płatności ma etykietę „One month (single payment)” i nie jest odnawiany (Zadania 1, 5).
 - Użytkownik nie widzi historii cudzego konta ani linków do cudzych płatności; administrator widzi tylko klientów z `manages` (Zadanie 5).
 - Konto bez oczekującej płatności nie wywołuje Stripe przy wejściu na stronę (Zadanie 5).
 
 ---
 
-### Zadanie 1: Usunięcie okresu `one_time`
+### Zadanie 1: Etykieta okresu jednorazowego
 
 **Files:**
-- Create: migracja `remove_one_time_billing_period`
-- Modify: `app/Enums/BillingPeriod.php`, `app/Models/Package.php`, `app/Http/Requests/Admin/StorePackageRequest.php`, `app/Billing/PackageBilling.php` (opis), `app/Billing/StripePackageBilling.php`, `app/Billing/ProjectStripeEvents.php`, `database/factories/PackageFactory.php`, `resources/js/types/package.ts`, `resources/js/components/PackageForm.vue`, `resources/js/pages/admin/packages/Index.vue`
-- Test: `tests/Feature/PackageModelTest.php`, `tests/Feature/StripeWebhookTest.php`, `tests/Feature/Admin/UserPackageAssignmentTest.php`, `tests/Feature/PackageStripeSyncTest.php`, nowy `tests/Feature/RemoveOneTimePeriodMigrationTest.php`
+- Modify: `resources/js/types/package.ts`, `resources/js/pages/admin/packages/Index.vue`, `resources/js/components/PackageForm.vue`
+- Test: `tests/Feature/PackageModelTest.php`
 
 **Interfaces:**
-- Produces:
-  - `enum BillingPeriod` bez `OneTime`; zostają `Monthly`, `Quarterly`, `Yearly`; `expiresAt` bez gałęzi jednorazowej.
-  - `packages` bez kolumn `price_one_time` i `stripe_price_id_one_time`; `Package::$fillable` i `@property` bez nich.
-  - `PackageBilling::invoice` i `StripePackageBilling::checkout` tworzą wyłącznie subskrypcje (bez gałęzi `invoiceItems`/`invoice_creation`); `priceParameters` zawsze zwraca `recurring`.
-  - `ProjectStripeEvents::applyPaidInvoice` ustawia `expires_at` zawsze z `period.end` linii faktury.
+- Produces: `billingPeriodLabels.one_time === 'One month (single payment)'`; nagłówek kolumny w `admin/packages/Index.vue` i etykieta pola w `PackageForm.vue` używają tej samej etykiety. Wartość `one_time`, enum `BillingPeriod::OneTime`, kolumny i dane w bazie bez zmian.
 
-- [ ] **Krok 1: Napisz testy.** `RemoveOneTimePeriodMigrationTest`: przed uruchomieniem migracji (test wywołuje jej `up()` na danych wstawionych ręcznie przez DB) pakiet z `price_one_time = 4900` i `price_monthly = null` ma po niej `price_monthly = 4900`; pakiet z obiema cenami zachowuje starą `price_monthly`; przypisanie `one_time` ma `monthly` i niezmienione `starts_at`/`expires_at`. Zaktualizuj istniejące testy: `PackageModelTest` bez `OneTime`, `StripeWebhookTest` bez przypadku jednorazowego (zamiast niego test, że `expires_at` pochodzi z `period.end`), `UserPackageAssignmentTest` z dataset `['monthly']` i `available_periods === ['monthly']`.
-- [ ] **Krok 2: Uruchom** `php artisan test --compact tests/Feature/RemoveOneTimePeriodMigrationTest.php tests/Feature/PackageModelTest.php`. Oczekiwane: FAIL.
-- [ ] **Krok 3: Zaimplementuj** migrację (`up`: kopiuje `price_one_time` do `price_monthly` gdzie ta jest pusta, ustawia `billing_period = 'monthly'` w `package_assignments` dla `one_time`, usuwa obie kolumny; `down` przywraca puste kolumny) oraz zmiany z bloku Interfaces. W UI usuń kolumnę i pole „One-time” oraz wpis w `billingPeriodLabels`.
-- [ ] **Krok 4: Uruchom** `php artisan migrate --no-interaction`, `php artisan test --compact`, `npm run types:check`, `npm run build`. Oczekiwane: PASS.
-- [ ] **Krok 5: Ponowna synchronizacja ze Stripe** (jednorazowo, ręcznie, wymaga kluczy testowych): zapisz każdy płatny pakiet w panelu albo wywołaj `syncPackage`, żeby przeniesione ceny miesięczne dostały Price. Oczekiwane: `stripe_price_id_monthly` ustawione dla pakietów z ceną miesięczną.
-- [ ] **Krok 6: Commit** `Replace one-time billing period with monthly`.
+- [ ] **Krok 1: Napisz test** w `PackageModelTest`: `BillingPeriod::OneTime->expiresAt(Carbon::parse('2026-01-31'))` daje `2026-02-28` (miesiąc kalendarzowy bez przepełnienia; sprawdź, czy test już istnieje, i nie duplikuj) oraz dopisz asercję, że okres jednorazowy nie jest cykliczny (nie ma Price z `recurring`: test `StripePackageBilling::priceParameters` jest pokryty w `PackageStripeSyncTest`, więc tu bez zmian).
+- [ ] **Krok 2: Zmień etykiety** w trzech plikach frontendu zgodnie z blokiem Interfaces.
+- [ ] **Krok 3: Uruchom** `php artisan test --compact tests/Feature/PackageModelTest.php`, `npm run types:check`, `npm run build`. Oczekiwane: PASS.
+- [ ] **Krok 4: Commit** `Label the one-time period as a single one-month payment`.
 
 ### Zadanie 2: Tabela i model `payments`
 
@@ -148,6 +141,6 @@
 
 ## Samoocena planu
 
-- Pokrycie speca: zmiana wstępna (Z1), model danych (Z2), webhooki i idempotencja po czasie zdarzenia (Z3), backfill (Z4), widoki, zakres ról i fallback linku (Z5), weryfikacja (Z6). Poza zakresem: zwroty, windykacja, PDF.
+- Pokrycie speca: etykieta okresu jednorazowego (Z1), model danych (Z2), webhooki i idempotencja po czasie zdarzenia (Z3), backfill (Z4), widoki, zakres ról i fallback linku (Z5), weryfikacja (Z6). Poza zakresem: zwroty, windykacja, PDF.
 - Spójność nazw: `RecordInvoicePayment::fromInvoice`, `Package::findByStripePrice`, `PackageBilling::invoicesFor`, `PackagePageData::{paymentsFor,invoiceUrlFor}`, `PaymentStatus`, `stripe_event_at` użyte jednolicie.
-- Zadanie 1 zmienia dane produkcyjne (przypisania i ceny); jest odwracalne tylko częściowo (`down` przywraca puste kolumny, nie wartości).
+- Okres jednorazowy zostaje bez zmian w danych; Zadanie 1 zmienia tylko etykietę w interfejsie.
