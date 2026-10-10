@@ -75,3 +75,7 @@ test('summary state has no city and a day start time', function () {
         ->and($click->city)->toBeNull()
         ->and($click->clicked_at->equalTo($click->clicked_at->copy()->startOfDay()))->toBeTrue();
 });
+
+test('an index supports the daily aggregation range scans', function () {
+    expect(collect(Schema::getIndexes('link_statistics'))->pluck('name'))->toContain('link_statistics_clicked_at_is_summary_index');
+});

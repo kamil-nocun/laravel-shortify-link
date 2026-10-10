@@ -87,6 +87,7 @@ require __DIR__.'/settings.php';
 
 Route::get('internal/domain-check', DomainCheckController::class)->name('domains.check')
     ->withoutMiddleware([
+        EnsureAccountIsNotBlocked::class,
         StartSession::class,
         AddQueuedCookiesToResponse::class,
         ShareErrorsFromSession::class,

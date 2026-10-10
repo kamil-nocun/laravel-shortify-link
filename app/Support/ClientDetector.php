@@ -10,6 +10,8 @@ class ClientDetector
 {
     public const BOT = 'bot';
 
+    public const UNKNOWN = ['browser' => null, 'os' => null, 'device_type' => null];
+
     /**
      * The parser rules are expensive to load, so a cache keeps them across requests.
      */
@@ -22,7 +24,7 @@ class ClientDetector
      */
     public function detect(?string $userAgent): array
     {
-        $unknown = ['browser' => null, 'os' => null, 'device_type' => null];
+        $unknown = self::UNKNOWN;
 
         if ($userAgent === null || trim($userAgent) === '') {
             return $unknown;

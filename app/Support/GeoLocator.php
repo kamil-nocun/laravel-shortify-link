@@ -10,6 +10,8 @@ use MaxMind\Db\Reader\InvalidDatabaseException;
 
 class GeoLocator
 {
+    public const UNKNOWN = ['country_code' => null, 'country' => null, 'city' => null];
+
     private ?Reader $reader = null;
 
     /**
@@ -19,7 +21,7 @@ class GeoLocator
      */
     public function locate(string $ip): array
     {
-        $unknown = ['country_code' => null, 'country' => null, 'city' => null];
+        $unknown = self::UNKNOWN;
 
         if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
             return $unknown;

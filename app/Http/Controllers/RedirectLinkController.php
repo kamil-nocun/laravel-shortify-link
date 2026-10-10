@@ -23,8 +23,8 @@ class RedirectLinkController extends Controller
         RecordLinkClick::dispatch(
             $link->id,
             now(),
-            $geoLocator->locate((string) $request->ip()),
-            $clientDetector->detect($request->userAgent()),
+            rescue(fn () => $geoLocator->locate((string) $request->ip()), GeoLocator::UNKNOWN),
+            rescue(fn () => $clientDetector->detect($request->userAgent()), ClientDetector::UNKNOWN),
             $link->code === $code ? LinkEntry::Code : LinkEntry::Alias,
             $request->boolean('qr') ? LinkSource::Qr : LinkSource::Link,
         );

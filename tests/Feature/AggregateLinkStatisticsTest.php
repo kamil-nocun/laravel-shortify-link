@@ -3,7 +3,9 @@
 use App\Actions\AggregateDailyLinkStatistics;
 use App\Models\Link;
 use App\Models\LinkClick;
+use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     $this->freezeTime();
@@ -108,4 +110,64 @@ test('aggregation is scheduled daily at 00:10 without overlapping', function () 
     expect($event)->not->toBeNull()
         ->and($event->expression)->toBe('10 0 * * *')
         ->and($event->withoutOverlapping)->toBeTrue();
+});
+
+test('midnight boundaries split days exactly', function () {
+    clicksOnDay(now()->startOfDay());
+    clicksOnDay(now()->subDay()->startOfDay());
+    clicksOnDay(now()->subDay()->endOfDay()->startOfSecond());
+
+    expect(app(AggregateDailyLinkStatistics::class)())->toBe(1);
+
+    $raw = LinkClick::where('is_summary', false)->get();
+    $summary = LinkClick::where('is_summary', true)->sole();
+    expect($raw)->toHaveCount(1)
+        ->and($raw->first()->clicked_at->equalTo(now()->startOfDay()))->toBeTrue()
+        ->and($summary->clicks)->toBe(2)
+        ->and($summary->clicked_at->equalTo(now()->subDay()->startOfDay()))->toBeTrue();
+});
+
+test('a failing day rolls back alone and earlier days stay summarised', function () {
+    clicksOnDay(now()->subDays(2), times: 2);
+    clicksOnDay(now()->subDay(), times: 3);
+
+    $inserts = 0;
+    DB::listen(function ($query) use (&$inserts) {
+        if (str_starts_with($query->sql, 'insert into `link_statistics`') && ++$inserts === 2) {
+            throw new RuntimeException('boom');
+        }
+    });
+
+    expect(fn () => app(AggregateDailyLinkStatistics::class)())->toThrow(RuntimeException::class);
+
+    expect(LinkClick::where('is_summary', true)->sole()->clicks)->toBe(2)
+        ->and(LinkClick::where('is_summary', false)->count())->toBe(3);
+});
+
+test('reports are identical before and after aggregation', function () {
+    $owner = $this->link->user;
+    $nulls = ['city' => null];
+    clicksOnDay(now()->subDays(3), ['country' => 'Poland', 'country_code' => 'PL', 'browser' => 'Chrome', ...$nulls], times: 3);
+    clicksOnDay(now()->subDays(2), ['country' => 'Germany', 'country_code' => 'DE', 'browser' => 'Firefox', 'source' => 'QR', ...$nulls], times: 2);
+    clicksOnDay(now()->subDay(), ['country' => 'Poland', 'country_code' => 'PL', 'browser' => 'Firefox', ...$nulls]);
+
+    $report = fn () => collect($this->actingAs($owner)->getJson(route('links.stats.data', [$this->link, 'period' => '30d']))->assertOk()->json())->except(['cities'])->all();
+    $admin = fn () => $this->actingAs(User::factory()->superAdmin()->create())->get(route('admin.dashboard', ['period' => '30d']))->viewData('page')['props'];
+
+    $before = $report();
+    $adminBefore = collect($admin())->only(['total', 'series', 'topLinks'])->all();
+
+    app(AggregateDailyLinkStatistics::class)();
+
+    expect($report())->toBe($before)
+        ->and(collect($admin())->only(['total', 'series', 'topLinks'])->all())->toBe($adminBefore);
+});
+
+test('the grouping read takes a shared lock', function () {
+    clicksOnDay(now()->subDay());
+    DB::enableQueryLog();
+
+    app(AggregateDailyLinkStatistics::class)();
+
+    expect(collect(DB::getQueryLog())->pluck('query')->contains(fn (string $sql) => str_contains($sql, 'group by') && str_contains($sql, 'lock in share mode')))->toBeTrue();
 });

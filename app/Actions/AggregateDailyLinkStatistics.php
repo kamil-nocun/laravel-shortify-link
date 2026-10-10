@@ -34,23 +34,22 @@ class AggregateDailyLinkStatistics
     /**
      * Replace the rows of one day with one summary row per dimension set.
      *
-     * ponytail: a click saved after the grouping read but before the delete is lost; queue lag across the 00:10 run is the only way to hit it.
+     * The grouping read takes a shared lock, so a click for this day is either counted or waits until the day is replaced.
      */
     private function summarise(CarbonImmutable $start): void
     {
         $day = fn () => LinkClick::query()->where('clicked_at', '>=', $start)->where('clicked_at', '<', $start->addDay());
 
-        $summaries = $day()->select(self::DIMENSIONS)->selectRaw('sum(clicks) as clicks')->groupBy(self::DIMENSIONS)->get();
+        $summaries = $day()->select(self::DIMENSIONS)->selectRaw('sum(clicks) as clicks')->groupBy(self::DIMENSIONS)->sharedLock()->get();
 
         $day()->delete();
 
-        foreach ($summaries as $summary) {
-            LinkClick::create([
-                ...$summary->only(self::DIMENSIONS),
-                'clicks' => (int) $summary->clicks,
-                'is_summary' => true,
-                'clicked_at' => $start,
-            ]);
-        }
+        $summaries->chunk(500)->each(fn ($chunk) => LinkClick::query()->insert($chunk->map(fn (LinkClick $summary): array => [
+            'id' => (new LinkClick)->newUniqueId(),
+            ...$summary->only(self::DIMENSIONS),
+            'clicks' => (int) $summary->clicks,
+            'is_summary' => true,
+            'clicked_at' => $start,
+        ])->all()));
     }
 }

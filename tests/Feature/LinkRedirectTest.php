@@ -173,3 +173,18 @@ test('redirect without a qr marker records the Link source', function (string $q
 
     Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->source === LinkSource::Link);
 })->with(['no parameter' => '', 'qr=0' => '?qr=0', 'qr=abc' => '?qr=abc']);
+
+test('a failing client detector or geo lookup never breaks the redirect', function () {
+    Queue::fake();
+    $detector = Mockery::mock(ClientDetector::class);
+    $detector->shouldReceive('detect')->andThrow(new RuntimeException('parser failed'));
+    app()->instance(ClientDetector::class, $detector);
+    $geoLocator = Mockery::mock(GeoLocator::class);
+    $geoLocator->shouldReceive('locate')->andThrow(new RuntimeException('database failed'));
+    app()->instance(GeoLocator::class, $geoLocator);
+    $link = Link::factory()->create();
+
+    $this->get(route('links.redirect', $link->code))->assertRedirect($link->original_url);
+
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->client === ClientDetector::UNKNOWN && $job->location === GeoLocator::UNKNOWN);
+});

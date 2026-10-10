@@ -2,6 +2,7 @@
 
 use App\Models\Domain;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 beforeEach(function () {
     config(['shortify.domain_check_secret' => 'proxy-secret']);
@@ -60,4 +61,17 @@ test('a verified domain of a blocked owner returns 404', function () {
     Domain::factory()->verified()->for(User::factory()->blocked())->create(['host' => 'links.example.com']);
 
     checkDomain('links.example.com')->assertNotFound();
+});
+
+test('a blocked user with a remember cookie does not break the check', function () {
+    Domain::factory()->verified()->create(['host' => 'links.example.com']);
+    $user = User::factory()->create();
+    $recaller = Auth::guard('web')->getRecallerName();
+    $cookie = $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password', 'remember' => true])->getCookie($recaller, false);
+    $user->forceFill(['blocked_at' => now()])->save();
+    Auth::guard('web')->forgetUser();
+
+    $this->flushSession()->withUnencryptedCookie($recaller, $cookie->getValue());
+
+    checkDomain('links.example.com')->assertOk();
 });

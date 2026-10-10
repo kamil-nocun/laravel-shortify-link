@@ -42,7 +42,7 @@ class AdminStatsReport
         $activeLinks = (clone $links)->active()->count();
 
         $topLinks = $inRange()
-            ->select('links.id', 'links.title', 'links.code')->selectRaw('sum(clicks) as clicks')
+            ->select('links.id', 'links.title', 'links.code')->selectRaw('sum(link_statistics.clicks) as clicks')
             ->groupBy('links.id', 'links.title', 'links.code')
             ->orderByDesc('clicks')->limit(self::TOP_LIMIT)->get()
             ->map(fn ($row): array => ['id' => $row->id, 'title' => $row->title, 'code' => $row->code, 'clicks' => (int) $row->clicks])
@@ -50,7 +50,7 @@ class AdminStatsReport
 
         $topUsers = $user !== null ? [] : $inRange()
             ->join('users', 'users.id', '=', 'links.user_id')
-            ->select('users.id', 'users.name', 'users.email')->selectRaw('sum(clicks) as clicks')
+            ->select('users.id', 'users.name', 'users.email')->selectRaw('sum(link_statistics.clicks) as clicks')
             ->groupBy('users.id', 'users.name', 'users.email')
             ->orderByDesc('clicks')->limit(self::TOP_LIMIT)->get()
             ->map(fn ($row): array => ['id' => $row->id, 'name' => $row->name, 'email' => $row->email, 'clicks' => (int) $row->clicks])
