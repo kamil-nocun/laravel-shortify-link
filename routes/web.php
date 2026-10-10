@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\UserPackageController;
 use App\Http\Controllers\Admin\UserPermissionController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\ContentPageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomainCheckController;
 use App\Http\Controllers\DomainController;
@@ -90,5 +91,7 @@ Route::get('internal/domain-check', DomainCheckController::class)->name('domains
         ShareErrorsFromSession::class,
         PreventRequestForgery::class,
     ]);
+
+Route::get('content/{slug}', ContentPageController::class)->where('slug', '[a-z0-9-]+')->name('content.show');
 
 Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z_-]+')->name('links.redirect');
