@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import InputError from '@/components/InputError.vue';
-import PasswordInput from '@/components/PasswordInput.vue';
-import TextLink from '@/components/TextLink.vue';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import { login } from '@/routes';
-import { show } from '@/routes/content';
-import { store } from '@/routes/register';
+import { Form, Head } from "@inertiajs/vue3";
+import InputError from "@/components/InputError.vue";
+import PasswordInput from "@/components/PasswordInput.vue";
+import TextLink from "@/components/TextLink.vue";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { login } from "@/routes";
+import { show } from "@/routes/content";
+import { store } from "@/routes/register";
 
 defineProps<{
     passwordRules: string;
@@ -19,8 +19,8 @@ defineProps<{
 
 defineOptions({
     layout: {
-        title: 'Create an account',
-        description: 'Enter your details below to create your account',
+        title: "Create an account",
+        description: "Enter your details below to create your account",
     },
 });
 </script>
@@ -100,15 +100,19 @@ defineOptions({
                     name="versions[]"
                     :value="document.id"
                 />
-                <div class="flex items-start gap-2">
+                <div class="flex items-start gap-3">
                     <Checkbox
                         id="accept_terms"
                         name="accept_terms"
                         value="1"
                         required
                         :tabindex="5"
+                        class="mt-0.5"
                     />
-                    <Label for="accept_terms" class="leading-normal">
+                    <Label
+                        for="accept_terms"
+                        class="block text-sm leading-normal font-normal text-muted-foreground"
+                    >
                         I accept
                         <template
                             v-for="(document, index) in consentDocuments"
@@ -118,7 +122,7 @@ defineOptions({
                                 :href="show(document.slug).url"
                                 target="_blank"
                                 rel="noopener"
-                                class="underline"
+                                class="font-medium text-foreground underline underline-offset-4"
                                 >{{ document.title }}</a
                             ><template
                                 v-if="index < consentDocuments.length - 1"
@@ -147,7 +151,7 @@ defineOptions({
             <TextLink
                 :href="login()"
                 class="underline underline-offset-4"
-                :tabindex="7"
+                tabindex="7"
                 >Log in</TextLink
             >
         </div>
