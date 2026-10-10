@@ -30,3 +30,22 @@ test('seeding twice neither duplicates pages nor overwrites edited content', fun
         ->and($page->fresh()->versions()->count())->toBe(2)
         ->and($page->fresh()->currentVersion->title)->toBe('Edited');
 });
+
+test('seeded documents are as long and structured as real legal texts', function (string $slug, int $sections, int $characters) {
+    $this->seed(LegalPagesSeeder::class);
+    $body = Page::firstWhere('slug', $slug)->currentVersion->body;
+
+    expect(substr_count($body, '<h2>'))->toBeGreaterThanOrEqual($sections)
+        ->and(mb_strlen(strip_tags($body)))->toBeGreaterThanOrEqual($characters);
+})->with([
+    'privacy policy' => ['privacy-policy', 10, 6000],
+    'cookies policy' => ['cookies-policy', 6, 3000],
+    'terms' => ['terms', 12, 7000],
+]);
+
+test('cookies policy lists cookies in a table and policies use lists', function () {
+    $this->seed(LegalPagesSeeder::class);
+
+    expect(Page::firstWhere('slug', 'cookies-policy')->currentVersion->body)->toContain('<table>', '<th>')
+        ->and(Page::firstWhere('slug', 'privacy-policy')->currentVersion->body)->toContain('<ul>', '<li>');
+});
