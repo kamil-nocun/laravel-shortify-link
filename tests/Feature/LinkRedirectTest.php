@@ -5,6 +5,8 @@ use App\Enums\LinkSource;
 use App\Jobs\RecordLinkClick;
 use App\Models\Link;
 use App\Models\User;
+use App\Support\ClientDetector;
+use App\Support\GeoLocator;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -87,33 +89,42 @@ test('refused redirects dispatch nothing', function (?string $state) {
     'unknown' => null,
 ]);
 
-test('redirect passes the user agent to the job', function () {
+test('redirect passes the detected client to the job', function () {
     Queue::fake();
+    $detector = Mockery::mock(ClientDetector::class);
+    $detector->shouldReceive('detect')->with('TestAgent/1.0')->andReturn(['browser' => 'Firefox', 'os' => 'Linux', 'device_type' => 'desktop']);
+    app()->instance(ClientDetector::class, $detector);
     $link = Link::factory()->create();
 
     $this->withHeader('User-Agent', 'TestAgent/1.0')->get(route('links.redirect', $link->code));
 
-    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->userAgent === 'TestAgent/1.0');
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->client === ['browser' => 'Firefox', 'os' => 'Linux', 'device_type' => 'desktop']);
 });
 
 test('forwarded ip is ignored unless proxies are trusted', function () {
     Queue::fake();
     config(['trustedproxy.proxies' => null]);
+    $geoLocator = Mockery::mock(GeoLocator::class);
+    $geoLocator->shouldReceive('locate')->with('127.0.0.1')->once()->andReturn(['country_code' => 'PL', 'country' => 'Poland', 'city' => null]);
+    app()->instance(GeoLocator::class, $geoLocator);
     $link = Link::factory()->create();
 
     $this->withHeader('X-Forwarded-For', '89.64.0.1')->get(route('links.redirect', $link->code));
 
-    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->ip === '127.0.0.1');
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->location['country_code'] === 'PL');
 });
 
 test('forwarded ip is used when proxies are trusted', function () {
     Queue::fake();
     config(['trustedproxy.proxies' => '*']);
+    $geoLocator = Mockery::mock(GeoLocator::class);
+    $geoLocator->shouldReceive('locate')->with('89.64.0.1')->once()->andReturn(['country_code' => 'DE', 'country' => 'Germany', 'city' => null]);
+    app()->instance(GeoLocator::class, $geoLocator);
     $link = Link::factory()->create();
 
     $this->withHeader('X-Forwarded-For', '89.64.0.1')->get(route('links.redirect', $link->code));
 
-    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->ip === '89.64.0.1');
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->location['country_code'] === 'DE');
 });
 
 test('links disabled by an admin or owned by a blocked user return 404 and record nothing', function (string $scenario) {

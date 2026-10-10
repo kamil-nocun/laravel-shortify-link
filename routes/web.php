@@ -94,4 +94,10 @@ Route::get('internal/domain-check', DomainCheckController::class)->name('domains
 
 Route::get('content/{slug}', ContentPageController::class)->where('slug', '[a-z0-9-]+')->name('content.show');
 
-Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z_-]+')->name('links.redirect');
+Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z_-]+')->name('links.redirect')
+    ->withoutMiddleware([
+        StartSession::class,
+        AddQueuedCookiesToResponse::class,
+        ShareErrorsFromSession::class,
+        PreventRequestForgery::class,
+    ]);
