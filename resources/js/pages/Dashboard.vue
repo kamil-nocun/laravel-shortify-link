@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import ClicksChart from '@/components/ClicksChart.vue';
+import { Activity, Link2, MousePointerClick } from '@lucide/vue';
+import ClicksByDayTable from '@/components/ClicksByDayTable.vue';
 import Heading from '@/components/Heading.vue';
 import PackageCard from '@/components/PackageCard.vue';
 import PeriodSelector from '@/components/PeriodSelector.vue';
@@ -9,6 +10,7 @@ import StatCards from '@/components/StatCards.vue';
 import TopLinksTable from '@/components/TopLinksTable.vue';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
+import { periodLabel } from '@/lib/periodLabel';
 import { dashboard } from '@/routes';
 import { create as createLink, stats as linkStats } from '@/routes/links';
 import type {
@@ -32,12 +34,19 @@ const props = defineProps<{
 const { can } = usePermissions();
 
 const cards = computed(() => [
-    { label: 'Links', value: props.counters.links },
+    { label: 'Links', value: props.counters.links, icon: Link2 },
     {
-        label: 'Active / disabled links',
-        value: `${props.counters.activeLinks} / ${props.counters.disabledLinks}`,
+        label: 'Active links',
+        value: props.counters.activeLinks,
+        hint: `${props.counters.disabledLinks} disabled`,
+        icon: Activity,
     },
-    { label: 'Clicks', value: props.counters.clicks },
+    {
+        label: 'Clicks',
+        value: props.counters.clicks,
+        hint: periodLabel(props.period.period),
+        icon: MousePointerClick,
+    },
 ]);
 
 defineOptions({
@@ -64,16 +73,34 @@ defineOptions({
             </div>
         </div>
 
-        <StatCards :cards="cards" />
-
-        <p v-if="total === 0" class="text-sm text-muted-foreground">
-            No clicks in this period yet.
-        </p>
-        <ClicksChart v-else :series="series" :granularity="granularity" />
-
-        <div class="grid gap-6 md:grid-cols-2">
-            <TopLinksTable :links="topLinks" :href="linkStats" />
+        <div v-if="counters.links === 0" class="space-y-6">
+            <div class="rounded-lg border p-8 text-center">
+                <p class="text-lg font-medium">Create your first link</p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Shorten a URL and watch its clicks show up here.
+                </p>
+                <Button v-if="can('links.manage')" class="mt-4" as-child>
+                    <Link :href="createLink()">New link</Link>
+                </Button>
+            </div>
             <PackageCard v-if="package" :package="package" />
         </div>
+
+        <template v-else>
+            <StatCards :cards="cards" />
+
+            <div class="grid items-start gap-6 lg:grid-cols-3">
+                <ClicksByDayTable
+                    class="lg:col-span-2"
+                    :series="series"
+                    :granularity="granularity"
+                    :total="total"
+                />
+                <div class="space-y-6">
+                    <TopLinksTable :links="topLinks" :href="linkStats" />
+                    <PackageCard v-if="package" :package="package" />
+                </div>
+            </div>
+        </template>
     </div>
 </template>
