@@ -15,7 +15,7 @@ class DomainDisableController extends Controller
      */
     public function store(Domain $domain): RedirectResponse
     {
-        Gate::authorize('manageDomains', $domain->user);
+        Gate::authorize('disableDomains', $domain->user);
         $domain->forceFill(['disabled_by_admin_at' => now(), 'disabled_by' => auth()->id()])->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Domain disabled.')]);
@@ -28,7 +28,7 @@ class DomainDisableController extends Controller
      */
     public function destroy(Domain $domain): RedirectResponse
     {
-        Gate::authorize('manageDomains', $domain->user);
+        Gate::authorize('disableDomains', $domain->user);
         $domain->forceFill(['disabled_by_admin_at' => null, 'disabled_by' => null])->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Domain enabled.')]);

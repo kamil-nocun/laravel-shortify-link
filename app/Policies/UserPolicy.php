@@ -2,17 +2,34 @@
 
 namespace App\Policies;
 
+use App\Enums\Permission;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
 class UserPolicy
 {
     /**
+     * Determine whether the actor may list users.
+     */
+    public function viewAny(User $actor): bool
+    {
+        return $actor->hasPermission(Permission::UsersView);
+    }
+
+    /**
+     * Determine whether the actor may see the target's page.
+     */
+    public function view(User $actor, User $target): bool
+    {
+        return $actor->hasPermission(Permission::UsersView) && $this->manages($actor, $target);
+    }
+
+    /**
      * Determine whether the actor may create users.
      */
     public function create(User $actor): bool
     {
-        return $actor->isAdmin();
+        return $actor->hasPermission(Permission::UsersCreate);
     }
 
     /**
@@ -20,7 +37,7 @@ class UserPolicy
      */
     public function manageAdministrators(User $actor): bool
     {
-        return $actor->isSuperAdmin();
+        return $actor->hasPermission(Permission::AdministratorsManage);
     }
 
     /**
@@ -28,7 +45,7 @@ class UserPolicy
      */
     public function createLink(User $actor, User $target): Response|bool
     {
-        if (! $this->outranks($actor, $target) || ! $this->manages($actor, $target)) {
+        if (! $actor->hasPermission(Permission::LinksCreateForUser) || ! $this->outranks($actor, $target) || ! $this->manages($actor, $target)) {
             return false;
         }
 
@@ -36,11 +53,11 @@ class UserPolicy
     }
 
     /**
-     * Determine whether the actor may add, delete or disable the target's domains.
+     * Determine whether the actor may add or delete the target's domains.
      */
     public function manageDomains(User $actor, User $target): bool
     {
-        return $this->outranks($actor, $target) && $this->manages($actor, $target);
+        return $actor->hasPermission(Permission::DomainsManageForUser) && $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**
@@ -60,7 +77,7 @@ class UserPolicy
      */
     public function block(User $actor, User $target): bool
     {
-        return $this->outranks($actor, $target) && $this->manages($actor, $target);
+        return $actor->hasPermission(Permission::UsersBlock) && $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**
@@ -68,7 +85,7 @@ class UserPolicy
      */
     public function update(User $actor, User $target): bool
     {
-        return $this->outranks($actor, $target) && $this->manages($actor, $target);
+        return $actor->hasPermission(Permission::UsersUpdate) && $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**
@@ -76,7 +93,7 @@ class UserPolicy
      */
     public function delete(User $actor, User $target): bool
     {
-        return $this->outranks($actor, $target) && $this->manages($actor, $target);
+        return $actor->hasPermission(Permission::UsersDelete) && $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**
@@ -84,7 +101,7 @@ class UserPolicy
      */
     public function changeRole(User $actor, User $target): bool
     {
-        return $actor->isSuperAdmin() && ! $target->is($actor) && ! $target->isSuperAdmin();
+        return $actor->hasPermission(Permission::UsersChangeRole) && ! $target->is($actor) && ! $target->isSuperAdmin();
     }
 
     /**
@@ -92,7 +109,7 @@ class UserPolicy
      */
     public function assignAdministrators(User $actor): bool
     {
-        return $actor->isSuperAdmin();
+        return $actor->hasPermission(Permission::AdministratorsAssign);
     }
 
     /**
@@ -100,7 +117,23 @@ class UserPolicy
      */
     public function assignPackage(User $actor, User $target): bool
     {
-        return $actor->isSuperAdmin() && ! $target->isSuperAdmin();
+        return $actor->hasPermission(Permission::PackagesAssign) && ! $target->isSuperAdmin();
+    }
+
+    /**
+     * Determine whether the actor may disable or enable the target's links.
+     */
+    public function disableLinks(User $actor, User $target): bool
+    {
+        return $actor->hasPermission(Permission::LinksDisable) && $this->outranks($actor, $target) && $this->manages($actor, $target);
+    }
+
+    /**
+     * Determine whether the actor may disable or enable the target's domains.
+     */
+    public function disableDomains(User $actor, User $target): bool
+    {
+        return $actor->hasPermission(Permission::DomainsDisable) && $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**

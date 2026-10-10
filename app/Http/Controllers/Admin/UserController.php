@@ -34,6 +34,8 @@ class UserController extends Controller
      */
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', User::class);
+
         $search = (string) $request->query('search', '');
         $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
 
@@ -98,6 +100,8 @@ class UserController extends Controller
      */
     public function show(AdminStatsRequest $request, User $user): Response
     {
+        Gate::authorize('view', $user);
+
         return Inertia::render('admin/users/Show', [
             'user' => $this->present($user->loadCount('links')->load('blockedBy:id,name'), $request->user()),
             'assignedAdministrators' => $this->isAssignable($request->user(), $user)
@@ -276,6 +280,8 @@ class UserController extends Controller
                 'createLink' => $actor->can('createLink', $user),
                 'manageDomains' => $actor->can('manageDomains', $user),
                 'createDomain' => $actor->can('createDomain', $user),
+                'disableLinks' => $actor->can('disableLinks', $user),
+                'disableDomains' => $actor->can('disableDomains', $user),
                 'changeRole' => $actor->can('changeRole', $user),
                 'assignAdministrators' => $this->isAssignable($actor, $user),
             ],

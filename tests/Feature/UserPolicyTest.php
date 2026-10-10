@@ -50,6 +50,23 @@ test('only the super admin changes roles of others', function (string $actorRole
     ['user', 'user', false],
 ]);
 
+test('viewing users requires users.view and, for one user, managing them', function (string $actorRole, bool $assigned, bool $expectedAny, bool $expected) {
+    $actor = makeUserWithRole($actorRole);
+    $target = User::factory()->create();
+
+    if ($assigned) {
+        $target->assignedAdmins()->attach($actor);
+    }
+
+    expect(Gate::forUser($actor)->allows('viewAny', User::class))->toBe($expectedAny)
+        ->and(Gate::forUser($actor)->allows('view', $target))->toBe($expected);
+})->with([
+    'admin, assigned' => ['admin', true, true, true],
+    'admin, unassigned' => ['admin', false, true, false],
+    'super admin, unassigned' => ['superAdmin', false, true, true],
+    'user, assigned' => ['user', true, false, false],
+]);
+
 test('admin can view but not update or delete a foreign link', function () {
     $admin = User::factory()->admin()->create();
     $link = Link::factory()->create();

@@ -50,3 +50,14 @@ test('admin routes are not forbidden for admins', function (string $state) {
         expect($this->actingAs(User::factory()->{$state}()->create())->call($method, $uri)->status())->not->toBe(403, "{$method} {$uri} was forbidden");
     }
 })->with(['admin', 'superAdmin']);
+
+test('administrators without package, administrator or role permissions are forbidden there', function () {
+    $admin = User::factory()->admin()->create();
+    $client = User::factory()->assignedTo($admin)->create();
+    $this->actingAs($admin);
+
+    $this->get(route('admin.packages.index'))->assertForbidden();
+    $this->get(route('admin.administrators.index'))->assertForbidden();
+    $this->put(route('admin.users.package.update', $client), [])->assertForbidden();
+    $this->patch(route('admin.users.role', $client), [])->assertForbidden();
+});

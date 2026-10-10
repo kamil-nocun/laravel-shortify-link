@@ -15,4 +15,5 @@ export type Auth = {
     user: User;
     isAdmin: boolean;
     isSuperAdmin: boolean;
+    can: Record<string, boolean>;
 };

@@ -134,11 +134,13 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * The super admin and any role with admin panel access.
+     * The super admin and any role with admin panel access; admin.access is role-only, so overrides are ignored.
      */
     public function isAdmin(): bool
     {
-        return $this->hasPermission(Permission::AdminAccess);
+        $role = $this->role;
+
+        return $role !== null && ($role->is_super || $role->loadMissing('permissions')->permissionKeys()->contains(Permission::AdminAccess->value));
     }
 
     public function isSuperAdmin(): bool

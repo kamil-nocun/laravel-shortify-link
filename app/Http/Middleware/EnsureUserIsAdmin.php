@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserIsAdmin
 {
     /**
-     * Allow only admins and the super admin through.
+     * Allow only users whose role grants admin panel access (admin.access) through.
      */
     public function handle(Request $request, Closure $next): Response
     {

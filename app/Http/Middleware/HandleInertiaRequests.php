@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Permission;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -42,6 +43,9 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'isAdmin' => (bool) $request->user()?->isAdmin(),
                 'isSuperAdmin' => (bool) $request->user()?->isSuperAdmin(),
+                'can' => $request->user()
+                    ? collect(Permission::cases())->mapWithKeys(fn (Permission $permission) => [$permission->value => $request->user()->hasPermission($permission)])->all()
+                    : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
