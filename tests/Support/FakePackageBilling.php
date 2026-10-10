@@ -17,6 +17,8 @@ class FakePackageBilling implements PackageBilling
 
     public bool $failSync = false;
 
+    public ?string $pendingInvoiceUrl = null;
+
     public function syncPackage(Package $package): void
     {
         $this->calls[] = ['syncPackage', [$package->id]];
@@ -41,6 +43,11 @@ class FakePackageBilling implements PackageBilling
     public function invoice(User $user, Package $package, BillingPeriod $period): void
     {
         $this->calls[] = ['invoice', [$user->id, $package->id, $period->value]];
+    }
+
+    public function pendingInvoiceUrl(User $user): ?string
+    {
+        return $this->pendingInvoiceUrl;
     }
 
     /**

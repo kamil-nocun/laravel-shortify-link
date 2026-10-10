@@ -27,4 +27,9 @@ interface PackageBilling
      * Create a subscription (or a one-off invoice) for the user and e-mail them the invoice to pay.
      */
     public function invoice(User $user, Package $package, BillingPeriod $period): void;
+
+    /**
+     * Stripe-hosted page where the user pays their open invoice, or null when none is waiting.
+     */
+    public function pendingInvoiceUrl(User $user): ?string;
 }

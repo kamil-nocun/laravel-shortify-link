@@ -93,9 +93,20 @@ class StripePackageBilling implements PackageBilling
         $stripe = Cashier::stripe();
         $customer = $user->createOrGetStripeCustomer()->id;
 
-        $stripe->invoiceItems->create(['customer' => $customer, 'price' => $priceId]);
-        $invoice = $stripe->invoices->create(['customer' => $customer, 'collection_method' => 'send_invoice', 'days_until_due' => self::INVOICE_DAYS_UNTIL_DUE]);
+        $stripe->invoiceItems->create(['customer' => $customer, 'pricing' => ['price' => $priceId]]);
+        $invoice = $stripe->invoices->create(['customer' => $customer, 'collection_method' => 'send_invoice', 'pending_invoice_items_behavior' => 'include', 'days_until_due' => self::INVOICE_DAYS_UNTIL_DUE]);
         $stripe->invoices->sendInvoice($stripe->invoices->finalizeInvoice($invoice->id)->id);
+    }
+
+    public function pendingInvoiceUrl(User $user): ?string
+    {
+        StripeSandboxGuard::assertTestMode();
+
+        if ($user->stripe_id === null) {
+            return null;
+        }
+
+        return Cashier::stripe()->invoices->all(['customer' => $user->stripe_id, 'status' => 'open', 'limit' => 1])->data[0]->hosted_invoice_url ?? null;
     }
 
     /**
