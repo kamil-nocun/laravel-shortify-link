@@ -16,7 +16,7 @@ Poza zakresem: zwroty, windykacja, eksport PDF (etap 2b).
 
 - Źródłem danych jest lokalna tabela zasilana webhookami Stripe oraz jednorazowy backfill starszych faktur ze Stripe.
 - Do historii trafiają faktury we wszystkich stanach: wystawione, opłacone, nieudane, anulowane i nieściągalne. Szkice i faktury na 0 zł są pomijane.
-- Link „Pay invoice” bierze dane z najnowszej otwartej płatności w tabeli, a nie z zapytania do API Stripe przy każdym wejściu na stronę. `PackageBilling::pendingInvoiceUrl` jest usuwany.
+- Jeśli płatność ma zapisany `invoice_url`, korzystamy z niego: link „Pay invoice” pochodzi z najnowszej otwartej płatności w tabeli i nie powoduje zapytania do API Stripe przy wejściu na stronę. `PackageBilling::pendingInvoiceUrl` jest usuwany.
 - Stripe jest dalej dostępny wyłącznie przez `PackageBilling`; testy nie wywołują prawdziwego API.
 
 ## Model danych
