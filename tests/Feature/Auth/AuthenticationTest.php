@@ -22,6 +22,21 @@ test('users can authenticate using the login screen', function () {
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 
+test('admins are redirected to the admin dashboard after login', function (string $state) {
+    $user = User::factory()->{$state}()->create();
+
+    $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password'])
+        ->assertRedirect(route('admin.dashboard', absolute: false));
+})->with(['admin', 'superAdmin']);
+
+test('login still honours the intended url for admins', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->get(route('links.index'))->assertRedirect(route('login'));
+    $this->post(route('login.store'), ['email' => $admin->email, 'password' => 'password'])
+        ->assertRedirect(route('links.index', absolute: false));
+});
+
 test('users with two factor enabled are redirected to two factor challenge', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
