@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdministratorController;
-use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DomainDisableController;
 use App\Http\Controllers\Admin\LinkDisableController;
 use App\Http\Controllers\Admin\LinkStatsController as AdminLinkStatsController;
@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\UserPackageController;
 use App\Http\Controllers\Admin\UserPermissionController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomainCheckController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\DomainVerifyController;
@@ -32,7 +33,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 Route::inertia('/', 'FrontApp')->name('front_app');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('links/{link}/stats', LinkStatsController::class)->name('links.stats');
     Route::get('links/{link}/stats/data', [LinkStatsController::class, 'data'])->name('links.stats.data');
     Route::patch('links/{link}/toggle', LinkToggleController::class)->name('links.toggle');
@@ -45,7 +46,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('/', AdminDashboardController::class)->name('dashboard');
     Route::get('links/{link}/stats', AdminLinkStatsController::class)->name('links.stats');
     Route::get('links/{link}/stats/data', [AdminLinkStatsController::class, 'data'])->name('links.stats.data');
     Route::patch('links/{link}/disable', [LinkDisableController::class, 'store'])->name('links.disable');
