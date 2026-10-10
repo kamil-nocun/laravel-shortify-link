@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
-import Heading from "@/components/Heading.vue";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import Heading from '@/components/Heading.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogClose,
@@ -14,10 +14,10 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { create, destroy, edit, index, stats, toggle } from "@/routes/links";
-import type { Link, LinkFilters, Paginated } from "@/types";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { create, destroy, edit, index, stats, toggle } from '@/routes/links';
+import type { Link, LinkFilters, Paginated } from '@/types';
 
 const props = defineProps<{
     links: Paginated<Link>;
@@ -35,9 +35,9 @@ const limitReached = computed(
     () => props.quota.limit !== null && props.quota.used >= props.quota.limit,
 );
 
-const search = ref(props.filters.search ?? "");
-const status = ref(props.filters.status ?? "");
-const domain = ref(props.filters.domain ?? "");
+const search = ref(props.filters.search ?? '');
+const status = ref(props.filters.status ?? '');
+const domain = ref(props.filters.domain ?? '');
 
 const hasFilters = computed(
     () =>
@@ -54,7 +54,7 @@ function applyFilters(): void {
             search: search.value,
             status: status.value,
             domain: domain.value,
-        }).filter(([, value]) => value !== ""),
+        }).filter(([, value]) => value !== ''),
     );
 
     router.get(index().url, params, {
@@ -71,16 +71,18 @@ function onSearchInput(): void {
     searchTimer = setTimeout(applyFilters, 300);
 }
 
+onBeforeUnmount(() => clearTimeout(searchTimer));
+
 function clearFilters(): void {
-    search.value = "";
-    status.value = "";
-    domain.value = "";
+    search.value = '';
+    status.value = '';
+    domain.value = '';
     applyFilters();
 }
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: "My links", href: index() }],
+        breadcrumbs: [{ title: 'My links', href: index() }],
     },
 });
 </script>
@@ -114,8 +116,7 @@ defineOptions({
                 Package {{ packageNotice.package_name }} is being withdrawn.
                 From
                 {{ new Date(packageNotice.ends_at).toLocaleDateString() }}
-                {{ packageNotice.default_package_name ?? "default" }} package
-                applies.
+                {{ packageNotice.default_package_name ?? 'default' }} package applies.
             </AlertDescription>
         </Alert>
 
@@ -190,7 +191,7 @@ defineOptions({
                         :key="link.id"
                         class="border-t"
                     >
-                        <td class="p-3">{{ link.title ?? "—" }}</td>
+                        <td class="p-3">{{ link.title ?? '—' }}</td>
                         <td class="max-w-64 truncate p-3">
                             {{ link.original_url }}
                         </td>
@@ -238,7 +239,7 @@ defineOptions({
                             {{
                                 link.expires_at
                                     ? new Date(link.expires_at).toLocaleString()
-                                    : "—"
+                                    : '—'
                             }}
                         </td>
                         <td class="space-x-2 p-3 text-right">
