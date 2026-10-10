@@ -6,6 +6,9 @@ use App\Http\Controllers\Admin\DomainDisableController;
 use App\Http\Controllers\Admin\LinkDisableController;
 use App\Http\Controllers\Admin\LinkStatsController as AdminLinkStatsController;
 use App\Http\Controllers\Admin\PackageController;
+use App\Http\Controllers\Admin\PageController;
+use App\Http\Controllers\Admin\PageStatusController;
+use App\Http\Controllers\Admin\PageVersionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserAdministratorController;
 use App\Http\Controllers\Admin\UserBlockController;
@@ -55,6 +58,13 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::delete('links/{link}/disable', [LinkDisableController::class, 'destroy'])->name('links.enable');
     Route::resource('packages', PackageController::class)->except('show');
     Route::resource('roles', RoleController::class)->except('show');
+    Route::resource('pages', PageController::class)->except(['show', 'destroy']);
+    Route::patch('pages/{page}/status', PageStatusController::class)->name('pages.status');
+    Route::scopeBindings()->group(function () {
+        Route::get('pages/{page}/versions', [PageVersionController::class, 'index'])->name('pages.versions.index');
+        Route::get('pages/{page}/versions/{version}', [PageVersionController::class, 'show'])->name('pages.versions.show');
+        Route::post('pages/{page}/versions/{version}/restore', [PageVersionController::class, 'restore'])->name('pages.versions.restore');
+    });
     Route::resource('administrators', AdministratorController::class)->only(['index', 'create', 'store']);
     Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
     Route::get('users/{user}/links/create', [UserLinkController::class, 'create'])->name('users.links.create');
