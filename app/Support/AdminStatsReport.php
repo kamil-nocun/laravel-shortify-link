@@ -30,14 +30,9 @@ class AdminStatsReport
 
         $firstClick = $request->period()['period'] === 'all' ? $scoped()->min('clicked_at') : null;
         $period = StatsPeriod::resolve($request->period(), $firstClick === null ? null : CarbonImmutable::parse($firstClick), now());
-        $from = $period->from;
-        $isEmpty = $from === null || $from->gt($period->to);
-        $inRange = fn (): Builder => $isEmpty
-            ? $scoped()->whereRaw('1 = 0')
-            : $scoped()->where('clicked_at', '>=', $from)->where('clicked_at', '<=', $period->to);
+        $inRange = fn (): Builder => $period->constrain($scoped());
 
-        $perDay = $inRange()->selectRaw('DATE(clicked_at) as day, count(*) as total')->groupBy('day')->pluck('total', 'day');
-        $series = $isEmpty ? [] : StatsSeries::build($perDay, $from, $period->to, $period->granularity);
+        $series = $period->series($inRange());
         $total = array_sum(array_column($series, 'count'));
 
         $links = Link::query()

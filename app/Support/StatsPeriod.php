@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Query\Builder;
 
 class StatsPeriod
 {
@@ -45,5 +46,39 @@ class StatsPeriod
             || ($from !== null && $from->diffInDays($to) > self::MAX_DAILY_DAYS);
 
         return new self($from, $to, $isMonthly ? 'month' : 'day');
+    }
+
+    /**
+     * Whether the period holds no days at all (e.g. 'all' without any click).
+     */
+    public function isEmpty(): bool
+    {
+        return $this->from === null || $this->from->gt($this->to);
+    }
+
+    /**
+     * Restrict a click query to this period.
+     */
+    public function constrain(Builder $query): Builder
+    {
+        return $this->isEmpty()
+            ? $query->whereRaw('1 = 0')
+            : $query->where('clicked_at', '>=', $this->from)->where('clicked_at', '<=', $this->to);
+    }
+
+    /**
+     * Clicks per day or month of this period from a query already limited to it, empty days included.
+     *
+     * @return list<array{date: string, count: int}>
+     */
+    public function series(Builder $clicks): array
+    {
+        if ($this->isEmpty()) {
+            return [];
+        }
+
+        $perDay = $clicks->selectRaw('DATE(clicked_at) as day, count(*) as total')->groupBy('day')->pluck('total', 'day');
+
+        return StatsSeries::build($perDay, $this->from, $this->to, $this->granularity);
     }
 }

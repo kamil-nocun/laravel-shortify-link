@@ -41,11 +41,7 @@ class LinkStatsReport
         $sections ??= LinkStatsRequest::SECTIONS;
         $firstClick = $request->period()['period'] === 'all' ? $link->clicks()->min('clicked_at') : null;
         $period = StatsPeriod::resolve($request->period(), $firstClick === null ? null : CarbonImmutable::parse($firstClick), now());
-        $from = $period->from;
-        $isEmpty = $from === null || $from->gt($period->to);
-        $inRange = fn (): Builder => $isEmpty
-            ? $link->clicks()->toBase()->whereRaw('1 = 0')
-            : $link->clicks()->toBase()->where('clicked_at', '>=', $from)->where('clicked_at', '<=', $period->to);
+        $inRange = fn (): Builder => $period->constrain($link->clicks()->toBase());
         $filters = $request->filters();
         $clicks = function () use ($inRange, $filters): Builder {
             $query = $inRange();
@@ -60,11 +56,7 @@ class LinkStatsReport
         $payload = [];
 
         if (in_array('summary', $sections, true)) {
-            $perDay = $clicks()
-                ->selectRaw('DATE(clicked_at) as day, count(*) as total')
-                ->groupBy('day')
-                ->pluck('total', 'day');
-            $series = $isEmpty ? [] : StatsSeries::build($perDay, $from, $period->to, $period->granularity);
+            $series = $period->series($clicks());
 
             $payload += [
                 'period' => $request->period(),
