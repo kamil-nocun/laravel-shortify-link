@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\DeleteUserAccount;
 use App\Billing\PackagePageData;
 use App\Enums\Permission;
+use App\Exceptions\AccountDeletionFailed;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminStatsRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
@@ -170,13 +172,19 @@ class UserController extends Controller
     }
 
     /**
-     * Delete a user; their links and statistics cascade at the database level.
+     * Delete a user together with their Stripe customer; their links and statistics cascade at the database level.
      */
-    public function destroy(User $user): RedirectResponse
+    public function destroy(User $user, DeleteUserAccount $deleteUserAccount): RedirectResponse
     {
         Gate::authorize('delete', $user);
 
-        $user->delete();
+        try {
+            $deleteUserAccount($user);
+        } catch (AccountDeletionFailed $exception) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $exception->userMessage()]);
+
+            return back();
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User deleted.')]);
 

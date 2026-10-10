@@ -22,6 +22,8 @@ class FakePackageBilling implements PackageBilling
 
     public bool $failPendingInvoiceUrl = false;
 
+    public bool $failDeleteCustomer = false;
+
     /**
      * @var array<string, list<array<string, mixed>>>
      */
@@ -79,6 +81,15 @@ class FakePackageBilling implements PackageBilling
      *
      * @return list<string>
      */
+    public function deleteCustomer(User $user): void
+    {
+        $this->calls[] = ['deleteCustomer', [$user->id]];
+
+        if ($this->failDeleteCustomer) {
+            throw new RuntimeException('Stripe is unavailable.');
+        }
+    }
+
     public function called(): array
     {
         return array_column($this->calls, 0);

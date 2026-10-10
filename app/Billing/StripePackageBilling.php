@@ -8,6 +8,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Support\StripeSandboxGuard;
 use Laravel\Cashier\Cashier;
+use Stripe\Exception\InvalidRequestException;
 use Stripe\StripeClient;
 
 class StripePackageBilling implements PackageBilling
@@ -123,6 +124,21 @@ class StripePackageBilling implements PackageBilling
 
         foreach (Cashier::stripe()->invoices->all(['customer' => $user->stripe_id, 'limit' => 100])->autoPagingIterator() as $invoice) {
             yield $invoice->toArray();
+        }
+    }
+
+    public function deleteCustomer(User $user): void
+    {
+        if ($user->stripe_id === null) {
+            return;
+        }
+
+        try {
+            $this->stripe()->customers->delete($user->stripe_id);
+        } catch (InvalidRequestException $exception) {
+            if ($exception->getStripeCode() !== 'resource_missing') {
+                throw $exception;
+            }
         }
     }
 

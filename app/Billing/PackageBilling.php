@@ -45,4 +45,9 @@ interface PackageBilling
      * @return iterable<int, array<string, mixed>>
      */
     public function invoicesFor(User $user): iterable;
+
+    /**
+     * Delete the user's Stripe customer, which cancels its subscriptions at once; nothing happens without a customer.
+     */
+    public function deleteCustomer(User $user): void;
 }
