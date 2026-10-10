@@ -16,37 +16,16 @@ class RecordLinkClick implements ShouldQueue
     use Queueable;
 
     /**
-     * Not promoted: jobs queued before this property existed are restored without it.
-     */
-    public ?string $userAgent = null;
-
-    /**
-     * Not promoted: jobs queued before this property existed are restored without it;
-     * those clicks could only come through the code.
-     */
-    public ?string $entry = null;
-
-    /**
-     * Not promoted: jobs queued before this property existed are restored without it;
-     * those clicks could not come from a QR code.
-     */
-    public ?string $source = null;
-
-    /**
      * The IP and User-Agent are only used for lookups and are never stored with the click.
      */
     public function __construct(
         public string $linkId,
         public string $ip,
         public CarbonInterface $clickedAt,
-        ?string $userAgent = null,
-        ?string $entry = null,
-        ?string $source = null,
-    ) {
-        $this->userAgent = $userAgent;
-        $this->entry = $entry;
-        $this->source = $source;
-    }
+        public ?string $userAgent = null,
+        public LinkEntry $entry = LinkEntry::Code,
+        public LinkSource $source = LinkSource::Link,
+    ) {}
 
     /**
      * Store the click with the location of the visitor; skip it when the link was deleted meanwhile.
@@ -63,8 +42,8 @@ class RecordLinkClick implements ShouldQueue
             ...$geoLocator->locate($this->ip),
             ...$clientDetector->detect($this->userAgent),
             'clicked_at' => $this->clickedAt,
-            'entry' => $this->entry ?? LinkEntry::Code->value,
-            'source' => $this->source ?? LinkSource::Link->value,
+            'entry' => $this->entry->value,
+            'source' => $this->source->value,
         ]);
     }
 }

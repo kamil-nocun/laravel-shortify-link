@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\CreateLink;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserLinkRequest;
 use App\Models\Link;
 use App\Models\User;
-use App\Support\LinkCodeGenerator;
+use App\Support\MainHost;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -21,15 +22,15 @@ class UserLinkController extends Controller
     {
         Gate::authorize('createLink', $user);
 
-        return Inertia::render('admin/users/links/Create', ['user' => $user->only(['id', 'name']), 'domains' => $user->domains()->active()->get(['id', 'host']), 'canSetAlias' => $user->allowsCustomAlias(), 'mainHost' => Link::mainHost()]);
+        return Inertia::render('admin/users/links/Create', ['user' => $user->only(['id', 'name']), 'domains' => $user->domains()->active()->get(['id', 'host']), 'canSetAlias' => $user->allowsCustomAlias(), 'mainHost' => MainHost::withPort()]);
     }
 
     /**
      * Store a new link with a generated code, owned by the user.
      */
-    public function store(StoreUserLinkRequest $request, User $user, LinkCodeGenerator $generator): RedirectResponse
+    public function store(StoreUserLinkRequest $request, User $user, CreateLink $createLink): RedirectResponse
     {
-        $generator->createFor($user, $request->validated());
+        $createLink($user, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link created.')]);
 

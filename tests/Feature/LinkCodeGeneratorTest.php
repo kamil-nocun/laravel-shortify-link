@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\CreateLink;
 use App\Models\Link;
 use App\Models\User;
 use App\Support\LinkCodeGenerator;
@@ -45,7 +46,7 @@ test('retries on collision', function () {
     expect($generator->generate())->toBe('fresh2');
 });
 
-test('createFor retries once on a unique constraint violation', function () {
+test('CreateLink retries once on a unique constraint violation', function () {
     $user = User::factory()->create();
     Link::factory()->create(['code' => 'taken1']);
 
@@ -59,7 +60,7 @@ test('createFor retries once on a unique constraint violation', function () {
         }
     };
 
-    $link = $generator->createFor($user, ['original_url' => 'https://example.com']);
+    $link = (new CreateLink($generator))($user, ['original_url' => 'https://example.com']);
 
     expect($link->code)->toBe('fresh2')->and($generator->calls)->toBe(2);
 });

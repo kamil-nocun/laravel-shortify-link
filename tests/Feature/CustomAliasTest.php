@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\CreateLink;
 use App\Http\Controllers\LinkController;
 use App\Http\Requests\Links\UpdateLinkRequest;
 use App\Models\Domain;
@@ -122,7 +123,7 @@ test('a race-condition collision becomes a validation error on alias', function 
     $user = userWithAlias();
     Link::factory()->create(['code' => 'other1', 'alias' => 'racing', 'domain_id' => null]);
 
-    expect(fn () => app(LinkCodeGenerator::class)->createFor($user, ['original_url' => 'https://example.com', 'alias' => 'racing']))
+    expect(fn () => app(CreateLink::class)($user, ['original_url' => 'https://example.com', 'alias' => 'racing']))
         ->toThrow(fn (ValidationException $e) => expect($e->errors())->toHaveKey('alias'));
 });
 

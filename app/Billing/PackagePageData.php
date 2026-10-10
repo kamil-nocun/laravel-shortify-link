@@ -193,4 +193,18 @@ class PackagePageData
             return null;
         }
     }
+
+    /**
+     * Notice for a user whose current package has been withdrawn.
+     *
+     * @return array{package_name: string, ends_at: string, default_package_name: string|null}|null
+     */
+    public function withdrawnPackageNotice(User $user): ?array
+    {
+        $assignment = $user->activeAssignment();
+
+        return $assignment?->package->trashed()
+            ? ['package_name' => $assignment->package->name, 'ends_at' => $assignment->expires_at->toIso8601String(), 'default_package_name' => Package::where('is_default', true)->value('name')]
+            : null;
+    }
 }

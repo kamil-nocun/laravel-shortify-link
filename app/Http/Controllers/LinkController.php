@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\LinkStatus;
+use App\Actions\CreateLink;
+use App\Billing\PackagePageData;
 use App\Http\Requests\Links\IndexLinksRequest;
 use App\Http\Requests\Links\StoreLinkRequest;
 use App\Http\Requests\Links\UpdateLinkRequest;
 use App\Models\Link;
-use App\Models\Package;
-use App\Models\User;
-use App\Support\LinkCodeGenerator;
+use App\Support\MainHost;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,20 +22,17 @@ class LinkController extends Controller
     /**
      * List the current user's links.
      */
-    public function index(IndexLinksRequest $request): Response
+    public function index(IndexLinksRequest $request, PackagePageData $packageData): Response
     {
         $filters = $request->safe()->only(['search', 'status', 'domain']) + ['search' => null, 'status' => null, 'domain' => null];
 
-        $links = $request->user()->links()->with('domain')->withCount('clicks')->latest()
-            ->when(filled($filters['search']), fn ($query) => $query->matching($filters['search']))
-            ->when($filters['status'], fn ($query, string $status) => $query->withStatus(LinkStatus::from($status)))
-            ->when($filters['domain'], fn ($query, string $domain) => $domain === 'main' ? $query->whereNull('domain_id') : $query->where('domain_id', $domain));
+        $links = $request->user()->links()->with('domain')->withCount('clicks')->latest()->filteredBy($filters);
 
         return Inertia::render('links/Index', [
             'links' => $links->paginate(15)->withQueryString(),
             'filters' => $filters,
             'domains' => $request->user()->domains()->get(['id', 'host']),
-            'packageNotice' => $this->packageNotice($request->user()),
+            'packageNotice' => $packageData->withdrawnPackageNotice($request->user()),
             'quota' => ['used' => $request->user()->links()->count(), 'limit' => $request->user()->linkLimit()],
         ]);
     }
@@ -48,17 +44,15 @@ class LinkController extends Controller
     {
         Gate::authorize('create', Link::class);
 
-        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host']), 'canSetAlias' => $request->user()->allowsCustomAlias(), 'mainHost' => Link::mainHost()]);
+        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host']), 'canSetAlias' => $request->user()->allowsCustomAlias(), 'mainHost' => MainHost::withPort()]);
     }
 
     /**
      * Store a new link with a generated code.
      */
-    public function store(StoreLinkRequest $request, LinkCodeGenerator $generator): RedirectResponse
+    public function store(StoreLinkRequest $request, CreateLink $createLink): RedirectResponse
     {
-        Gate::authorize('create', Link::class);
-
-        $generator->createFor($request->user(), $request->validated());
+        $createLink($request->user(), $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link created.')]);
 
@@ -72,7 +66,7 @@ class LinkController extends Controller
     {
         Gate::authorize('update', $link);
 
-        return Inertia::render('links/Edit', ['link' => $link, 'canSetAlias' => $link->user->allowsCustomAlias(), 'mainHost' => Link::mainHost()]);
+        return Inertia::render('links/Edit', ['link' => $link, 'canSetAlias' => $link->user->allowsCustomAlias(), 'mainHost' => MainHost::withPort()]);
     }
 
     /**
@@ -103,19 +97,5 @@ class LinkController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link deleted.')]);
 
         return to_route('links.index');
-    }
-
-    /**
-     * Notice for a user whose current package has been withdrawn.
-     *
-     * @return array{package_name: string, ends_at: string, default_package_name: string|null}|null
-     */
-    private function packageNotice(User $user): ?array
-    {
-        $assignment = $user->activeAssignment();
-
-        return $assignment?->package->trashed()
-            ? ['package_name' => $assignment->package->name, 'ends_at' => $assignment->expires_at->toIso8601String(), 'default_package_name' => Package::where('is_default', true)->value('name')]
-            : null;
     }
 }

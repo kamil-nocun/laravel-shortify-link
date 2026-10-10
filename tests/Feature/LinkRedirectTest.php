@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\LinkEntry;
+use App\Enums\LinkSource;
 use App\Jobs\RecordLinkClick;
 use App\Models\Link;
 use App\Models\User;
@@ -137,8 +139,8 @@ test('redirect records whether the code or the alias was used', function () {
     $this->get('/'.$link->code);
     $this->get('/'.$link->alias);
 
-    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Code');
-    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Alias');
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === LinkEntry::Code);
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === LinkEntry::Alias);
 });
 
 test('redirect marks qr scans on the code and on the alias', function () {
@@ -148,8 +150,8 @@ test('redirect marks qr scans on the code and on the alias', function () {
     $this->get('/'.$link->code.'?qr=1')->assertRedirect($link->original_url);
     $this->get('/'.$link->alias.'?qr=1')->assertRedirect($link->original_url);
 
-    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Code' && $job->source === 'QR');
-    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Alias' && $job->source === 'QR');
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === LinkEntry::Code && $job->source === LinkSource::Qr);
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === LinkEntry::Alias && $job->source === LinkSource::Qr);
 });
 
 test('redirect without a qr marker records the Link source', function (string $query) {
@@ -158,5 +160,5 @@ test('redirect without a qr marker records the Link source', function (string $q
 
     $this->get('/'.$link->code.$query);
 
-    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->source === 'Link');
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->source === LinkSource::Link);
 })->with(['no parameter' => '', 'qr=0' => '?qr=0', 'qr=abc' => '?qr=abc']);

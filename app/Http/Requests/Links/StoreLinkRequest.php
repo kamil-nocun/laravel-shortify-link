@@ -13,6 +13,14 @@ use Illuminate\Validation\Rule;
 class StoreLinkRequest extends FormRequest
 {
     /**
+     * Only a user within their link limit may create a link.
+     */
+    public function authorize(): bool
+    {
+        return $this->user()->can('create', Link::class);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>

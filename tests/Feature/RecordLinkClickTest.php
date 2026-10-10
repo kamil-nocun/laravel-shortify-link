@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\LinkEntry;
+use App\Enums\LinkSource;
 use App\Jobs\RecordLinkClick;
 use App\Models\Link;
 use App\Models\LinkClick;
@@ -94,24 +96,11 @@ test('does not persist the user agent', function () {
     expect(json_encode(LinkClick::sole()->getAttributes()))->not->toContain('SecretAgent');
 });
 
-test('a job queued before user agents were recorded still runs', function () {
-    fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
-    $link = Link::factory()->create();
-    $job = (new ReflectionClass(RecordLinkClick::class))->newInstanceWithoutConstructor();
-    $job->linkId = $link->id;
-    $job->ip = '203.0.113.7';
-    $job->clickedAt = now();
-
-    app()->call([$job, 'handle']);
-
-    expect(LinkClick::sole()->browser)->toBeNull();
-});
-
 test('records which entry the click came through', function () {
     fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
     $link = Link::factory()->create();
 
-    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now(), 'UA', 'Alias');
+    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now(), 'UA', LinkEntry::Alias);
 
     expect(LinkClick::sole()->entry)->toBe('Alias');
 });
@@ -125,25 +114,12 @@ test('records the Code entry when none is given', function () {
     expect(LinkClick::sole()->entry)->toBe('Code');
 });
 
-test('a job queued before entries were recorded still runs', function () {
-    fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
-    $link = Link::factory()->create();
-    $job = (new ReflectionClass(RecordLinkClick::class))->newInstanceWithoutConstructor();
-    $job->linkId = $link->id;
-    $job->ip = '203.0.113.7';
-    $job->clickedAt = now();
-
-    app()->call([$job, 'handle']);
-
-    expect(LinkClick::sole()->entry)->toBe('Code');
-});
-
 test('records the Link source by default and keeps a given QR source', function () {
     fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
     $link = Link::factory()->create();
 
     RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now());
-    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now(), null, 'Code', 'QR');
+    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now(), null, LinkEntry::Code, LinkSource::Qr);
 
     expect(LinkClick::orderBy('source')->pluck('source')->all())->toBe(['Link', 'QR']);
 });

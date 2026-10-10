@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Domains;
 
 use App\Models\Domain;
+use App\Support\MainHost;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -33,7 +34,7 @@ class StoreDomainRequest extends FormRequest
                 'required', 'string', 'max:253',
                 'regex:/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/',
                 'unique:domains,host',
-                Rule::notIn([Str::lower((string) parse_url(config('app.url'), PHP_URL_HOST))]),
+                Rule::notIn([MainHost::name()]),
             ],
         ];
     }
