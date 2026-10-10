@@ -4,10 +4,11 @@ import { computed } from 'vue';
 import { Activity, Link2, MousePointerClick } from '@lucide/vue';
 import ClicksCard from '@/components/ClicksCard.vue';
 import Heading from '@/components/Heading.vue';
+import LinkStatusChart from '@/components/LinkStatusChart.vue';
 import PackageCard from '@/components/PackageCard.vue';
 import PeriodSelector from '@/components/PeriodSelector.vue';
 import StatCards from '@/components/StatCards.vue';
-import TopLinksTable from '@/components/TopLinksTable.vue';
+import TopLinksChart from '@/components/TopLinksChart.vue';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { periodLabel } from '@/lib/periodLabel';
@@ -97,7 +98,11 @@ defineOptions({
                     :total="total"
                 />
                 <div class="space-y-6">
-                    <TopLinksTable :links="topLinks" :href="linkStats" />
+                    <TopLinksChart :links="topLinks" :href="linkStats" />
+                    <LinkStatusChart
+                        :active="counters.activeLinks"
+                        :disabled="counters.disabledLinks"
+                    />
                     <PackageCard v-if="package" :package="package" />
                 </div>
             </div>

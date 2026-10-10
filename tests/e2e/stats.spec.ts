@@ -129,6 +129,7 @@ test('period can be switched to all time, a month and a range', async ({
 test('table can be sorted by name, toggling direction', async ({ page }) => {
     await openStats(page, 'Pages e2e');
     const cities = section(page, 'Cities');
+    await cities.getByRole('button', { name: 'Cities table view' }).click();
     const header = cities.getByRole('button', { name: /^City/ });
 
     await header.click();
@@ -143,6 +144,7 @@ test('table paginates, limit changes and resets keep the limit', async ({
 }) => {
     await openStats(page, 'Pages e2e');
     const cities = section(page, 'Cities');
+    await cities.getByRole('button', { name: 'Cities table view' }).click();
 
     await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
     await cities.getByRole('button', { name: 'Next' }).click();
@@ -175,6 +177,7 @@ test('interactions never change the URL and reload restores defaults', async ({
     const url = page.url();
     expect(url).toMatch(/\/links\/[^/?]+\/stats$/);
     const cities = section(page, 'Cities');
+    await cities.getByRole('button', { name: 'Cities table view' }).click();
 
     await page.getByRole('button', { name: '7 days' }).click();
     await cities.getByRole('button', { name: 'Next' }).click();
@@ -198,6 +201,7 @@ test('table actions request only their section, period requests all', async ({
 }) => {
     await openStats(page, 'Pages e2e');
     const cities = section(page, 'Cities');
+    await cities.getByRole('button', { name: 'Cities table view' }).click();
 
     let request = page.waitForRequest('**/stats/data?*');
     await cities.getByRole('button', { name: 'Next' }).click();
@@ -298,6 +302,7 @@ test('tables are shown in two columns in order', async ({ page }) => {
 test('share column shows the percentage of period clicks', async ({ page }) => {
     await openStats(page, 'Filters e2e');
     const cities = section(page, 'Cities');
+    await cities.getByRole('button', { name: 'Cities table view' }).click();
 
     await expect(
         cities
@@ -341,6 +346,7 @@ test('a server-clamped page is not resent by other tables', async ({
 }) => {
     await openStats(page, 'Pages e2e');
     const cities = section(page, 'Cities');
+    await cities.getByRole('button', { name: 'Cities table view' }).click();
     await page.route('**/stats/data?*', async (route) => {
         const response = await route.fetch();
         const body = await response.json();
@@ -357,6 +363,9 @@ test('a server-clamped page is not resent by other tables', async ({
     await page.evaluate(() => new Promise(requestAnimationFrame));
     await expect(cities.getByText('Page 1 of 3 (25 rows)')).toBeVisible();
     const request = page.waitForRequest('**/stats/data?*');
+    await section(page, 'Countries')
+        .getByRole('button', { name: 'Countries table view' })
+        .click();
     await section(page, 'Countries')
         .getByRole('button', { name: /^Country/ })
         .click();
@@ -390,6 +399,7 @@ test('a failed request shows an alert, keeps data and clears on success', async 
 test('two quick Next clicks advance two pages', async ({ page }) => {
     await openStats(page, 'Pages e2e');
     const cities = section(page, 'Cities');
+    await cities.getByRole('button', { name: 'Cities table view' }).click();
 
     await cities.getByRole('button', { name: 'Next' }).dblclick();
     await expect(cities.getByText('Page 3 of 3 (25 rows)')).toBeVisible();

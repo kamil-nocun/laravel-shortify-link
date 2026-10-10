@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ChartPie, Table } from '@lucide/vue';
+import { computed, ref } from 'vue';
+import BreakdownChart from '@/components/BreakdownChart.vue';
 import { Button } from '@/components/ui/button';
 import type { StatsTable } from '@/types';
 
 const props = defineProps<{
     title: string;
     label: string;
+    chartType: 'doughnut' | 'bar';
     total: number;
     table: StatsTable;
     sort: string;
@@ -17,6 +20,8 @@ const emit = defineEmits<{
     page: [delta: number];
     perPage: [perPage: number];
 }>();
+
+const view = ref<'chart' | 'table'>('chart');
 
 const perPageOptions = [10, 25, 50, 100];
 
@@ -55,11 +60,35 @@ const toggle = (key: 'name' | 'count') => {
         :class="{ 'animate-pulse opacity-50': loading }"
         :aria-busy="loading"
     >
-        <div class="flex items-baseline justify-between px-4 py-3">
-            <h2 class="font-medium">{{ title }}</h2>
-            <span class="text-sm text-muted-foreground tabular-nums"
-                >{{ table.total }} rows</span
-            >
+        <div class="flex items-center justify-between gap-2 px-4 py-3">
+            <div class="flex items-baseline gap-2">
+                <h2 class="font-medium">{{ title }}</h2>
+                <span class="text-sm text-muted-foreground tabular-nums"
+                    >{{ table.total }} rows</span
+                >
+            </div>
+            <div class="flex items-center gap-1 rounded-lg border p-1">
+                <Button
+                    type="button"
+                    size="sm"
+                    :variant="view === 'chart' ? 'default' : 'ghost'"
+                    :aria-pressed="view === 'chart'"
+                    :aria-label="`${title} chart view`"
+                    @click="view = 'chart'"
+                >
+                    <ChartPie />
+                </Button>
+                <Button
+                    type="button"
+                    size="sm"
+                    :variant="view === 'table' ? 'default' : 'ghost'"
+                    :aria-pressed="view === 'table'"
+                    :aria-label="`${title} table view`"
+                    @click="view = 'table'"
+                >
+                    <Table />
+                </Button>
+            </div>
         </div>
         <p
             v-if="table.rows.length === 0"
@@ -67,6 +96,24 @@ const toggle = (key: 'name' | 'count') => {
         >
             No data.
         </p>
+        <div v-else-if="view === 'chart'" class="space-y-2 px-4 pb-4">
+            <BreakdownChart
+                :type="chartType"
+                :items="
+                    table.rows.map((row) => ({
+                        label: row.name,
+                        value: row.count,
+                    }))
+                "
+            />
+            <p
+                v-if="table.total > table.rows.length"
+                class="text-xs text-muted-foreground"
+            >
+                Showing {{ table.rows.length }} of {{ table.total }} rows on
+                this page.
+            </p>
+        </div>
         <table v-else class="w-full text-left text-sm">
             <thead class="bg-muted/50 text-muted-foreground">
                 <tr>

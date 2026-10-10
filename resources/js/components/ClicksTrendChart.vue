@@ -9,8 +9,9 @@ import {
     PointElement,
     Tooltip,
 } from 'chart.js';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { Bar, Line } from 'vue-chartjs';
+import { useChartColors } from '@/composables/useChartColors';
 import type { DailyClicks } from '@/types';
 
 ChartJS.register(
@@ -30,31 +31,7 @@ const props = defineProps<{
     formatDate: (date: string) => string;
 }>();
 
-const colors = ref({ primary: '#888', muted: '#888', border: '#8884' });
-let observer: MutationObserver | null = null;
-
-function readColors(): void {
-    const style = getComputedStyle(document.documentElement);
-    const read = (name: string, fallback: string) =>
-        style.getPropertyValue(name).trim() || fallback;
-
-    colors.value = {
-        primary: read('--primary', '#888'),
-        muted: read('--muted-foreground', '#888'),
-        border: read('--border', '#8884'),
-    };
-}
-
-onMounted(() => {
-    readColors();
-    observer = new MutationObserver(readColors);
-    observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['class'],
-    });
-});
-
-onBeforeUnmount(() => observer?.disconnect());
+const colors = useChartColors();
 
 const data = computed(() => ({
     labels: props.series.map((row) => props.formatDate(row.date)),
