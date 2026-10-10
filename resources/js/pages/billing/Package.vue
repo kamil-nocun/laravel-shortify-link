@@ -2,15 +2,17 @@
 import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import PackageOverview from '@/components/PackageOverview.vue';
+import PackageHistory from '@/components/PackageHistory.vue';
 import PaymentHistory from '@/components/PaymentHistory.vue';
 import { show } from '@/routes/billing/package';
-import type { Paginated, PaymentRow } from '@/types';
+import type { AssignmentRow, Paginated, PaymentRow } from '@/types';
 
 defineProps<{
     current: InstanceType<typeof PackageOverview>['$props']['current'];
     awaitingPayment: boolean;
     invoiceUrl: string | null;
     payments: Paginated<PaymentRow>;
+    assignments: Paginated<AssignmentRow>;
     checkoutStatus: string | null;
     packages: InstanceType<typeof PackageOverview>['$props']['packages'];
     errors: Record<string, string>;
@@ -38,6 +40,8 @@ defineOptions({
             :packages="packages"
             :errors="errors"
         />
+
+        <PackageHistory :assignments="assignments" />
 
         <PaymentHistory :payments="payments" />
     </div>

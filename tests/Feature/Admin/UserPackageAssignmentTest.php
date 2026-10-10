@@ -60,6 +60,16 @@ test('a user who already holds a package cannot be invoiced for another', functi
     expect($this->billing->called())->toBe([]);
 });
 
+test('a user whose package is cancelled can be invoiced for the next one', function () {
+    PackageAssignment::factory()->for($this->client)->for($this->package)->create(['cancelled_at' => now()]);
+
+    $this->actingAs($this->super)->put(route('admin.users.package.update', $this->client), [
+        'package_id' => $this->package->id, 'billing_period' => 'monthly',
+    ])->assertSessionHasNoErrors();
+
+    expect($this->billing->called())->toBe(['invoice']);
+});
+
 test('a failing Stripe call is reported', function () {
     $this->app->instance(PackageBilling::class, new class extends FakePackageBilling
     {

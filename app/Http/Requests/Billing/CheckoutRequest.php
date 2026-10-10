@@ -28,14 +28,14 @@ class CheckoutRequest extends FormRequest
     }
 
     /**
-     * The package must sell the period in Stripe, and the user must not already hold a package.
+     * The package must sell the period in Stripe, and the user must not hold, or have queued, a package that is still going to renew.
      *
      * @return list<callable(Validator): void>
      */
     public function after(): array
     {
         return [function (Validator $validator) {
-            if ($this->user()->activeAssignment() !== null) {
+            if ($this->user()->activeAssignment()?->isCancelled() === false || $this->user()->queuedAssignment() !== null) {
                 $validator->errors()->add('package', __('You already have a package.'));
 
                 return;

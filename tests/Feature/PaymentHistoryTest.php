@@ -49,6 +49,8 @@ test('a plain user cannot open the admin user page', function () {
 });
 
 test('payments are newest first and paginated by ten', function () {
+    $this->travelTo(now()->startOfSecond());
+
     foreach (range(1, 22) as $day) {
         Payment::factory()->create(['user_id' => $this->client->id, 'issued_at' => now()->subDays($day)]);
     }

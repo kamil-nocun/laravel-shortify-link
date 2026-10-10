@@ -28,14 +28,14 @@ class UpdateUserPackageRequest extends FormRequest
     }
 
     /**
-     * The user must not hold a package yet, and the package must sell the chosen period in Stripe.
+     * The user must not hold, or have queued, a package that is still going to renew, and the package must sell the chosen period in Stripe.
      *
      * @return list<callable(Validator): void>
      */
     public function after(): array
     {
         return [function (Validator $validator) {
-            if ($this->route('user')->activeAssignment() !== null) {
+            if ($this->route('user')->activeAssignment()?->isCancelled() === false || $this->route('user')->queuedAssignment() !== null) {
                 $validator->errors()->add('package', __('This user already has a package.'));
 
                 return;

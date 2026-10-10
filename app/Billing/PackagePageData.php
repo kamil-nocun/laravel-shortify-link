@@ -5,9 +5,12 @@ namespace App\Billing;
 use App\Enums\BillingPeriod;
 use App\Enums\PaymentStatus;
 use App\Models\Package;
+use App\Models\PackageAssignment;
 use App\Models\Payment;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Throwable;
 
 class PackagePageData
@@ -17,11 +20,13 @@ class PackagePageData
     /**
      * The package page as the given account sees it.
      *
-     * @return array{current: array<string, mixed>, awaitingPayment: bool, invoiceUrl: ?string, payments: LengthAwarePaginator<int, array<string, mixed>>, packages: list<array<string, mixed>>}
+     * @return array{current: array<string, mixed>, awaitingPayment: bool, invoiceUrl: ?string, payments: LengthAwarePaginator<int, array<string, mixed>>, assignments: LengthAwarePaginator<int, array<string, mixed>>, packages: list<array<string, mixed>>}
      */
     public function for(User $user): array
     {
         $assignment = $user->activeAssignment();
+        $subscription = $assignment?->subscription;
+        $queued = $user->queuedAssignment();
         $invoiceUrl = $this->invoiceUrlFor($user);
 
         return [
@@ -30,10 +35,17 @@ class PackagePageData
                 'link_limit' => $user->linkLimit(),
                 'billing_period' => $assignment?->billing_period->value,
                 'expires_at' => $assignment?->expires_at->toIso8601String(),
+                'cancellable' => $assignment !== null && $assignment->cancelled_at === null && ! $subscription?->ended() && ! $subscription?->onGracePeriod(),
+                'can_buy' => ($assignment === null || $assignment->isCancelled()) && $queued === null,
+                'next_package_name' => $queued?->package->name,
+                'next_starts_at' => $queued?->starts_at->toIso8601String(),
+                'one_off' => $assignment !== null && $subscription === null,
+                'cancels' => $assignment?->isCancelled() ?? false,
             ],
             'awaitingPayment' => $this->isAwaitingPayment($user),
             'invoiceUrl' => $invoiceUrl,
             'payments' => $this->paymentsFor($user),
+            'assignments' => $this->assignmentsFor($user),
             'packages' => Package::where('is_default', false)->orderBy('name')->get()
                 ->map(fn (Package $package) => [
                     'id' => $package->id,
@@ -68,6 +80,73 @@ class PackagePageData
                 'status' => $payment->status->value,
                 'invoice_url' => $payment->invoice_url,
             ]);
+    }
+
+    /**
+     * One page of the user's package history, newest first.
+     *
+     * @return LengthAwarePaginator<int, array{id: string, package_name: string, billing_period: string, price: int, starts_at: ?string, expires_at: ?string, status: string}>
+     */
+    public function assignmentsFor(User $user): LengthAwarePaginator
+    {
+        $page = PackageAssignment::with(['package', 'subscription'])->where('user_id', $user->id)->latest('starts_at')
+            ->paginate(10, pageName: 'history_page')->withQueryString()
+            ->through(fn (PackageAssignment $assignment) => [
+                'id' => $assignment->id,
+                'package_name' => $assignment->package->name,
+                'billing_period' => $assignment->billing_period->value,
+                'price' => $assignment->price,
+                'starts_at' => $assignment->starts_at->toIso8601String(),
+                'expires_at' => $assignment->expires_at->toIso8601String(),
+                'status' => match (true) {
+                    $assignment->starts_at->isFuture() => 'queued',
+                    ! $assignment->expires_at->isFuture() => 'expired',
+                    $assignment->isCancelled() => 'cancelled',
+                    default => 'active',
+                },
+            ]);
+
+        if ($page->currentPage() === 1) {
+            $page->setCollection($this->awaitingActivationFor($user)->concat($page->getCollection()));
+        }
+
+        return $page;
+    }
+
+    /**
+     * Packages invoiced but not paid yet, so not activated; they start when the current package ends, else when bought.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function awaitingActivationFor(User $user): Collection
+    {
+        $current = $user->activeAssignment();
+        $invoiced = $user->payments()->with('package')->where('status', PaymentStatus::Open)->whereNotNull('package_id')->latest('issued_at')->get()
+            ->map(fn (Payment $payment) => [
+                'id' => $payment->id,
+                'package_name' => $payment->package->name,
+                'billing_period' => $payment->billing_period?->value,
+                'price' => $payment->amount,
+                'starts_at' => ($current?->expires_at ?? $payment->issued_at)->toIso8601String(),
+                'expires_at' => null,
+                'status' => 'awaiting_payment',
+            ]);
+
+        $activated = PackageAssignment::where('user_id', $user->id)->whereNotNull('subscription_id')->pluck('subscription_id');
+        $subscribed = $user->subscriptions()->whereNotIn('id', $activated)->whereNull('ends_at')->latest()->get()
+            ->map(fn (Subscription $subscription) => [$subscription, Package::findByStripePrice((string) $subscription->stripe_price)])
+            ->filter(fn (array $pair) => $pair[1] !== null && $invoiced->doesntContain('package_name', $pair[1][0]->name))
+            ->map(fn (array $pair) => [
+                'id' => $pair[0]->id,
+                'package_name' => $pair[1][0]->name,
+                'billing_period' => $pair[1][1]->value,
+                'price' => $pair[1][0]->priceFor($pair[1][1]),
+                'starts_at' => ($current?->expires_at ?? $pair[0]->created_at)->toIso8601String(),
+                'expires_at' => null,
+                'status' => 'awaiting_payment',
+            ]);
+
+        return $invoiced->concat($subscribed)->values();
     }
 
     /**

@@ -105,3 +105,82 @@ test('the package page has no invoice link when nothing is open', function () {
     $this->actingAs($this->user)->get(route('billing.package.show'))
         ->assertInertia(fn (Assert $page) => $page->where('invoiceUrl', null)->where('awaitingPayment', false));
 });
+
+test('a user cancels their own subscription', function () {
+    $subscription = Subscription::create(['user_id' => $this->user->id, 'type' => 'default', 'stripe_id' => 'sub_c', 'stripe_status' => 'active', 'stripe_price' => 'price_m', 'quantity' => 1]);
+    PackageAssignment::factory()->for($this->user)->for($this->package)->create(['subscription_id' => $subscription->id]);
+
+    $this->actingAs($this->user)->get(route('billing.package.show'))->assertInertia(fn (Assert $page) => $page->where('current.cancellable', true));
+    $this->actingAs($this->user)->delete(route('billing.package.cancel'))->assertRedirect();
+
+    expect($this->billing->calls)->toBe([['cancelSubscription', [$subscription->id]]]);
+});
+
+test('an admin cancels only their own subscription', function () {
+    $admin = User::factory()->admin()->create();
+    $subscription = Subscription::create(['user_id' => $admin->id, 'type' => 'default', 'stripe_id' => 'sub_a', 'stripe_status' => 'active', 'stripe_price' => 'price_m', 'quantity' => 1]);
+    PackageAssignment::factory()->for($admin)->for($this->package)->create(['subscription_id' => $subscription->id]);
+    $clientSubscription = Subscription::create(['user_id' => $this->user->id, 'type' => 'default', 'stripe_id' => 'sub_u', 'stripe_status' => 'active', 'stripe_price' => 'price_m', 'quantity' => 1]);
+    PackageAssignment::factory()->for($this->user)->for($this->package)->create(['subscription_id' => $clientSubscription->id]);
+
+    $this->actingAs($admin)->delete(route('billing.package.cancel'))->assertRedirect();
+
+    expect($this->billing->calls)->toBe([['cancelSubscription', [$subscription->id]]]);
+});
+
+test('cancelling a one-off package keeps it until it expires', function () {
+    PackageAssignment::factory()->for($this->user)->for($this->package)->create(['subscription_id' => null]);
+
+    $this->actingAs($this->user)->delete(route('billing.package.cancel'))->assertRedirect();
+
+    $this->actingAs($this->user)->get(route('billing.package.show'))->assertInertia(fn (Assert $page) => $page->where('current.cancellable', false)->where('current.cancels', true));
+    $this->actingAs($this->user)->delete(route('billing.package.cancel'))->assertSessionHasErrors('package');
+
+    expect($this->user->fresh()->activeAssignment()->cancelled_at)->not->toBeNull()->and($this->billing->called())->toBe([]);
+});
+
+test('nothing is cancelled without a package', function () {
+    $this->actingAs($this->user)->delete(route('billing.package.cancel'))->assertSessionHasErrors('package');
+});
+
+test('guests and super admins cannot cancel', function () {
+    $this->delete(route('billing.package.cancel'))->assertRedirect(route('login'));
+    $this->actingAs(User::factory()->superAdmin()->create())->delete(route('billing.package.cancel'))->assertForbidden();
+});
+
+test('a cancelled package can be followed by a new purchase, but only one', function () {
+    $current = PackageAssignment::factory()->for($this->user)->for($this->package)->create(['cancelled_at' => now()]);
+    $data = ['package_id' => $this->package->id, 'billing_period' => 'monthly'];
+
+    $this->actingAs($this->user)->get(route('billing.package.show'))->assertInertia(fn (Assert $page) => $page->where('current.can_buy', true));
+    $this->actingAs($this->user)->withHeaders(['X-Inertia' => 'true'])->post(route('billing.package.checkout'), $data)->assertStatus(409);
+
+    PackageAssignment::factory()->for($this->user)->for($this->package)->create(['starts_at' => $current->expires_at, 'expires_at' => $current->expires_at->copy()->addMonth()]);
+
+    $this->actingAs($this->user)->post(route('billing.package.checkout'), $data)->assertSessionHasErrors('package');
+});
+
+test('the page lists the package history, newest first', function () {
+    PackageAssignment::factory()->for($this->user)->for($this->package)->create(['starts_at' => now()->subMonths(2), 'expires_at' => now()->subMonth()]);
+    PackageAssignment::factory()->for($this->user)->for($this->package)->create(['starts_at' => now()->subDay(), 'expires_at' => now()->addMonth(), 'cancelled_at' => now()]);
+    PackageAssignment::factory()->for(User::factory()->create())->for($this->package)->create();
+    Payment::factory()->open()->create(['user_id' => $this->user->id, 'package_id' => $this->package->id]);
+
+    $this->actingAs($this->user)->get(route('billing.package.show'))
+        ->assertInertia(fn (Assert $page) => $page->where('assignments.data', fn ($rows) => collect($rows)->pluck('status')->all() === ['awaiting_payment', 'cancelled', 'expired']));
+});
+
+test('a subscription not yet activated by a payment is listed as awaiting payment', function () {
+    Subscription::create(['user_id' => $this->user->id, 'type' => 'default', 'stripe_id' => 'sub_d', 'stripe_status' => 'active', 'stripe_price' => 'price_m', 'quantity' => 1]);
+
+    $this->actingAs($this->user)->get(route('billing.package.show'))
+        ->assertInertia(fn (Assert $page) => $page->where('assignments.data.0.status', 'awaiting_payment')->where('assignments.data.0.package_name', 'Pro')->where('assignments.data.0.price', 1900));
+});
+
+test('an awaiting package starts when the current one ends', function () {
+    $current = PackageAssignment::factory()->for($this->user)->for($this->package)->create(['cancelled_at' => now()]);
+    Payment::factory()->open()->create(['user_id' => $this->user->id, 'package_id' => $this->package->id]);
+
+    $this->actingAs($this->user)->get(route('billing.package.show'))
+        ->assertInertia(fn (Assert $page) => $page->where('assignments.data.0.status', 'awaiting_payment')->where('assignments.data.0.starts_at', $current->expires_at->toIso8601String()));
+});

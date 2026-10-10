@@ -5,6 +5,7 @@ namespace Tests\Support;
 use App\Billing\PackageBilling;
 use App\Enums\BillingPeriod;
 use App\Models\Package;
+use App\Models\Subscription;
 use App\Models\User;
 use RuntimeException;
 
@@ -38,6 +39,11 @@ class FakePackageBilling implements PackageBilling
     public function retirePackage(Package $package): void
     {
         $this->calls[] = ['retirePackage', [$package->id]];
+    }
+
+    public function cancelSubscription(Subscription $subscription): void
+    {
+        $this->calls[] = ['cancelSubscription', [$subscription->id]];
     }
 
     public function checkout(User $user, Package $package, BillingPeriod $period, string $successUrl, string $cancelUrl): string

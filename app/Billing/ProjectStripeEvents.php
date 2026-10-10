@@ -70,17 +70,50 @@ class ProjectStripeEvents
         $start = CarbonImmutable::createFromTimestamp(data_get($line, 'period.start', time()));
         $stripeSubscription = $invoice['subscription'] ?? data_get($invoice, 'parent.subscription_details.subscription');
 
-        PackageAssignment::updateOrCreate(['user_id' => $user->id], [
+        $subscriptionId = $stripeSubscription === null ? null : Subscription::where('stripe_id', $stripeSubscription)->value('id');
+        $end = $period === BillingPeriod::OneTime
+            ? $start->addMonthNoOverflow()
+            : CarbonImmutable::createFromTimestamp($line['period']['end']);
+        $attributes = [
             'package_id' => $package->id,
-            'subscription_id' => $stripeSubscription === null ? null : Subscription::where('stripe_id', $stripeSubscription)->value('id'),
+            'subscription_id' => $subscriptionId,
             'billing_period' => $period,
             'price' => $invoice['amount_paid'],
             'link_limit' => $package->link_limit,
-            'starts_at' => $start,
-            'expires_at' => $period === BillingPeriod::OneTime
-                ? $start->addMonthNoOverflow()
-                : CarbonImmutable::createFromTimestamp($line['period']['end']),
-        ]);
+            'cancelled_at' => null,
+        ];
+
+        $renewed = $subscriptionId === null ? null : PackageAssignment::where('subscription_id', $subscriptionId)->latest('starts_at')->first();
+
+        if ($renewed !== null) {
+            $expires = $renewed->expires_at->toImmutable();
+            $renewed->update([...$attributes, 'starts_at' => $renewed->starts_at->toImmutable()->max($start->min($expires)), 'expires_at' => $expires->max($start)->add($start->diff($end))]);
+
+            return;
+        }
+
+        $current = $user->activeAssignment();
+
+        if ($current?->isCancelled()) {
+            $queuedStart = $current->expires_at->toImmutable();
+            PackageAssignment::updateOrCreate(
+                ['user_id' => $user->id, 'starts_at' => $queuedStart],
+                [...$attributes, 'expires_at' => $queuedStart->add($start->diff($end))],
+            );
+
+            return;
+        }
+
+        $previous = $user->packageAssignment()->first();
+
+        if ($previous?->package_id === $package->id && $previous->billing_period === $period) {
+            $previous->update([...$attributes, 'starts_at' => $start, 'expires_at' => $end]);
+
+            return;
+        }
+
+        $previous?->update(['expires_at' => $previous->expires_at->min($start)]);
+        PackageAssignment::create([...$attributes, 'user_id' => $user->id, 'starts_at' => $start, 'expires_at' => $end]);
     }
 
     /**
@@ -91,7 +124,10 @@ class ProjectStripeEvents
         $id = Subscription::where('stripe_id', $subscription['id'] ?? null)->value('id');
 
         if ($id !== null) {
-            PackageAssignment::where('subscription_id', $id)->delete();
+            PackageAssignment::where('subscription_id', $id)->get()->each(fn (PackageAssignment $assignment) => $assignment->update([
+                'cancelled_at' => $assignment->cancelled_at ?? now(),
+                'expires_at' => $assignment->expires_at->isFuture() ? now() : $assignment->expires_at,
+            ]));
         }
     }
 }

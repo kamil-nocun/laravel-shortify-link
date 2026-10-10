@@ -7,7 +7,9 @@ use App\Billing\PackagePageData;
 use App\Enums\BillingPeriod;
 use App\Http\Requests\Billing\CheckoutRequest;
 use App\Models\Package;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -27,6 +29,25 @@ class BillingController extends Controller
             ...$this->pageData->for($request->user()),
             'checkoutStatus' => $request->query('checkout'),
         ]);
+    }
+
+    /**
+     * Cancel the user's own package: a subscription ends with the paid period, a one-off package is only marked cancelled and runs until it expires (no refund).
+     */
+    public function cancel(Request $request): RedirectResponse
+    {
+        abort_if($request->user()->isSuperAdmin(), 403);
+
+        $assignment = $request->user()->activeAssignment();
+        $subscription = $assignment?->subscription;
+
+        if ($assignment === null || $assignment->cancelled_at !== null || $subscription?->onGracePeriod() || $subscription?->ended()) {
+            throw ValidationException::withMessages(['package' => 'There is no package to cancel.']);
+        }
+
+        $subscription === null ? $assignment->update(['cancelled_at' => now()]) : $this->billing->cancelSubscription($subscription);
+
+        return back();
     }
 
     /**

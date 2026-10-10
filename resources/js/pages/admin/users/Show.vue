@@ -8,6 +8,7 @@ import {
 } from "@inertiajs/vue3";
 import { computed, ref, useTemplateRef } from "vue";
 import ClicksChart from "@/components/ClicksChart.vue";
+import PackageHistory from "@/components/PackageHistory.vue";
 import PaymentHistory from "@/components/PaymentHistory.vue";
 import UserPackageCard from "@/components/UserPackageCard.vue";
 import Heading from "@/components/Heading.vue";
@@ -25,7 +26,6 @@ import {
 } from "@/components/ui/dialog";
 import { dashboard } from "@/routes/admin";
 import { disable, enable, stats as linkStats } from "@/routes/admin/links";
-import { create as createLink } from "@/routes/admin/users/links";
 import {
     block,
     destroy,
@@ -42,6 +42,7 @@ import type {
     Link,
     PackageAssignment,
     PackageOption,
+    AssignmentRow,
     PaymentRow,
     Paginated,
     StatsPeriodParams,
@@ -55,6 +56,7 @@ const props = defineProps<{
     effectiveLimit: number | null;
     invoiceUrl: string | null;
     payments: Paginated<PaymentRow> | null;
+    assignments: Paginated<AssignmentRow> | null;
     paymentState: "awaiting_payment" | "active" | "expired" | null;
     links: Paginated<Link>;
     period: StatsPeriodParams;
@@ -301,6 +303,8 @@ setLayoutProps({
             >
         </p>
 
+        <PackageHistory v-if="assignments" :assignments="assignments" />
+
         <PaymentHistory v-if="payments" :payments="payments" />
 
         <div class="flex flex-wrap items-center justify-between gap-2">
@@ -341,9 +345,6 @@ setLayoutProps({
 
         <div class="flex items-center justify-between">
             <h2 class="font-medium">Links</h2>
-            <Button v-if="user.can.createLink" size="sm" as-child>
-                <InertiaLink :href="createLink(user.id)">Add link</InertiaLink>
-            </Button>
         </div>
 
         <p v-if="links.data.length === 0" class="text-sm text-muted-foreground">

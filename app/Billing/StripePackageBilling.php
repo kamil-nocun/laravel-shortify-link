@@ -64,6 +64,13 @@ class StripePackageBilling implements PackageBilling
         }
     }
 
+    public function cancelSubscription(Subscription $subscription): void
+    {
+        StripeSandboxGuard::assertTestMode();
+
+        $subscription->cancel();
+    }
+
     public function checkout(User $user, Package $package, BillingPeriod $period, string $successUrl, string $cancelUrl): string
     {
         StripeSandboxGuard::assertTestMode();

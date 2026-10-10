@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('links/{link}/toggle', LinkToggleController::class)->name('links.toggle');
     Route::resource('links', LinkController::class)->except('show');
     Route::get('billing/package', [BillingController::class, 'show'])->name('billing.package.show');
+    Route::delete('billing/package', [BillingController::class, 'cancel'])->name('billing.package.cancel');
     Route::post('billing/package/checkout', [BillingController::class, 'checkout'])->name('billing.package.checkout');
 });
 

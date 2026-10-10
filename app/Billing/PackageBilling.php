@@ -4,10 +4,16 @@ namespace App\Billing;
 
 use App\Enums\BillingPeriod;
 use App\Models\Package;
+use App\Models\Subscription;
 use App\Models\User;
 
 interface PackageBilling
 {
+    /**
+     * Cancel the user's subscription at the end of the paid period.
+     */
+    public function cancelSubscription(Subscription $subscription): void;
+
     /**
      * Create or update the Stripe product and prices of the package and store their identifiers.
      */

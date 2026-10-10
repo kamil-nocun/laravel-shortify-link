@@ -5,7 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { checkout } from '@/routes/billing/package';
+import { cancel, checkout } from '@/routes/billing/package';
 import { billingPeriodLabels, formatPrice } from '@/types';
 import type { BillingPeriod } from '@/types';
 
@@ -22,6 +22,12 @@ const props = defineProps<{
         link_limit: number | null;
         billing_period: BillingPeriod | null;
         expires_at: string | null;
+        cancellable: boolean;
+        cancels: boolean;
+        one_off: boolean;
+        can_buy: boolean;
+        next_package_name: string | null;
+        next_starts_at: string | null;
     };
     awaitingPayment: boolean;
     invoiceUrl?: string | null;
@@ -36,6 +42,12 @@ const chosen = reactive<Record<string, BillingPeriod>>(
         props.packages.map((pkg) => [pkg.id, Object.keys(pkg.prices)[0] as BillingPeriod]),
     ),
 );
+
+const cancelSubscription = () => {
+    if (confirm(props.current.one_off ? 'Cancel your package? It stays active until it expires and is not refunded.' : 'Cancel your subscription? The package stays active until the end of the paid period.')) {
+        router.delete(cancel().url);
+    }
+};
 
 const buy = (pkg: SellablePackage) =>
     router.post(checkout().url, {
@@ -88,6 +100,21 @@ const buy = (pkg: SellablePackage) =>
                     {{ new Date(current.expires_at).toLocaleDateString() }}
                 </template>
             </p>
+            <p v-if="current.cancels" class="text-sm text-muted-foreground">
+                Package cancelled — it will not renew.
+            </p>
+            <p v-if="current.next_package_name" class="text-sm">
+                Next: {{ current.next_package_name }} · starts
+                {{ new Date(current.next_starts_at as string).toLocaleDateString() }}
+            </p>
+            <Button
+                v-if="current.cancellable && !readonly"
+                variant="destructive"
+                size="sm"
+                class="mt-3"
+                @click="cancelSubscription"
+                >{{ current.one_off ? 'Cancel package' : 'Cancel subscription' }}</Button
+            >
         </div>
 
         <InputError :message="errors?.package" />
@@ -125,7 +152,7 @@ const buy = (pkg: SellablePackage) =>
                 <InputError :message="errors?.billing_period" />
                 <Button
                     size="sm"
-                    :disabled="readonly || current.billing_period !== null || awaitingPayment"
+                    :disabled="readonly || !current.can_buy || awaitingPayment"
                     @click="buy(pkg)"
                     >Buy</Button
                 >

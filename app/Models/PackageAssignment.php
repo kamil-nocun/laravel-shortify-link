@@ -21,10 +21,11 @@ use Illuminate\Support\Carbon;
  * @property int $link_limit
  * @property Carbon $starts_at
  * @property Carbon $expires_at
+ * @property Carbon|null $cancelled_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'package_id', 'subscription_id', 'billing_period', 'price', 'link_limit', 'starts_at', 'expires_at'])]
+#[Fillable(['user_id', 'package_id', 'subscription_id', 'billing_period', 'price', 'link_limit', 'starts_at', 'expires_at', 'cancelled_at'])]
 class PackageAssignment extends Model
 {
     /** @use HasFactory<PackageAssignmentFactory> */
@@ -39,6 +40,7 @@ class PackageAssignment extends Model
             'billing_period' => BillingPeriod::class,
             'starts_at' => 'datetime',
             'expires_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -64,6 +66,14 @@ class PackageAssignment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Whether the package will not renew: cancelled by the user or its subscription is winding down.
+     */
+    public function isCancelled(): bool
+    {
+        return $this->cancelled_at !== null || ($this->subscription?->onGracePeriod() ?? false);
     }
 
     public function isActive(): bool

@@ -107,7 +107,16 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function packageAssignment(): HasOne
     {
-        return $this->hasOne(PackageAssignment::class);
+        return $this->hasOne(PackageAssignment::class)
+            ->ofMany(['starts_at' => 'max'], fn (Builder $query) => $query->where('starts_at', '<=', now()));
+    }
+
+    /**
+     * The package bought to start once the current one ends, if any.
+     */
+    public function queuedAssignment(): ?PackageAssignment
+    {
+        return PackageAssignment::with('package')->where('user_id', $this->id)->where('starts_at', '>', now())->orderBy('starts_at')->first();
     }
 
     /**

@@ -74,13 +74,14 @@ test('the newer invoice payload shape is understood', function () {
 test('a renewal moves the period and refreshes the limit', function () {
     $this->postJson(route('cashier.webhook'), invoicePaid('price_monthly', 1000, now()->timestamp, now()->addMonth()->timestamp));
     $this->package->update(['link_limit' => 60]);
+    $this->travelTo(now()->addMonth());
 
-    $this->postJson(route('cashier.webhook'), invoicePaid('price_monthly', 1000, now()->addMonth()->timestamp, now()->addMonths(2)->timestamp));
+    $this->postJson(route('cashier.webhook'), invoicePaid('price_monthly', 1000, now()->timestamp, now()->addMonth()->timestamp));
 
     $assignment = $this->user->packageAssignment()->firstOrFail();
     expect(PackageAssignment::where('user_id', $this->user->id)->count())->toBe(1)
         ->and($assignment->link_limit)->toBe(60)
-        ->and($assignment->expires_at->timestamp)->toBe(now()->addMonths(2)->timestamp);
+        ->and($assignment->expires_at->timestamp)->toBe(now()->addMonth()->timestamp);
 });
 
 test('the same event is applied only once', function () {
@@ -108,7 +109,8 @@ test('a deleted subscription ends the assignment', function () {
 
     $this->postJson(route('cashier.webhook'), stripeEvent('customer.subscription.deleted', ['id' => 'sub_9', 'customer' => 'cus_test', 'status' => 'canceled']))->assertOk();
 
-    expect($this->user->packageAssignment()->exists())->toBeFalse()
+    expect($this->user->activeAssignment())->toBeNull()
+        ->and(PackageAssignment::where('user_id', $this->user->id)->count())->toBe(1)
         ->and($this->user->linkLimit())->toBe(10);
 });
 
@@ -137,4 +139,18 @@ test('a webhook with a valid signature is accepted', function () {
     $this->call('POST', route('cashier.webhook'), [], [], [], ['HTTP_STRIPE_SIGNATURE' => "t={$timestamp},v1={$signature}", 'CONTENT_TYPE' => 'application/json'], $payload)->assertOk();
 
     expect(PackageAssignment::count())->toBe(1);
+});
+
+test('a package bought after cancelling starts when the current one ends', function () {
+    $current = PackageAssignment::factory()->for($this->user)->for($this->package)->create(['billing_period' => 'one_time', 'starts_at' => now()->subDays(10), 'expires_at' => now()->addDays(20), 'cancelled_at' => now()]);
+
+    $this->postJson(route('cashier.webhook'), invoicePaid('price_one_time', 4900, now()->timestamp, now()->timestamp))->assertOk();
+
+    $queued = $this->user->queuedAssignment();
+    expect($queued->starts_at->timestamp)->toBe($current->expires_at->timestamp)
+        ->and($queued->expires_at->timestamp)->toBe($current->expires_at->copy()->addMonthNoOverflow()->timestamp)
+        ->and($this->user->activeAssignment()->id)->toBe($current->id);
+
+    $this->travelTo($current->expires_at->copy()->addMinute());
+    expect($this->user->fresh()->activeAssignment()->id)->toBe($queued->id);
 });

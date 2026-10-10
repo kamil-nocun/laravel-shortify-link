@@ -58,6 +58,26 @@ export type PaymentRow = {
     invoice_url: string | null;
 };
 
+export type AssignmentStatus = 'awaiting_payment' | 'queued' | 'active' | 'cancelled' | 'expired';
+
+export type AssignmentRow = {
+    id: string;
+    package_name: string;
+    billing_period: BillingPeriod | null;
+    price: number;
+    starts_at: string | null;
+    expires_at: string | null;
+    status: AssignmentStatus;
+};
+
+export const assignmentStatusLabels: Record<AssignmentStatus, string> = {
+    awaiting_payment: 'Awaiting payment',
+    queued: 'Starts later',
+    active: 'Active',
+    cancelled: 'Cancelled, runs to the end',
+    expired: 'Ended',
+};
+
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
     open: 'Awaiting payment',
     paid: 'Paid',
