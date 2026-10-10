@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Support\AccountExport;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Throwable;
 use ZipArchive;
 
 class PrivacyExportController extends Controller
@@ -17,14 +18,20 @@ class PrivacyExportController extends Controller
     {
         $path = tempnam(sys_get_temp_dir(), 'export');
 
-        $zip = new ZipArchive;
-        $zip->open($path, ZipArchive::OVERWRITE);
+        try {
+            $zip = new ZipArchive;
+            abort_unless($zip->open($path, ZipArchive::OVERWRITE) === true, 500);
 
-        foreach ($export->files($request->user()) as $name => $content) {
-            $zip->addFromString($name, $content);
+            foreach ($export->files($request->user()) as $name => $content) {
+                $zip->addFromString($name, $content);
+            }
+
+            abort_unless($zip->close(), 500);
+        } catch (Throwable $exception) {
+            @unlink($path);
+
+            throw $exception;
         }
-
-        $zip->close();
 
         return response()->download($path, 'shortify-export-'.now()->toDateString().'.zip', ['Content-Type' => 'application/zip'])->deleteFileAfterSend();
     }

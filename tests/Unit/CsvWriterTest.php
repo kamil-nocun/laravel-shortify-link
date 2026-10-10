@@ -19,3 +19,7 @@ test('renders null as an empty cell and booleans as numbers', function () {
 test('renders the header even without rows', function () {
     expect((new CsvWriter)->render(['a', 'b'], []))->toBe("a,b\n");
 });
+
+test('escapes formulas hidden behind leading whitespace', function () {
+    expect((new CsvWriter)->render(['value'], [[' =1+1']]))->toContain("' =1+1");
+});

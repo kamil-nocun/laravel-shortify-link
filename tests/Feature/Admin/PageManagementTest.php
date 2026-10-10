@@ -169,3 +169,12 @@ test('the edit and index props expose the legal document flag', function () {
     $this->actingAs($this->super)->get(route('admin.pages.index'))
         ->assertInertia(fn (Assert $inertia) => $inertia->where('pages.0.is_legal_document', true));
 });
+
+test('an update that does not send the legal flag keeps it', function () {
+    $page = pageWithVersion('terms');
+    $page->update(['is_legal_document' => true]);
+
+    $this->actingAs($this->super)->put(route('admin.pages.update', $page), ['slug' => 'terms', 'title' => 'Privacy', 'body' => '<p>One</p>']);
+
+    expect($page->fresh()->is_legal_document)->toBeTrue();
+});

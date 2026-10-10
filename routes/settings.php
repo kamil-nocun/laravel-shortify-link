@@ -10,7 +10,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::get('settings/privacy/export', PrivacyExportController::class)->name('privacy.export');
+    Route::get('settings/privacy/export', PrivacyExportController::class)->middleware('throttle:6,1')->name('privacy.export');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

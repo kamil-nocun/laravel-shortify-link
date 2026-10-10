@@ -2,8 +2,10 @@
 
 use App\Actions\SavePageVersion;
 use App\Models\Link;
+use App\Models\Page;
 use App\Models\User;
 use App\Support\ConsentDocuments;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('a user with pending documents is redirected to the consent page', function () {
@@ -140,4 +142,35 @@ test('accepting records only the versions that were shown', function () {
 
     expect($user->consents()->pluck('page_version_id')->all())->toBe([$shown]);
     $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('consent.show'));
+});
+
+test('the public home page stays reachable while consent is pending', function () {
+    documentPage('terms');
+
+    $this->actingAs(User::factory()->create())->get(route('front_app'))->assertOk();
+});
+
+test('json requests get a 409 that says where to accept', function () {
+    documentPage('terms');
+
+    $this->actingAs(User::factory()->create())->getJson('/dashboard')
+        ->assertStatus(409)
+        ->assertJsonPath('redirect', route('consent.show'));
+});
+
+test('with nothing pending the consent page sends admins to the admin dashboard', function () {
+    $this->actingAs(User::factory()->admin()->create())->get(route('consent.show'))->assertRedirect(route('admin.dashboard'));
+});
+
+test('finding the pending documents takes at most two queries', function () {
+    documentPage('terms');
+    documentPage('privacy-policy');
+    $user = User::factory()->create();
+    ConsentDocuments::accept($user);
+    app(SavePageVersion::class)(Page::firstWhere('slug', 'terms'), 'Terms', '<p>Changed</p>', null);
+    DB::enableQueryLog();
+
+    ConsentDocuments::pendingFor($user);
+
+    expect(count(DB::getQueryLog()))->toBeLessThanOrEqual(2);
 });

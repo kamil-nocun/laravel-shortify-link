@@ -19,7 +19,7 @@ class ConsentController extends Controller
         $pending = ConsentDocuments::pendingFor($request->user());
 
         if ($pending->isEmpty()) {
-            return to_route('dashboard');
+            return to_route($request->user()->isAdmin() ? 'admin.dashboard' : 'dashboard');
         }
 
         return Inertia::render('consent/Show', [

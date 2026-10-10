@@ -12,7 +12,7 @@ class EnsureConsentsAccepted
     /**
      * Routes that must work without consent, so that the user's rights never depend on accepting anything.
      */
-    private const EXEMPT = ['consent.*', 'content.show', 'logout', 'privacy.export', 'profile.destroy', 'verification.*'];
+    private const EXEMPT = ['consent.*', 'content.show', 'front_app', 'logout', 'privacy.export', 'profile.destroy', 'verification.*'];
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -22,7 +22,9 @@ class EnsureConsentsAccepted
             return $next($request);
         }
 
-        abort_if($request->expectsJson(), 409, __('You have to accept the current documents first.'));
+        if ($request->expectsJson()) {
+            return response()->json(['message' => __('You have to accept the current documents first.'), 'redirect' => route('consent.show')], 409);
+        }
 
         return redirect()->guest(route('consent.show'), 303);
     }

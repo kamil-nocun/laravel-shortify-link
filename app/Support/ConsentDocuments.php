@@ -7,6 +7,7 @@ use App\Models\Page;
 use App\Models\PageVersion;
 use App\Models\User;
 use App\Models\UserConsent;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -19,27 +20,41 @@ class ConsentDocuments
      */
     public static function current(): Collection
     {
+        return self::currentPages()->get()->map(fn (Page $page): PageVersion => self::versionOf($page))->values();
+    }
+
+    private static function versionOf(Page $page): PageVersion
+    {
+        return $page->currentVersion->setRelation('page', $page);
+    }
+
+    /**
+     * Published legal pages with content and their current version, in a fixed order (slug descending: terms, privacy policy, cookies policy).
+     *
+     * @return Builder<Page>
+     */
+    private static function currentPages(): Builder
+    {
         return Page::query()
             ->where('is_legal_document', true)
             ->where('status', PageStatus::Published)
             ->whereNotNull('current_version_id')
             ->with('currentVersion')
-            ->orderBy('slug', 'desc')
-            ->get()
-            ->map(fn (Page $page): PageVersion => $page->currentVersion)
-            ->values();
+            ->orderBy('slug', 'desc');
     }
 
     /**
-     * Current versions the user has not accepted yet.
+     * Current versions the user has not accepted yet, found in one query for the pages plus one for their versions.
      *
      * @return Collection<int, PageVersion>
      */
     public static function pendingFor(User $user): Collection
     {
-        $accepted = $user->consents()->pluck('page_version_id');
-
-        return self::current()->reject(fn (PageVersion $version): bool => $accepted->contains($version->id))->values();
+        return self::currentPages()
+            ->whereNotIn('current_version_id', $user->consents()->select('page_version_id'))
+            ->get()
+            ->map(fn (Page $page): PageVersion => self::versionOf($page))
+            ->values();
     }
 
     /**

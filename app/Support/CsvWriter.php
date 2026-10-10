@@ -32,7 +32,7 @@ class CsvWriter
         return match (true) {
             $value === null => '',
             is_bool($value) => $value ? '1' : '0',
-            is_string($value) && $value !== '' && str_contains("=+-@\t\r", $value[0]) => "'".$value,
+            is_string($value) && ltrim($value, ' ') !== '' && str_contains("=+-@\t\r", ltrim($value, ' ')[0]) => "'".$value,
             default => (string) $value,
         };
     }

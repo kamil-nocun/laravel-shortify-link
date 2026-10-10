@@ -5,6 +5,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Models\UserConsent;
 use App\Support\ConsentDocuments;
+use Illuminate\Support\Facades\Auth;
 
 function customerWithData(): User
 {
@@ -20,7 +21,9 @@ test('deleting the account removes the stripe customer and then the data', funct
     $user = customerWithData();
     ConsentDocuments::accept($user);
 
-    $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password'])->assertRedirect(route('front_app'));
+    $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertRedirect(route('front_app'))
+        ->assertCookieExpired(Auth::guard('web')->getRecallerName());
 
     expect($this->billing->calls)->toBe([['deleteCustomer', [$user->id]]])
         ->and(User::whereKey($user->id)->exists())->toBeFalse()

@@ -84,7 +84,7 @@ class PageController extends Controller
      */
     public function update(UpdatePageRequest $request, Page $page, HtmlSanitizer $sanitizer): RedirectResponse
     {
-        $page->update(['slug' => $request->validated('slug'), 'is_legal_document' => $request->boolean('is_legal_document')]);
+        $page->update(['slug' => $request->validated('slug'), 'is_legal_document' => $request->has('is_legal_document') ? $request->boolean('is_legal_document') : $page->is_legal_document]);
 
         $current = $page->currentVersion;
         $title = $request->validated('title');

@@ -112,3 +112,13 @@ test('every csv starts with a utf-8 byte order mark so Excel reads Polish charac
         expect(str_starts_with($zip->getFromIndex($index), "\xEF\xBB\xBF"))->toBeTrue();
     }
 });
+
+test('the export is throttled', function () {
+    $user = User::factory()->create();
+
+    foreach (range(1, 6) as $ignored) {
+        $this->actingAs($user)->get(route('privacy.export'))->assertOk();
+    }
+
+    $this->actingAs($user)->get(route('privacy.export'))->assertStatus(429);
+});
