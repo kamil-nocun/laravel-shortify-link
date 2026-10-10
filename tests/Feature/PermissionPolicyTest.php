@@ -101,3 +101,20 @@ test('auth.can shares every permission key, true only for the user\'s own', func
 test('guests share an empty auth.can map', function () {
     $this->get(route('front_app'))->assertInertia(fn (Assert $page) => $page->where('auth.can', []));
 });
+
+test('an administrator granted users.change_role changes roles only of clients they manage', function () {
+    $admin = User::factory()->admin()->create();
+    $admin->permissionOverrides()->attach(PermissionRecord::where('key', Permission::UsersChangeRole)->firstOrFail(), ['granted' => true]);
+    $assigned = User::factory()->assignedTo($admin)->create();
+    $unassigned = User::factory()->create();
+    $otherAdmin = User::factory()->admin()->create();
+    $otherAdmin->assignedAdmins()->attach($admin);
+
+    expect(Gate::forUser($admin)->allows('changeRole', $assigned))->toBeTrue()
+        ->and(Gate::forUser($admin)->allows('changeRole', $unassigned))->toBeFalse()
+        ->and(Gate::forUser($admin)->allows('changeRole', $otherAdmin))->toBeFalse()
+        ->and(Gate::forUser($admin)->allows('changeRole', $admin))->toBeFalse();
+
+    $this->actingAs($admin)->patch(route('admin.users.role', $unassigned), ['role_id' => roleId('Administrator')])->assertNotFound();
+    expect($unassigned->fresh()->role_id)->toBe(roleId('Client'));
+});

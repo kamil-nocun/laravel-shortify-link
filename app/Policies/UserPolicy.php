@@ -101,7 +101,8 @@ class UserPolicy
      */
     public function changeRole(User $actor, User $target): bool
     {
-        return $actor->hasPermission(Permission::UsersChangeRole) && ! $target->is($actor) && ! $target->isSuperAdmin();
+        return $actor->hasPermission(Permission::UsersChangeRole) && ! $target->is($actor) && ! $target->isSuperAdmin()
+            && $this->outranks($actor, $target) && $this->manages($actor, $target);
     }
 
     /**
