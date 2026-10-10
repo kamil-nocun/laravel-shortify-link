@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LinkEntry;
 use App\Enums\LinkStatus;
 use Database\Factories\LinkFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -85,6 +86,16 @@ class Link extends Model
             : Str::of(config('app.url'))->rtrim('/');
 
         return $base->append('/', $path)->toString();
+    }
+
+    /**
+     * Address encoded in the QR code of the code or alias, marked as a scan; null when the link has no alias.
+     */
+    public function qrUrl(LinkEntry $entry): ?string
+    {
+        $url = $entry === LinkEntry::Code ? $this->short_url : $this->alias_url;
+
+        return $url === null ? null : $url.'?qr=1';
     }
 
     /**

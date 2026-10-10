@@ -21,6 +21,7 @@ use App\Http\Controllers\DomainCheckController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\DomainVerifyController;
 use App\Http\Controllers\LinkController;
+use App\Http\Controllers\LinkQrController;
 use App\Http\Controllers\LinkStatsController;
 use App\Http\Controllers\LinkToggleController;
 use App\Http\Controllers\RedirectLinkController;
@@ -36,6 +37,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('links/{link}/stats', LinkStatsController::class)->name('links.stats');
     Route::get('links/{link}/stats/data', [LinkStatsController::class, 'data'])->name('links.stats.data');
+    Route::get('links/{link}/qr/{type}', LinkQrController::class)->whereIn('type', ['code', 'alias'])->name('links.qr');
     Route::patch('links/{link}/toggle', LinkToggleController::class)->name('links.toggle');
     Route::resource('links', LinkController::class)->except('show');
     Route::resource('domains', DomainController::class)->only(['index', 'store', 'destroy']);
