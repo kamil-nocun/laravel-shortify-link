@@ -32,6 +32,7 @@ const initial = defineProps<{
     browsers: StatsTableData;
     systems: StatsTableData;
     devices: StatsTableData;
+    entries: StatsTableData;
     filters: StatsFilters;
     options: StatsOptions;
     dataUrl: string;
@@ -53,6 +54,7 @@ const tableKeys: StatsTableKey[] = [
     'browsers',
     'systems',
     'devices',
+    'entries',
 ];
 
 const tableLabels: Record<StatsTableKey, string> = {
@@ -61,6 +63,7 @@ const tableLabels: Record<StatsTableKey, string> = {
     browsers: 'Browser',
     systems: 'Operating system',
     devices: 'Device',
+    entries: 'Short URL',
 };
 
 const tableTitles: Record<StatsTableKey, string> = {
@@ -69,6 +72,7 @@ const tableTitles: Record<StatsTableKey, string> = {
     browsers: 'Browsers',
     systems: 'Operating systems',
     devices: 'Devices',
+    entries: 'Short URL used',
 };
 
 type StatsQuery = NonNullable<RouteQueryOptions['query']>;
@@ -90,6 +94,7 @@ const tables = ref<Record<StatsTableKey, StatsTableData>>({
     browsers: initial.browsers,
     systems: initial.systems,
     devices: initial.devices,
+    entries: initial.entries,
 });
 
 const loadFailed = ref(false);
@@ -331,6 +336,11 @@ const filterFields = computed(() => {
                 label: 'Device',
                 options: options.value.devices,
             },
+            {
+                key: 'entry',
+                label: 'Short URL',
+                options: options.value.entries,
+            },
         ];
 
     return fields.map((field) => {
@@ -397,6 +407,7 @@ const clearFilters = () => {
         browser: null,
         os: null,
         device_type: null,
+        entry: null,
     };
     resetPages();
     load(null);
