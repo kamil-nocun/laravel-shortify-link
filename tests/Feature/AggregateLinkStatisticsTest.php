@@ -10,16 +10,16 @@ beforeEach(function () {
     $this->link = Link::factory()->create();
 });
 
-function clickOn($day, array $attributes = [], ?Link $link = null, int $times = 1): void
+function clicksOnDay($day, array $attributes = [], ?Link $link = null, int $times = 1): void
 {
     LinkClick::factory()->count($times)->for($link ?? test()->link)->create(['clicked_at' => $day, ...$attributes]);
 }
 
 test('collapses a past day into one summary row per dimension set', function () {
     $day = now()->subDay();
-    clickOn($day->copy()->setTime(9, 15), ['country_code' => 'PL', 'country' => 'Poland', 'city' => 'Warsaw', 'browser' => 'Chrome'], times: 2);
-    clickOn($day->copy()->setTime(22, 5), ['country_code' => 'PL', 'country' => 'Poland', 'city' => 'Krakow', 'browser' => 'Chrome']);
-    clickOn($day->copy()->setTime(11, 0), ['country_code' => 'DE', 'country' => 'Germany', 'city' => 'Berlin', 'browser' => 'Firefox']);
+    clicksOnDay($day->copy()->setTime(9, 15), ['country_code' => 'PL', 'country' => 'Poland', 'city' => 'Warsaw', 'browser' => 'Chrome'], times: 2);
+    clicksOnDay($day->copy()->setTime(22, 5), ['country_code' => 'PL', 'country' => 'Poland', 'city' => 'Krakow', 'browser' => 'Chrome']);
+    clicksOnDay($day->copy()->setTime(11, 0), ['country_code' => 'DE', 'country' => 'Germany', 'city' => 'Berlin', 'browser' => 'Firefox']);
 
     $days = app(AggregateDailyLinkStatistics::class)();
 
@@ -34,7 +34,7 @@ test('collapses a past day into one summary row per dimension set', function () 
 
 test('keeps null dimensions null and groups them together', function () {
     $nulls = ['country_code' => null, 'country' => null, 'city' => null, 'browser' => null, 'os' => null, 'device_type' => null, 'entry' => null, 'source' => null];
-    clickOn(now()->subDay(), $nulls, times: 3);
+    clicksOnDay(now()->subDay(), $nulls, times: 3);
 
     app(AggregateDailyLinkStatistics::class)();
 
@@ -44,15 +44,15 @@ test('keeps null dimensions null and groups them together', function () {
 });
 
 test('leaves today untouched', function () {
-    clickOn(now()->startOfDay()->addSecond());
-    clickOn(now()->endOfDay()->subSecond());
+    clicksOnDay(now()->startOfDay()->addSecond());
+    clicksOnDay(now()->endOfDay()->subSecond());
 
     expect(app(AggregateDailyLinkStatistics::class)())->toBe(0)
         ->and(LinkClick::where('is_summary', false)->count())->toBe(2);
 });
 
 test('is idempotent', function () {
-    clickOn(now()->subDay(), times: 2);
+    clicksOnDay(now()->subDay(), times: 2);
 
     app(AggregateDailyLinkStatistics::class)();
     $before = LinkClick::all()->map->getAttributes()->all();
@@ -62,9 +62,9 @@ test('is idempotent', function () {
 });
 
 test('catches up several missed days and returns how many days it processed', function () {
-    clickOn(now()->subDays(3), times: 2);
-    clickOn(now()->subDays(2));
-    clickOn(now()->subDay());
+    clicksOnDay(now()->subDays(3), times: 2);
+    clicksOnDay(now()->subDays(2));
+    clicksOnDay(now()->subDay());
 
     expect(app(AggregateDailyLinkStatistics::class)())->toBe(3)
         ->and(LinkClick::count())->toBe(3)
@@ -73,9 +73,9 @@ test('catches up several missed days and returns how many days it processed', fu
 
 test('merges a late click into an existing summary', function () {
     $day = now()->subDay();
-    clickOn($day, ['country_code' => 'PL'], times: 2);
+    clicksOnDay($day, ['country_code' => 'PL'], times: 2);
     app(AggregateDailyLinkStatistics::class)();
-    clickOn($day->copy()->setTime(23, 59), ['country_code' => 'PL']);
+    clicksOnDay($day->copy()->setTime(23, 59), ['country_code' => 'PL']);
 
     expect(app(AggregateDailyLinkStatistics::class)())->toBe(1);
 
@@ -85,8 +85,8 @@ test('merges a late click into an existing summary', function () {
 
 test('keeps the links separate', function () {
     $other = Link::factory()->create();
-    clickOn(now()->subDay(), times: 2);
-    clickOn(now()->subDay(), link: $other, times: 5);
+    clicksOnDay(now()->subDay(), times: 2);
+    clicksOnDay(now()->subDay(), link: $other, times: 5);
 
     app(AggregateDailyLinkStatistics::class)();
 
@@ -95,8 +95,8 @@ test('keeps the links separate', function () {
 });
 
 test('command prints the processed day count', function () {
-    clickOn(now()->subDays(2));
-    clickOn(now()->subDay());
+    clicksOnDay(now()->subDays(2));
+    clicksOnDay(now()->subDay());
 
     $this->artisan('stats:aggregate')->expectsOutputToContain('2')->assertSuccessful();
     $this->artisan('stats:aggregate')->expectsOutputToContain('0')->assertSuccessful();
