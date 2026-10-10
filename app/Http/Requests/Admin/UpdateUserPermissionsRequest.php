@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\Permission;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -11,6 +12,16 @@ class UpdateUserPermissionsRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()->can('changeRole', $this->route('user'));
+    }
+
+    /**
+     * A non-super actor may only grant permissions they hold themselves.
+     */
+    private function mayGrant(string $attribute, mixed $value, Closure $fail): void
+    {
+        if (! $this->user()->isSuperAdmin() && ! $this->user()->hasPermission((string) $value)) {
+            $fail(__('You can only grant permissions you hold yourself.'));
+        }
     }
 
     /**
@@ -24,7 +35,7 @@ class UpdateUserPermissionsRequest extends FormRequest
 
         return [
             'granted' => ['present', 'array'],
-            'granted.*' => [...$key, 'distinct', Rule::notIn((array) $this->input('revoked'))],
+            'granted.*' => [...$key, 'distinct', Rule::notIn(array_filter((array) $this->input('revoked'), 'is_string')), $this->mayGrant(...)],
             'revoked' => ['present', 'array'],
             'revoked.*' => [...$key, 'distinct'],
         ];

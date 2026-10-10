@@ -109,3 +109,59 @@ test('show hides the override data from an administrator without users.change_ro
             ->where('permissionGroups', [])
             ->where('roles', []));
 });
+
+/**
+ * An administrator holding users.change_role only through an override, with a managed client.
+ *
+ * @return array{User, User}
+ */
+function overrideAdminWithClient(): array
+{
+    $admin = User::factory()->admin()->create();
+    $admin->permissionOverrides()->attach(PermissionRecord::where('key', 'users.change_role')->first(), ['granted' => true]);
+
+    return [$admin, User::factory()->assignedTo($admin)->create()];
+}
+
+test('a non-super actor cannot grant permissions they lack but can grant ones they hold', function () {
+    [$admin, $client] = overrideAdminWithClient();
+
+    $this->actingAs($admin)->put(route('admin.users.permissions.update', $client), ['granted' => ['roles.manage'], 'revoked' => []])
+        ->assertSessionHasErrors('granted.0');
+    expect(DB::table('permission_user')->where('user_id', $client->id)->count())->toBe(0);
+
+    $this->put(route('admin.users.permissions.update', $client), ['granted' => ['users.change_role'], 'revoked' => ['links.manage']])->assertSessionHasNoErrors();
+    expect($client->permissionOverrides()->count())->toBe(2);
+});
+
+test('a non-super actor cannot assign a role exceeding their own permissions but can assign a subset', function () {
+    [$admin, $client] = overrideAdminWithClient();
+    $tooMuch = roleWith([Permission::AdminAccess, Permission::RolesManage]);
+    $subset = roleWith([Permission::AdminAccess, Permission::UsersChangeRole]);
+
+    $this->actingAs($admin)->patch(route('admin.users.role', $client), ['role_id' => $tooMuch->id])->assertSessionHasErrors('role_id');
+    expect($client->fresh()->role_id)->not->toBe($tooMuch->id);
+
+    $this->patch(route('admin.users.role', $client), ['role_id' => $subset->id])->assertSessionHasNoErrors();
+    expect($client->fresh()->role_id)->toBe($subset->id);
+});
+
+test('a super admin can grant any permission and assign any non-super role', function () {
+    $role = roleWith([Permission::AdminAccess, Permission::RolesManage]);
+
+    $this->actingAs($this->super)->put(route('admin.users.permissions.update', $this->target), ['granted' => ['roles.manage'], 'revoked' => []])->assertSessionHasNoErrors();
+    $this->patch(route('admin.users.role', $this->target), ['role_id' => $role->id])->assertSessionHasNoErrors();
+    expect($this->target->fresh()->role_id)->toBe($role->id);
+});
+
+test('nested array input is a validation error, not a server error', function () {
+    $this->actingAs($this->super)->put(route('admin.users.permissions.update', $this->target), ['granted' => ['links.stats'], 'revoked' => [['x']]])
+        ->assertSessionHasErrors('revoked.0');
+});
+
+test('a non-super actor cannot change the overrides of a super admin', function () {
+    [$admin] = overrideAdminWithClient();
+
+    $this->actingAs($admin)->put(route('admin.users.permissions.update', $this->super), ['granted' => [], 'revoked' => ['links.manage']])->assertStatus(404);
+    expect(DB::table('permission_user')->where('user_id', $this->super->id)->count())->toBe(0);
+});
