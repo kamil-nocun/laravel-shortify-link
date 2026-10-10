@@ -23,13 +23,56 @@ function storeLink(User $user, array $extra = [])
     return test()->actingAs($user)->post(route('links.store'), ['original_url' => 'https://example.com/x', 'is_active' => true, ...$extra]);
 }
 
-test('a valid alias becomes the code and redirects', function (string $alias) {
+test('a link with an alias redirects from both the code and the alias', function (string $alias) {
     storeLink(userWithAlias(), ['alias' => $alias])->assertSessionHasNoErrors();
 
     $link = Link::sole();
-    expect($link->code)->toBe($alias);
+    expect(strlen($link->code))->toBeGreaterThanOrEqual(LinkCodeGenerator::MIN_LENGTH)
+        ->and($link->alias)->toBe($alias)
+        ->and($link->alias_url)->toEndWith('/'.$alias);
+    $this->get('/'.$link->code)->assertRedirect('https://example.com/x');
     $this->get('/'.$alias)->assertRedirect('https://example.com/x');
 })->with(['promocja-lato', 'a_b-1']);
+
+test('alias_url is null without an alias', function () {
+    expect(Link::factory()->create()->alias_url)->toBeNull();
+});
+
+test('a value is taken per domain by either code or alias', function () {
+    $domain = Domain::factory()->verified()->create();
+    $byCode = Link::factory()->create(['code' => 'codeone', 'domain_id' => null]);
+    Link::factory()->create(['code' => 'other11', 'alias' => 'aliasone', 'domain_id' => null]);
+
+    expect(Link::isCodeOrAliasTaken(null, 'codeone'))->toBeTrue()
+        ->and(Link::isCodeOrAliasTaken(null, 'aliasone'))->toBeTrue()
+        ->and(Link::isCodeOrAliasTaken($domain->id, 'codeone'))->toBeFalse()
+        ->and(Link::isCodeOrAliasTaken(null, 'codeone', $byCode->id))->toBeFalse();
+});
+
+test('the generator skips values taken as an alias', function () {
+    Link::factory()->create(['code' => 'zzzzzz', 'alias' => 'AAAAAA', 'domain_id' => null]);
+    $generator = new class extends LinkCodeGenerator
+    {
+        private array $queue = ['AAAAAA', 'BBBBBB'];
+
+        protected function randomCode(int $length): string
+        {
+            return array_shift($this->queue);
+        }
+    };
+
+    expect($generator->generate())->toBe('BBBBBB');
+});
+
+test('an alias on one domain does not redirect from another domain', function () {
+    $a = Domain::factory()->verified()->create(['host' => 'a.example.test']);
+    $b = Domain::factory()->verified()->create(['host' => 'b.example.test']);
+    Link::factory()->create(['domain_id' => $a->id, 'alias' => 'shared', 'original_url' => 'https://a.test/x']);
+    Link::factory()->create(['domain_id' => $b->id, 'code' => 'shared', 'original_url' => 'https://b.test/x']);
+
+    $this->get('http://a.example.test/shared')->assertRedirect('https://a.test/x');
+    $this->get('http://b.example.test/shared')->assertRedirect('https://b.test/x');
+});
 
 test('invalid aliases are rejected', function (string $alias) {
     $user = userWithAlias();
@@ -73,7 +116,7 @@ test('without an alias a code is generated', function () {
 
 test('a race-condition collision becomes a validation error on alias', function () {
     $user = userWithAlias();
-    Link::factory()->create(['code' => 'racing', 'domain_id' => null]);
+    Link::factory()->create(['code' => 'other1', 'alias' => 'racing', 'domain_id' => null]);
 
     expect(fn () => app(LinkCodeGenerator::class)->createFor($user, ['original_url' => 'https://example.com', 'alias' => 'racing']))
         ->toThrow(fn (ValidationException $e) => expect($e->errors())->toHaveKey('alias'));
@@ -88,7 +131,7 @@ test('an admin creating a link checks the client permission', function () {
     $this->actingAs($admin)->post(route('admin.users.links.store', $plain), $payload)->assertSessionHasErrors('alias');
     $this->actingAs($admin)->post(route('admin.users.links.store', $allowed), $payload)->assertSessionHasNoErrors();
 
-    expect($allowed->links()->sole()->code)->toBe('fromadmin');
+    expect($allowed->links()->sole()->alias)->toBe('fromadmin');
 });
 
 test('update never changes the code', function () {

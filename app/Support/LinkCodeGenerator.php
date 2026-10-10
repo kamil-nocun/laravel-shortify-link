@@ -24,34 +24,29 @@ class LinkCodeGenerator
 
         do {
             $code = $this->randomCode($length);
-        } while (Link::where('domain_id', $domainId)->where('code', $code)->exists());
+        } while (Link::isCodeOrAliasTaken($domainId, $code));
 
         return $code;
     }
 
     /**
-     * Create a link for the user with the given alias or a generated code, retrying once on a race-condition collision.
+     * Create a link for the user with a generated code and the optional alias, retrying once on a race-condition collision.
      *
      * @param  array<string, mixed>  $attributes
      */
     public function createFor(User $user, array $attributes): Link
     {
+        $domainId = $attributes['domain_id'] ?? null;
         $alias = $attributes['alias'] ?? null;
-        unset($attributes['alias']);
-
-        if ($alias !== null) {
-            try {
-                return $user->links()->create([...$attributes, 'code' => $alias]);
-            } catch (UniqueConstraintViolationException) {
-                throw ValidationException::withMessages(['alias' => __('This alias is already taken.')]);
-            }
-        }
-
-        $create = fn () => $user->links()->create([...$attributes, 'code' => $this->generate($attributes['domain_id'] ?? null)]);
+        $create = fn () => $user->links()->create([...$attributes, 'code' => $this->generate($domainId)]);
 
         try {
             return $create();
-        } catch (UniqueConstraintViolationException) {
+        } catch (UniqueConstraintViolationException $exception) {
+            if ($alias !== null && Link::isCodeOrAliasTaken($domainId, $alias)) {
+                throw ValidationException::withMessages(['alias' => __('This alias is already taken.')]);
+            }
+
             return $create();
         }
     }

@@ -16,7 +16,7 @@ class RedirectLinkController extends Controller
     public function __invoke(Request $request, string $code): RedirectResponse
     {
         $mainHost = strtolower((string) parse_url(config('app.url'), PHP_URL_HOST));
-        $links = Link::active()->where('code', $code);
+        $links = Link::active()->where(fn ($query) => $query->where('code', $code)->orWhere('alias', $code));
 
         if ($request->getHost() === $mainHost) {
             $links->whereNull('domain_id');

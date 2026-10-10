@@ -63,3 +63,9 @@ test('createFor retries once on a unique constraint violation', function () {
 
     expect($link->code)->toBe('fresh2')->and($generator->calls)->toBe(2);
 });
+
+test('currentLength ignores aliases', function () {
+    Link::factory()->create(['code' => 'abcdefg', 'alias' => 'sixsix']);
+
+    expect((new LinkCodeGenerator(1e-11))->currentLength())->toBe(6);
+});

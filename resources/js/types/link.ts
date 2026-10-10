@@ -3,7 +3,9 @@ export type Link = {
     title: string | null;
     original_url: string;
     code: string;
+    alias: string | null;
     short_url: string;
+    alias_url: string | null;
     is_active: boolean;
     expires_at: string | null;
     disabled_by_admin_at: string | null;

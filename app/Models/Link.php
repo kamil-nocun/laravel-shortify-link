@@ -23,7 +23,9 @@ use Illuminate\Support\Str;
  * @property string|null $title
  * @property string $original_url
  * @property string $code
+ * @property string|null $alias
  * @property-read string $short_url
+ * @property-read string|null $alias_url
  * @property bool $is_active
  * @property Carbon|null $expires_at
  * @property Carbon|null $disabled_by_admin_at
@@ -31,7 +33,7 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['domain_id', 'title', 'original_url', 'code', 'is_active', 'expires_at'])]
+#[Fillable(['domain_id', 'title', 'original_url', 'code', 'alias', 'is_active', 'expires_at'])]
 class Link extends Model
 {
     /** @use HasFactory<LinkFactory> */
@@ -40,7 +42,7 @@ class Link extends Model
     /**
      * @var list<string>
      */
-    protected $appends = ['short_url'];
+    protected $appends = ['short_url', 'alias_url'];
 
     /**
      * Get the attributes that should be cast.
@@ -63,15 +65,37 @@ class Link extends Model
      */
     protected function shortUrl(): Attribute
     {
-        return Attribute::get(function (): string {
-            $base = Str::of(config('app.url'))->rtrim('/');
+        return Attribute::get(fn (): string => $this->urlFor($this->code));
+    }
 
-            if ($this->domain_id !== null) {
-                $base = Str::of($this->domain->url());
-            }
+    /**
+     * Public address of the custom alias, or null when the link has none.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function aliasUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->alias === null ? null : $this->urlFor($this->alias));
+    }
 
-            return $base->append('/', $this->code)->toString();
-        });
+    private function urlFor(string $path): string
+    {
+        $base = $this->domain_id !== null
+            ? Str::of($this->domain->url())
+            : Str::of(config('app.url'))->rtrim('/');
+
+        return $base->append('/', $path)->toString();
+    }
+
+    /**
+     * Whether the value is already a code or alias of another link within the domain (null = main domain).
+     */
+    public static function isCodeOrAliasTaken(?string $domainId, string $value, ?string $ignoreLinkId = null): bool
+    {
+        return static::where('domain_id', $domainId)
+            ->where(fn (Builder $query) => $query->where('code', $value)->orWhere('alias', $value))
+            ->when($ignoreLinkId !== null, fn (Builder $query) => $query->whereKeyNot($ignoreLinkId))
+            ->exists();
     }
 
     /**
@@ -101,6 +125,7 @@ class Link extends Model
 
         $query->where(fn (Builder $query) => $query->where('title', 'like', $like)
             ->orWhere('code', 'like', $like)
+            ->orWhere('alias', 'like', $like)
             ->orWhere('original_url', 'like', $like));
     }
 
