@@ -8,6 +8,7 @@ import {
     Link2,
     Package,
     Shield,
+    ShieldCheck,
     Users,
 } from "@lucide/vue";
 import { computed } from "vue";
@@ -24,9 +25,11 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { usePermissions } from "@/composables/usePermissions";
 import { dashboard } from "@/routes";
 import { index as administratorsIndex } from "@/routes/admin/administrators";
 import { index as packagesIndex } from "@/routes/admin/packages";
+import { index as rolesIndex } from "@/routes/admin/roles";
 import { show as billingPackage } from "@/routes/billing/package";
 import { index as usersIndex } from "@/routes/admin/users";
 import { index as domainsIndex } from "@/routes/domains";
@@ -34,39 +37,56 @@ import { index as linksIndex } from "@/routes/links";
 import type { NavItem } from "@/types";
 
 const page = usePage();
+const { can } = usePermissions();
 
-const baseNavItems: NavItem[] = [
-    {
-        title: "My links",
-        href: linksIndex(),
-        icon: Link2,
-    },
-    {
-        title: "My domains",
-        href: domainsIndex(),
-        icon: Globe,
-    },
-];
-
-const mainNavItems = computed<NavItem[]>(() => {
-    const { isAdmin, isSuperAdmin } = page.props.auth;
-
-    return [
-        ...(isSuperAdmin
-            ? [
-                  { title: "Admin", href: administratorsIndex(), icon: Shield },
-                  { title: "Packages", href: packagesIndex(), icon: Package },
-              ]
-            : []),
-        ...(isAdmin
-            ? [{ title: "Users", href: usersIndex(), icon: Users }]
-            : []),
-        ...baseNavItems,
-        ...(!isSuperAdmin
-            ? [{ title: "My package", href: billingPackage(), icon: CreditCard }]
-            : []),
-    ];
-});
+const mainNavItems = computed<NavItem[]>(() =>
+    [
+        {
+            title: "Admin",
+            href: administratorsIndex(),
+            icon: Shield,
+            visible: can("administrators.manage"),
+        },
+        {
+            title: "Packages",
+            href: packagesIndex(),
+            icon: Package,
+            visible: can("packages.manage"),
+        },
+        {
+            title: "Roles",
+            href: rolesIndex(),
+            icon: ShieldCheck,
+            visible: can("roles.manage"),
+        },
+        {
+            title: "Users",
+            href: usersIndex(),
+            icon: Users,
+            visible: can("users.view"),
+        },
+        {
+            title: "My links",
+            href: linksIndex(),
+            icon: Link2,
+            visible: can("links.manage"),
+        },
+        {
+            title: "My domains",
+            href: domainsIndex(),
+            icon: Globe,
+            visible: can("domains.manage"),
+        },
+        {
+            title: "My package",
+            href: billingPackage(),
+            icon: CreditCard,
+            visible: can("billing.manage") && !page.props.auth.isSuperAdmin,
+        },
+    ]
+        .filter((item) => item.visible)
+        .map(({ visible, ...item }) => item),
+);
 
 const footerNavItems: NavItem[] = [
     {
