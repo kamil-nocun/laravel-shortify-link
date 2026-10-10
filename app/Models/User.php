@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\Permission;
-use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -31,10 +30,10 @@ use Laravel\Cashier\Billable;
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
- * @property UserRole $role
  * @property Carbon|null $blocked_at
  * @property string|null $blocked_by
  * @property string|null $role_id
+ * @property-read Role|null $role
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -47,9 +46,14 @@ class User extends Authenticatable implements MustVerifyEmail
     use Billable, HasFactory, HasUuids, Notifiable;
 
     /**
-     * @var array<string, mixed>
+     * Give a user created without a role the default one.
      */
-    protected $attributes = ['role' => 'user'];
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            $user->role_id ??= Role::where('is_default', true)->value('id');
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -61,7 +65,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'role' => UserRole::class,
             'blocked_at' => 'datetime',
         ];
     }
@@ -130,14 +133,22 @@ class User extends Authenticatable implements MustVerifyEmail
             ->unique()->values();
     }
 
+    /**
+     * The super admin and any role with admin panel access.
+     */
     public function isAdmin(): bool
     {
-        return $this->role->isAdmin();
+        return $this->hasPermission(Permission::AdminAccess);
     }
 
     public function isSuperAdmin(): bool
     {
-        return $this->role === UserRole::SuperAdmin;
+        return $this->role?->is_super ?? false;
+    }
+
+    public function isClient(): bool
+    {
+        return ! $this->isAdmin();
     }
 
     public function isBlocked(): bool
@@ -294,7 +305,31 @@ class User extends Authenticatable implements MustVerifyEmail
             return;
         }
 
-        $query->where('role', UserRole::User)
+        $query->clients()
             ->whereHas('assignedAdmins', fn (Builder $query) => $query->whereKey($actor->id));
+    }
+
+    /**
+     * Users whose role is neither super nor grants admin panel access; users without a role count as clients.
+     *
+     * @param  Builder<User>  $query
+     */
+    #[Scope]
+    protected function clients(Builder $query): void
+    {
+        $query->whereDoesntHave('role', fn (Builder $role) => $role->where('is_super', true)
+            ->orWhereHas('permissions', fn (Builder $permission) => $permission->where('key', Permission::AdminAccess)));
+    }
+
+    /**
+     * Users whose non-super role grants admin panel access.
+     *
+     * @param  Builder<User>  $query
+     */
+    #[Scope]
+    protected function administrators(Builder $query): void
+    {
+        $query->whereHas('role', fn (Builder $role) => $role->where('is_super', false)
+            ->whereHas('permissions', fn (Builder $permission) => $permission->where('key', Permission::AdminAccess)));
     }
 }

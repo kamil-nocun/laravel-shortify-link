@@ -1,10 +1,11 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Models\Link;
 use App\Models\LinkClick;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
+use App\Support\PermissionCatalog;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -160,18 +161,18 @@ test('regular user cannot moderate', function () {
 
     $this->actingAs($user)->patch(route('admin.users.block', $target))->assertForbidden();
     $this->actingAs($user)->delete(route('admin.users.destroy', $target))->assertForbidden();
-    $this->actingAs($user)->patch(route('admin.users.role', $target), ['role' => 'admin'])->assertForbidden();
+    $this->actingAs($user)->patch(route('admin.users.role', $target), ['role_id' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE)])->assertForbidden();
 });
 
 test('super admin promotes and demotes a user', function () {
     $super = User::factory()->superAdmin()->create();
     $user = User::factory()->create();
 
-    $this->actingAs($super)->patch(route('admin.users.role', $user), ['role' => 'admin'])->assertRedirect();
-    expect($user->fresh()->role)->toBe(UserRole::Admin);
+    $this->actingAs($super)->patch(route('admin.users.role', $user), ['role_id' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE)])->assertRedirect();
+    expect($user->fresh()->role->name)->toBe(PermissionCatalog::ADMINISTRATOR_ROLE);
 
-    $this->actingAs($super)->patch(route('admin.users.role', $user), ['role' => 'user'])->assertRedirect();
-    expect($user->fresh()->role)->toBe(UserRole::User);
+    $this->actingAs($super)->patch(route('admin.users.role', $user), ['role_id' => roleId(PermissionCatalog::CLIENT_ROLE)])->assertRedirect();
+    expect($user->fresh()->role->name)->toBe(PermissionCatalog::CLIENT_ROLE);
 });
 
 test('admin cannot change roles', function () {
@@ -179,32 +180,37 @@ test('admin cannot change roles', function () {
     $user = User::factory()->assignedTo($admin)->create();
 
     $this->actingAs($admin)
-        ->patch(route('admin.users.role', $user), ['role' => 'admin'])->assertForbidden();
-    expect($user->fresh()->role)->toBe(UserRole::User);
+        ->patch(route('admin.users.role', $user), ['role_id' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE)])->assertForbidden();
+    expect($user->fresh()->role->name)->toBe(PermissionCatalog::CLIENT_ROLE);
 });
 
-test('role must be user or admin', function (mixed $role) {
+test('role must be an existing non-super role', function (mixed $role) {
     $user = User::factory()->create();
 
     $this->actingAs(User::factory()->superAdmin()->create())
-        ->patch(route('admin.users.role', $user), ['role' => $role])->assertSessionHasErrors('role');
-    expect($user->fresh()->role)->toBe(UserRole::User);
-})->with(['super_admin', 'garbage', '', null]);
+        ->patch(route('admin.users.role', $user), ['role_id' => $role])->assertSessionHasErrors('role_id');
+    expect($user->fresh()->role->name)->toBe(PermissionCatalog::CLIENT_ROLE);
+})->with([
+    'super role' => fn () => roleId(PermissionCatalog::SUPER_ADMIN_ROLE),
+    'garbage' => 'garbage',
+    'empty' => '',
+    'null' => null,
+]);
 
 test('super admin cannot change own role', function () {
     $super = User::factory()->superAdmin()->create();
 
-    $this->actingAs($super)->patch(route('admin.users.role', $super), ['role' => 'user'])->assertForbidden();
-    expect($super->fresh()->role)->toBe(UserRole::SuperAdmin);
+    $this->actingAs($super)->patch(route('admin.users.role', $super), ['role_id' => roleId(PermissionCatalog::CLIENT_ROLE)])->assertForbidden();
+    expect($super->fresh()->isSuperAdmin())->toBeTrue();
 });
 
 test('super admin cannot change another super admin role', function () {
-    $other = User::factory()->create()->forceFill(['role' => UserRole::SuperAdmin]);
+    $other = User::factory()->create()->forceFill(['role_id' => roleId(PermissionCatalog::SUPER_ADMIN_ROLE)]);
     $other->save();
 
     $this->actingAs(User::factory()->superAdmin()->create())
-        ->patch(route('admin.users.role', $other), ['role' => 'user'])->assertForbidden();
-    expect($other->fresh()->role)->toBe(UserRole::SuperAdmin);
+        ->patch(route('admin.users.role', $other), ['role_id' => roleId(PermissionCatalog::CLIENT_ROLE)])->assertForbidden();
+    expect($other->fresh()->isSuperAdmin())->toBeTrue();
 });
 
 test('admin edits a user profile and password is optional', function () {
@@ -270,7 +276,7 @@ test('admin creates a verified user with an unknown password and e-mails a set-p
         ->assertRedirect(route('admin.users.index'));
 
     $user = User::where('email', 'new@example.com')->firstOrFail();
-    expect($user->role)->toBe(UserRole::User)
+    expect($user->role->name)->toBe(PermissionCatalog::CLIENT_ROLE)
         ->and($user->email_verified_at)->not->toBeNull()
         ->and($user->password)->not->toBeEmpty();
 
@@ -352,4 +358,35 @@ test('deleting the blocking admin nulls blocked_by', function () {
     $admin->delete();
 
     expect($user->fresh())->blocked_by->toBeNull()->blocked_at->not->toBeNull();
+});
+
+test('creating a user takes a client role only from a role changer', function () {
+    Notification::fake();
+    $custom = Role::factory()->create();
+    $admin = User::factory()->admin()->create();
+    $super = User::factory()->superAdmin()->create();
+
+    $this->actingAs($admin)->post(route('admin.users.store'), ['name' => 'A', 'email' => 'a@example.com', 'role_id' => $custom->id])->assertRedirect();
+    $this->actingAs($super)->post(route('admin.users.store'), ['name' => 'B', 'email' => 'b@example.com', 'role_id' => $custom->id])->assertRedirect();
+    $this->actingAs($super)->post(route('admin.users.store'), ['name' => 'C', 'email' => 'c@example.com', 'role_id' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE)])
+        ->assertSessionHasErrors('role_id');
+
+    expect(User::where('email', 'a@example.com')->sole()->role->name)->toBe(PermissionCatalog::CLIENT_ROLE)
+        ->and(User::where('email', 'b@example.com')->sole()->role_id)->toBe($custom->id)
+        ->and(User::where('email', 'c@example.com')->exists())->toBeFalse();
+});
+
+test('shared auth props and role options expose the role kind', function () {
+    $super = User::factory()->superAdmin()->create();
+    $user = User::factory()->create();
+
+    $this->actingAs($super)->get(route('admin.users.show', $user))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.isAdmin', true)
+            ->where('auth.isSuperAdmin', true)
+            ->where('user.role', PermissionCatalog::CLIENT_ROLE)
+            ->where('roleOptions', [
+                'client' => roleId(PermissionCatalog::CLIENT_ROLE),
+                'administrator' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE),
+            ]));
 });

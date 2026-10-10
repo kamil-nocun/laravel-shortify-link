@@ -88,7 +88,7 @@ test('admin user page lists domain short urls without a query per link', functio
     $count = function () use ($admin, $domain): int {
         DB::flushQueryLog();
         DB::enableQueryLog();
-        $this->actingAs($admin)->get(route('admin.users.show', $domain->user))->assertOk();
+        $this->actingAs($admin->fresh())->get(route('admin.users.show', $domain->user))->assertOk();
 
         return count(DB::getQueryLog());
     };

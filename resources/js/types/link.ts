@@ -99,7 +99,8 @@ export type AdminUser = {
     id: string;
     name: string;
     email: string;
-    role: 'user' | 'admin' | 'super_admin';
+    role: string | null;
+    role_id: string | null;
     blocked_at: string | null;
     blocked_by_id: string | null;
     blocked_by_name: string | null;

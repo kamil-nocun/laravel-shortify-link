@@ -1,8 +1,8 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
+use App\Support\PermissionCatalog;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -27,7 +27,8 @@ test('super admin creates administrator and e-mails password link', function () 
         ->assertRedirect(route('admin.administrators.index'));
 
     $created = User::where('email', 'ada@example.com')->firstOrFail();
-    expect($created->role)->toBe(UserRole::Admin);
+    expect($created->isAdmin())->toBeTrue()
+        ->and($created->isSuperAdmin())->toBeFalse();
     Notification::assertSentTo($created, AccountCreatedNotification::class);
 });
 
@@ -48,4 +49,15 @@ test('admin and user cannot manage administrators', function (User $actor) {
 })->with([
     'admin' => fn () => User::factory()->admin()->create(),
     'user' => fn () => User::factory()->create(),
+]);
+
+test('administrator role must grant admin access and not be super', function (string $roleId) {
+    $super = User::factory()->superAdmin()->create();
+
+    $this->actingAs($super)->post(route('admin.administrators.store'), ['name' => 'Ada', 'email' => 'ada@example.com', 'role_id' => $roleId])
+        ->assertSessionHasErrors('role_id');
+    expect(User::where('email', 'ada@example.com')->exists())->toBeFalse();
+})->with([
+    'client role' => fn () => roleId(PermissionCatalog::CLIENT_ROLE),
+    'super role' => fn () => roleId(PermissionCatalog::SUPER_ADMIN_ROLE),
 ]);

@@ -77,7 +77,7 @@ defineOptions({
                     <InertiaLink :href="usersIndex()">Users</InertiaLink>
                 </Button>
                 <Button
-                    v-if="page.props.auth.user.role !== 'super_admin'"
+                    v-if="!page.props.auth.isSuperAdmin"
                     variant="outline"
                     size="sm"
                     as-child

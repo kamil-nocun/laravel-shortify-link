@@ -43,7 +43,7 @@ defineOptions({
 });
 
 const isSuperAdmin = computed(
-    () => usePage().props.auth.user.role === "super_admin",
+    () => usePage().props.auth.isSuperAdmin,
 );
 </script>
 

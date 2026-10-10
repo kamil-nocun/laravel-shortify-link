@@ -2,8 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Enums\UserRole;
+use App\Models\Role;
 use App\Models\User;
+use App\Support\PermissionCatalog;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -49,7 +50,7 @@ class UserFactory extends Factory
      */
     public function admin(): static
     {
-        return $this->state(['role' => UserRole::Admin]);
+        return $this->state(fn () => ['role_id' => Role::where('name', PermissionCatalog::ADMINISTRATOR_ROLE)->value('id')]);
     }
 
     /**
@@ -57,7 +58,7 @@ class UserFactory extends Factory
      */
     public function superAdmin(): static
     {
-        return $this->state(['role' => UserRole::SuperAdmin]);
+        return $this->state(fn () => ['role_id' => Role::where('name', PermissionCatalog::SUPER_ADMIN_ROLE)->value('id')]);
     }
 
     /**

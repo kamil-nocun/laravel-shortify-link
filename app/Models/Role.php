@@ -60,4 +60,16 @@ class Role extends Model
 
         return $this->permissions()->pluck('key');
     }
+
+    /**
+     * Ids of the non-super roles that grant admin panel access.
+     *
+     * @return list<string>
+     */
+    public static function administratorIds(): array
+    {
+        return self::where('is_super', false)
+            ->whereHas('permissions', fn ($query) => $query->where('key', Permission::AdminAccess))
+            ->pluck('id')->all();
+    }
 }

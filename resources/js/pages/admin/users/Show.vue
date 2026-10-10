@@ -60,6 +60,7 @@ import type {
 
 const props = defineProps<{
     user: AdminUser;
+    roleOptions: { client: string; administrator: string };
     assignedAdministrators: AdministratorOption[];
     packageAssignment: PackageAssignment | null;
     packages: PackageOption[];
@@ -101,12 +102,6 @@ const toggleDomain = (domain: DomainRow) =>
 
 const ranges = [7, 30, 90];
 
-const roleLabels: Record<AdminUser["role"], string> = {
-    user: "User",
-    admin: "Admin",
-    super_admin: "Super admin",
-};
-
 const cards = computed(() => [
     { label: "Links", value: props.counters.links },
     {
@@ -128,10 +123,11 @@ const toggleBlock = () =>
         ? router.delete(unblock(props.user.id).url, { preserveScroll: true })
         : router.patch(block(props.user.id).url, {}, { preserveScroll: true });
 
-type AssignableRole = Exclude<AdminUser["role"], "super_admin">;
-
-const targetRole = computed<AssignableRole>(() =>
-    props.user.role === "admin" ? "user" : "admin",
+const isAdministrator = computed(
+    () => props.user.role_id === props.roleOptions.administrator,
+);
+const targetRoleLabel = computed(() =>
+    isAdministrator.value ? "Client" : "Administrator",
 );
 
 const isRoleOpen = ref(false);
@@ -139,7 +135,11 @@ const isRoleOpen = ref(false);
 const changeRole = () =>
     router.patch(
         updateRole(props.user.id).url,
-        { role: targetRole.value },
+        {
+            role_id: isAdministrator.value
+                ? props.roleOptions.client
+                : props.roleOptions.administrator,
+        },
         {
             preserveScroll: true,
             onFinish: () => {
@@ -174,7 +174,7 @@ const toggleLink = (link: Link) =>
         : router.patch(disable(link.id).url, {}, { preserveScroll: true });
 
 const isSuperAdmin = computed(
-    () => usePage().props.auth.user.role === "super_admin",
+    () => usePage().props.auth.isSuperAdmin,
 );
 
 const linkStatus = (link: Link) =>
@@ -201,7 +201,7 @@ setLayoutProps({
             <div class="space-y-2">
                 <Heading :title="user.name" :description="user.email" />
                 <div class="flex flex-wrap items-center gap-2 text-sm">
-                    <Badge variant="outline">{{ roleLabels[user.role] }}</Badge>
+                    <Badge variant="outline">{{ user.role }}</Badge>
                     <Badge
                         :variant="user.blocked_at ? 'destructive' : 'secondary'"
                     >
@@ -235,7 +235,7 @@ setLayoutProps({
                 <Dialog v-if="user.can.changeRole" v-model:open="isRoleOpen">
                     <DialogTrigger as-child>
                         <Button variant="outline" size="sm">
-                            Change role to {{ roleLabels[targetRole] }}
+                            Change role to {{ targetRoleLabel }}
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -243,7 +243,7 @@ setLayoutProps({
                             <DialogTitle>Change role?</DialogTitle>
                             <DialogDescription>
                                 {{ user.name }} will become
-                                {{ roleLabels[targetRole] }}.
+                                {{ targetRoleLabel }}.
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter class="gap-2">
@@ -252,7 +252,7 @@ setLayoutProps({
                             </DialogClose>
                             <Button @click="changeRole"
                                 >Change role to
-                                {{ roleLabels[targetRole] }}</Button
+                                {{ targetRoleLabel }}</Button
                             >
                         </DialogFooter>
                     </DialogContent>

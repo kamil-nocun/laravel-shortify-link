@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Billing\PackagePageData;
 use App\Enums\BillingPeriod;
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminStatsRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
@@ -12,9 +11,11 @@ use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Domain;
 use App\Models\Link;
 use App\Models\Package;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
 use App\Support\AdminStatsReport;
+use App\Support\PermissionCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,7 +39,8 @@ class UserController extends Controller
 
         $users = User::query()
             ->visibleTo($request->user())
-            ->where('role', UserRole::User)
+            ->clients()
+            ->with('role')
             ->withCount('links')
             ->with('blockedBy:id,name')
             ->with(['assignedAdmins' => fn ($query) => $query->whereKey($request->user()->id)])
@@ -70,7 +72,8 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $user = new User($request->safe()->except('administrators'));
+        $user = new User($request->safe()->except(['administrators', 'role_id']));
+        $user->role_id = $request->validated('role_id');
         $user->password = Str::password(32);
         $user->email_verified_at = now();
         DB::transaction(function () use ($user, $request): void {
@@ -111,6 +114,10 @@ class UserController extends Controller
             'domainLimit' => $user->domainLimit(),
             'links' => $user->links()->withCount('clicks')->with(['domain', 'disabledBy:id,name'])->latest()->paginate(15)->withQueryString()
                 ->through(fn (Link $link) => [...$link->toArray(), 'disabled_by_name' => $link->disabledBy?->name]),
+            'roleOptions' => [
+                'client' => Role::where('name', PermissionCatalog::CLIENT_ROLE)->value('id'),
+                'administrator' => Role::where('name', PermissionCatalog::ADMINISTRATOR_ROLE)->value('id'),
+            ],
             ...$this->report->build($user, $request),
         ]);
     }
@@ -187,7 +194,7 @@ class UserController extends Controller
      */
     private function isAssignable(User $actor, User $user): bool
     {
-        return $actor->can('assignAdministrators', User::class) && $user->role === UserRole::User;
+        return $actor->can('assignAdministrators', User::class) && $user->isClient();
     }
 
     /**
@@ -248,7 +255,7 @@ class UserController extends Controller
             return [];
         }
 
-        return User::query()->where('role', UserRole::Admin)->orderBy('name')->get(['id', 'name', 'email'])
+        return User::query()->administrators()->orderBy('name')->get(['id', 'name', 'email'])
             ->map->only(['id', 'name', 'email'])->values()->all();
     }
 
@@ -258,7 +265,8 @@ class UserController extends Controller
     private function present(User $user, User $actor): array
     {
         return [
-            ...$user->only(['id', 'name', 'email', 'role', 'blocked_at', 'created_at', 'links_count']),
+            ...$user->only(['id', 'name', 'email', 'role_id', 'blocked_at', 'created_at', 'links_count']),
+            'role' => $user->role?->name,
             'blocked_by_id' => $user->blocked_by,
             'blocked_by_name' => $user->blockedBy?->name,
             'can' => [

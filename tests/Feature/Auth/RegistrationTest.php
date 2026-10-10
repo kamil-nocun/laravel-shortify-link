@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+use App\Support\PermissionCatalog;
 use Laravel\Fortify\Features;
 
 beforeEach(function () {
@@ -22,4 +24,5 @@ test('new users can register', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
+    expect(User::sole()->role->name)->toBe(PermissionCatalog::CLIENT_ROLE);
 });

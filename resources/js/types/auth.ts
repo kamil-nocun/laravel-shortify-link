@@ -2,7 +2,7 @@ export type User = {
     id: number;
     name: string;
     email: string;
-    role: 'user' | 'admin' | 'super_admin';
+    role_id: string | null;
     blocked_at: string | null;
     avatar?: string;
     email_verified_at: string | null;
@@ -13,4 +13,6 @@ export type User = {
 
 export type Auth = {
     user: User;
+    isAdmin: boolean;
+    isSuperAdmin: boolean;
 };

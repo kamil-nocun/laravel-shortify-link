@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Enums\UserRole;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,7 +13,7 @@ class UpdateUserAdministratorsRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()->can('assignAdministrators', User::class)
-            && $this->route('user')->role === UserRole::User;
+            && $this->route('user')->isClient();
     }
 
     /**
@@ -23,7 +23,7 @@ class UpdateUserAdministratorsRequest extends FormRequest
     {
         return [
             'administrators' => ['present', 'array'],
-            'administrators.*' => ['uuid', Rule::exists('users', 'id')->where('role', UserRole::Admin)],
+            'administrators.*' => ['uuid', Rule::exists('users', 'id')->whereIn('role_id', Role::administratorIds())],
         ];
     }
 }

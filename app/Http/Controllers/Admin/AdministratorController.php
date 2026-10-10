@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreAdministratorRequest;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
+use App\Support\PermissionCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -28,7 +29,7 @@ class AdministratorController extends Controller
         $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
 
         $administrators = User::query()
-            ->where('role', UserRole::Admin)
+            ->administrators()
             ->when($search !== '', fn ($query) => $query->where(
                 fn ($query) => $query->whereRaw("name LIKE ? ESCAPE '!'", [$pattern])
                     ->orWhereRaw("email LIKE ? ESCAPE '!'", [$pattern])
@@ -66,8 +67,8 @@ class AdministratorController extends Controller
      */
     public function store(StoreAdministratorRequest $request): RedirectResponse
     {
-        $user = new User($request->validated());
-        $user->role = UserRole::Admin;
+        $user = new User($request->safe()->except(['administrators', 'role_id']));
+        $user->role_id = $request->validated('role_id') ?? Role::where('name', PermissionCatalog::ADMINISTRATOR_ROLE)->value('id');
         $user->password = Str::password(32);
         $user->email_verified_at = now();
         $user->save();

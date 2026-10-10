@@ -17,9 +17,11 @@ class UserRoleController extends Controller
     public function __invoke(UpdateUserRoleRequest $request, User $user): RedirectResponse
     {
         DB::transaction(function () use ($request, $user): void {
-            $user->forceFill(['role' => $request->validated('role')])->save();
+            $wasAdmin = $user->isAdmin();
+            $user->forceFill(['role_id' => $request->validated('role_id')])->save();
+            $user->unsetRelation('role')->forgetPermissions();
 
-            if ($user->wasChanged('role')) {
+            if ($user->isAdmin() !== $wasAdmin) {
                 $user->assignedAdmins()->detach();
                 $user->managedClients()->detach();
             }

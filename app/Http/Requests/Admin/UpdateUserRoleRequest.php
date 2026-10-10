@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Enums\UserRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,6 +17,6 @@ class UpdateUserRoleRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['role' => ['required', Rule::enum(UserRole::class)->only([UserRole::User, UserRole::Admin])]];
+        return ['role_id' => ['required', 'uuid', Rule::exists('roles', 'id')->where('is_super', false)]];
     }
 }

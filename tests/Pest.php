@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,4 +48,12 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Id of the starting role with the given name.
+ */
+function roleId(string $name): string
+{
+    return Role::where('name', $name)->value('id');
 }

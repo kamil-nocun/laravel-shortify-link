@@ -26,7 +26,7 @@ defineOptions({
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
         <Link
-            v-if="page.props.auth.user.role !== 'super_admin'"
+            v-if="!page.props.auth.isSuperAdmin"
             :href="billingPackage()"
             class="flex items-center gap-3 rounded-xl border p-4 hover:bg-muted"
         >

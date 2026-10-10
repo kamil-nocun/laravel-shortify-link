@@ -1,10 +1,10 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Models\Link;
 use App\Models\LinkClick;
 use App\Models\User;
 use App\Policies\UserPolicy;
+use App\Support\PermissionCatalog;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -217,7 +217,7 @@ test('promoting a client clears their assigned administrators', function () {
     $admin = User::factory()->admin()->create();
     $client = User::factory()->assignedTo($admin)->create();
 
-    $this->actingAs($super)->patch(route('admin.users.role', $client), ['role' => 'admin'])->assertRedirect();
+    $this->actingAs($super)->patch(route('admin.users.role', $client), ['role_id' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE)])->assertRedirect();
 
     expect(DB::table('client_admin')->where('client_id', $client->id)->count())->toBe(0);
 });
@@ -227,12 +227,12 @@ test('demoting an administrator clears their managed clients', function () {
     $admin = User::factory()->admin()->create();
     $client = User::factory()->assignedTo($admin)->create();
 
-    $this->actingAs($super)->patch(route('admin.users.role', $admin), ['role' => 'user'])->assertRedirect();
+    $this->actingAs($super)->patch(route('admin.users.role', $admin), ['role_id' => roleId(PermissionCatalog::CLIENT_ROLE)])->assertRedirect();
 
     expect(DB::table('client_admin')->where('admin_id', $admin->id)->count())->toBe(0)
         ->and($client->fresh())->not->toBeNull();
 
-    $formerAdmin = $admin->fresh()->forceFill(['role' => UserRole::Admin]);
+    $formerAdmin = $admin->fresh()->forceFill(['role_id' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE)]);
     expect(User::visibleTo($formerAdmin)->whereKey($client->id)->exists())->toBeFalse();
 });
 
@@ -241,7 +241,7 @@ test('resubmitting the same role keeps assignments', function () {
     $admin = User::factory()->admin()->create();
     User::factory()->assignedTo($admin)->create();
 
-    $this->actingAs($super)->patch(route('admin.users.role', $admin), ['role' => 'admin'])->assertRedirect();
+    $this->actingAs($super)->patch(route('admin.users.role', $admin), ['role_id' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE)])->assertRedirect();
 
     expect(DB::table('client_admin')->where('admin_id', $admin->id)->count())->toBe(1);
 });

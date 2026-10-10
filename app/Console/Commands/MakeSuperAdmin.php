@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\UserRole;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Command;
@@ -41,7 +41,7 @@ class MakeSuperAdmin extends Command
         }
 
         return DB::transaction(function () use ($email, $attributes): int {
-            if (User::where('role', UserRole::SuperAdmin)->lockForUpdate()->exists()) {
+            if (User::whereHas('role', fn ($query) => $query->where('is_super', true))->lockForUpdate()->exists()) {
                 $this->error('A super admin already exists.');
 
                 return self::FAILURE;
@@ -54,7 +54,7 @@ class MakeSuperAdmin extends Command
                 $user->forceFill(['email_verified_at' => now()]);
             }
 
-            $user->forceFill(['role' => UserRole::SuperAdmin, 'blocked_at' => null, 'blocked_by' => null])->save();
+            $user->forceFill(['role_id' => Role::where('is_super', true)->value('id'), 'blocked_at' => null, 'blocked_by' => null])->save();
             $this->info("{$user->email} is now the super admin.");
 
             return self::SUCCESS;

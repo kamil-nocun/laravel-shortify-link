@@ -49,20 +49,20 @@ const baseNavItems: NavItem[] = [
 ];
 
 const mainNavItems = computed<NavItem[]>(() => {
-    const role = page.props.auth.user.role;
+    const { isAdmin, isSuperAdmin } = page.props.auth;
 
     return [
-        ...(role === "super_admin"
+        ...(isSuperAdmin
             ? [
                   { title: "Admin", href: administratorsIndex(), icon: Shield },
                   { title: "Packages", href: packagesIndex(), icon: Package },
               ]
             : []),
-        ...(role === "admin" || role === "super_admin"
+        ...(isAdmin
             ? [{ title: "Users", href: usersIndex(), icon: Users }]
             : []),
         ...baseNavItems,
-        ...(role !== "super_admin"
+        ...(!isSuperAdmin
             ? [{ title: "My package", href: billingPackage(), icon: CreditCard }]
             : []),
     ];

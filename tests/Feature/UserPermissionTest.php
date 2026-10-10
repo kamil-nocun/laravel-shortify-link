@@ -45,10 +45,13 @@ test('super role has every permission regardless of overrides', function () {
 
 test('user without a role has no permissions', function () {
     $user = User::factory()->create();
+    $user->forceFill(['role_id' => null])->save();
 
     expect($user->role_id)->toBeNull()
         ->and($user->hasPermission(Permission::LinksManage))->toBeFalse()
-        ->and($user->permissionKeys())->toBeEmpty();
+        ->and($user->permissionKeys())->toBeEmpty()
+        ->and($user->isAdmin())->toBeFalse()
+        ->and($user->isSuperAdmin())->toBeFalse();
 });
 
 test('forgetPermissions refreshes the cached result', function () {
