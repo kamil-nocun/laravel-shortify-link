@@ -409,6 +409,7 @@ setLayoutProps({
                     </div>
                     <div class="space-x-2">
                         <Button
+                            v-if="user.can.disableDomains"
                             variant="outline"
                             size="sm"
                             :aria-label="`${domain.status === 'disabled' ? 'Enable' : 'Disable'} domain ${domain.host}`"
@@ -532,7 +533,7 @@ setLayoutProps({
                         </td>
                         <td class="space-x-2 p-3 text-right whitespace-nowrap">
                             <Button
-                                v-if="user.can.block"
+                                v-if="user.can.disableLinks"
                                 variant="outline"
                                 size="sm"
                                 :aria-label="`${link.disabled_by_admin_at ? 'Enable' : 'Disable'} link ${link.code}`"

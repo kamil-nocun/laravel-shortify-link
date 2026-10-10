@@ -110,6 +110,8 @@ export type AdminUser = {
         block: boolean;
         manageDomains: boolean;
         createDomain: boolean;
+        disableLinks: boolean;
+        disableDomains: boolean;
         update: boolean;
         createLink: boolean;
         delete: boolean;
