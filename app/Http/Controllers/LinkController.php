@@ -35,7 +35,7 @@ class LinkController extends Controller
     {
         Gate::authorize('create', Link::class);
 
-        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host'])]);
+        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host']), 'canSetAlias' => $request->user()->allowsCustomAlias()]);
     }
 
     /**

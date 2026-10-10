@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { Link as InertiaLink, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import DateTimePicker from '@/components/DateTimePicker.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { show as showPackage } from '@/routes/billing/package';
 import type { Link } from '@/types';
 
 const props = defineProps<{
     link?: Link;
     domains?: { id: string; host: string }[];
+    canSetAlias?: boolean;
     submitLabel: string;
     action: (form: ReturnType<typeof useLinkForm>) => void;
 }>();
@@ -30,6 +33,7 @@ function toLocalInput(iso: string | null | undefined): string {
 function useLinkForm() {
     return useForm({
         domain_id: '',
+        alias: '',
         original_url: props.link?.original_url ?? '',
         title: props.link?.title ?? '',
         is_active: props.link?.is_active ?? true,
@@ -37,6 +41,7 @@ function useLinkForm() {
     }).transform((data) => ({
         ...data,
         domain_id: data.domain_id || null,
+        alias: data.alias || null,
         expires_at: data.expires_at
             ? new Date(data.expires_at).toISOString()
             : null,
@@ -44,6 +49,12 @@ function useLinkForm() {
 }
 
 const form = useLinkForm();
+
+const aliasHost = computed(
+    () =>
+        props.domains?.find((d) => d.id === form.domain_id)?.host ??
+        window.location.host,
+);
 </script>
 
 <template>
@@ -78,6 +89,30 @@ const form = useLinkForm();
                 placeholder="https://example.com/long/path"
             />
             <InputError :message="form.errors.original_url" />
+        </div>
+
+        <div v-if="!link" class="grid gap-2">
+            <Label for="alias">Custom alias</Label>
+            <template v-if="canSetAlias">
+                <Input id="alias" v-model="form.alias" placeholder="Optional" />
+                <p class="text-xs text-muted-foreground">
+                    {{ aliasHost }}/{{ form.alias }}
+                </p>
+            </template>
+            <template v-else>
+                <Input
+                    id="alias"
+                    disabled
+                    model-value="Custom aliases are included in selected packages"
+                />
+                <InertiaLink
+                    :href="showPackage().url"
+                    class="text-xs underline"
+                >
+                    View packages
+                </InertiaLink>
+            </template>
+            <InputError :message="form.errors.alias" />
         </div>
 
         <div class="grid gap-2">

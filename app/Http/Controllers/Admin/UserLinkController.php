@@ -20,7 +20,7 @@ class UserLinkController extends Controller
     {
         Gate::authorize('createLink', $user);
 
-        return Inertia::render('admin/users/links/Create', ['user' => $user->only(['id', 'name']), 'domains' => $user->domains()->active()->get(['id', 'host'])]);
+        return Inertia::render('admin/users/links/Create', ['user' => $user->only(['id', 'name']), 'domains' => $user->domains()->active()->get(['id', 'host']), 'canSetAlias' => $user->allowsCustomAlias()]);
     }
 
     /**

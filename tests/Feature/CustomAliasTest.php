@@ -119,3 +119,16 @@ test('every static route prefix is reserved', function () {
 
     expect($missing)->toBe([]);
 });
+
+test('the create pages expose whether the alias field is allowed', function () {
+    $this->actingAs(userWithAlias())->get(route('links.create'))
+        ->assertInertia(fn ($page) => $page->where('canSetAlias', true));
+    $this->actingAs(User::factory()->create())->get(route('links.create'))
+        ->assertInertia(fn ($page) => $page->where('canSetAlias', false));
+
+    $admin = User::factory()->superAdmin()->create();
+    $this->actingAs($admin)->get(route('admin.users.links.create', userWithAlias()))
+        ->assertInertia(fn ($page) => $page->where('canSetAlias', true));
+    $this->actingAs($admin)->get(route('admin.users.links.create', User::factory()->create()))
+        ->assertInertia(fn ($page) => $page->where('canSetAlias', false));
+});
