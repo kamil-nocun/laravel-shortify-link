@@ -31,7 +31,7 @@ export type PackageAssignment = {
 };
 
 export const billingPeriodLabels: Record<BillingPeriod, string> = {
-    one_time: 'One-time',
+    one_time: 'One month (single payment)',
     monthly: 'Monthly',
     quarterly: 'Quarterly',
     yearly: 'Yearly',

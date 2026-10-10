@@ -57,7 +57,7 @@ defineOptions({
                     <tr>
                         <th class="p-3">Name</th>
                         <th class="p-3">Link limit</th>
-                        <th class="p-3">One-time</th>
+                        <th class="p-3">One month (single payment)</th>
                         <th class="p-3">Monthly</th>
                         <th class="p-3">Quarterly</th>
                         <th class="p-3">Yearly</th>
