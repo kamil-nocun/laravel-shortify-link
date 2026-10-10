@@ -230,6 +230,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * A package setting: the active assignment's snapshot, else the default package's value.
+     */
+    private function effectivePackageValue(string $column): mixed
+    {
+        return $this->activeAssignment()?->{$column} ?? Package::where('is_default', true)->value($column);
+    }
+
+    /**
      * Maximum number of links, or null when unlimited. An assignment's snapshot wins over later package edits.
      */
     public function linkLimit(): ?int
@@ -238,7 +246,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return null;
         }
 
-        return $this->activeAssignment()?->link_limit ?? Package::where('is_default', true)->value('link_limit') ?? 0;
+        return $this->effectivePackageValue('link_limit') ?? 0;
     }
 
     /**
@@ -250,7 +258,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return null;
         }
 
-        return $this->activeAssignment()?->domain_limit ?? Package::where('is_default', true)->value('domain_limit') ?? 0;
+        return $this->effectivePackageValue('domain_limit') ?? 0;
     }
 
     public function canAddDomain(): bool
@@ -266,7 +274,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
-        return (bool) ($this->activeAssignment()?->allows_custom_alias ?? Package::where('is_default', true)->value('allows_custom_alias') ?? false);
+        return (bool) $this->effectivePackageValue('allows_custom_alias');
     }
 
     public function canCreateLink(): bool
