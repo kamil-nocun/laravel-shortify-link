@@ -30,6 +30,7 @@ class AdministratorController extends Controller
 
         $administrators = User::query()
             ->administrators()
+            ->with(['role.permissions', 'permissionOverrides'])
             ->when($search !== '', fn ($query) => $query->where(
                 fn ($query) => $query->whereRaw("name LIKE ? ESCAPE '!'", [$pattern])
                     ->orWhereRaw("email LIKE ? ESCAPE '!'", [$pattern])

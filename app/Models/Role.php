@@ -58,7 +58,7 @@ class Role extends Model
             return collect(Permission::cases())->map->value;
         }
 
-        return $this->permissions()->pluck('key');
+        return $this->relationLoaded('permissions') ? $this->permissions->pluck('key') : $this->permissions()->pluck('key');
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
 use App\Support\PermissionCatalog;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -390,3 +391,20 @@ test('shared auth props and role options expose the role kind', function () {
                 'administrator' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE),
             ]));
 });
+
+test('users index resolves roles and permissions without a query per row', function (string $viewerState) {
+    $viewer = User::factory()->{$viewerState}()->create();
+    $count = function () use ($viewer): int {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->actingAs($viewer->fresh())->get(route('admin.users.index'))->assertOk();
+
+        return collect(DB::getQueryLog())->filter(fn (array $query) => preg_match('/from `(roles|permissions)`/', $query['query']))->count();
+    };
+
+    User::factory()->assignedTo($viewer)->create();
+    $before = $count();
+    User::factory()->count(5)->assignedTo($viewer)->create();
+
+    expect($count())->toBe($before);
+})->with(['superAdmin', 'admin']);

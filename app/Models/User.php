@@ -115,7 +115,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     private function resolvePermissionKeys(): Collection
     {
-        $role = $this->role()->first();
+        $role = $this->relationLoaded('role') ? $this->role : $this->role()->first();
 
         if ($role === null) {
             return collect();
@@ -125,7 +125,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return $role->permissionKeys();
         }
 
-        $overrides = $this->permissionOverrides()->get();
+        $overrides = $this->relationLoaded('permissionOverrides') ? $this->permissionOverrides : $this->permissionOverrides()->get();
 
         return $role->permissionKeys()
             ->merge($overrides->filter(fn (PermissionRecord $permission) => $permission->pivot->granted)->pluck('key'))

@@ -40,7 +40,7 @@ class UserController extends Controller
         $users = User::query()
             ->visibleTo($request->user())
             ->clients()
-            ->with('role')
+            ->with(['role.permissions', 'permissionOverrides'])
             ->withCount('links')
             ->with('blockedBy:id,name')
             ->with(['assignedAdmins' => fn ($query) => $query->whereKey($request->user()->id)])
