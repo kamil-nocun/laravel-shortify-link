@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import ClicksChart from '@/components/ClicksChart.vue';
+import ClicksCard from '@/components/ClicksCard.vue';
 import { Button } from '@/components/ui/button';
 import { show } from '@/routes/admin/users';
 import type { AdminCounters, DailyClicks, StatsPeriodParams } from '@/types';
@@ -67,9 +67,10 @@ const setPeriod = (range: number) =>
             </div>
         </div>
 
-        <p v-if="total === 0" class="text-sm text-muted-foreground">
-            No clicks in this period yet.
-        </p>
-        <ClicksChart v-else :series="series" :granularity="granularity" />
+        <ClicksCard
+            :series="series"
+            :granularity="granularity"
+            :total="total"
+        />
     </div>
 </template>

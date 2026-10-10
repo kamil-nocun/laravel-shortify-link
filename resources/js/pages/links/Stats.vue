@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, setLayoutProps, useHttp, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref, watch } from 'vue';
-import ClicksChart from '@/components/ClicksChart.vue';
+import ClicksCard from '@/components/ClicksCard.vue';
 import StatsTable from '@/components/StatsTable.vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -621,14 +621,10 @@ const pageTable = (key: StatsTableKey, delta: number) => {
             >
         </p>
 
-        <p v-if="total === 0" class="text-sm text-muted-foreground">
-            No clicks in this period yet.
-        </p>
-
-        <ClicksChart
-            v-else
+        <ClicksCard
             :series="series"
             :granularity="granularity"
+            :total="total"
             :loading="isLoading('summary')"
         />
 

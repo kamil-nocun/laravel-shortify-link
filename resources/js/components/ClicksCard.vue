@@ -9,6 +9,7 @@ const props = defineProps<{
     series: DailyClicks[];
     granularity: 'day' | 'month';
     total: number;
+    loading?: boolean;
 }>();
 
 type View = 'bar' | 'line';
@@ -58,7 +59,10 @@ function formatDate(date: string): string {
 </script>
 
 <template>
-    <section class="overflow-hidden rounded-lg border">
+    <section
+        class="overflow-hidden rounded-lg border transition-opacity"
+        :class="{ 'animate-pulse opacity-50': loading }"
+    >
         <div
             class="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
         >
