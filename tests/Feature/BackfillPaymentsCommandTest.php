@@ -61,3 +61,13 @@ test('users without a stripe id and zero-total invoices are skipped', function (
 
     expect(Payment::count())->toBe(0);
 });
+
+test('backfill walks every customer and reports the total', function () {
+    $second = User::factory()->create(['stripe_id' => 'cus_bf2']);
+    $this->billing->invoices[$this->user->id] = [backfillInvoice('in_first')];
+    $this->billing->invoices[$second->id] = [backfillInvoice('in_second', ['customer' => 'cus_bf2'])];
+
+    $this->artisan('payments:backfill')->expectsOutputToContain('Stored 2 invoices.')->assertExitCode(0);
+
+    expect(Payment::pluck('stripe_invoice_id')->sort()->values()->all())->toBe(['in_first', 'in_second']);
+});
