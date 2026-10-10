@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { CreditCard } from '@lucide/vue';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 import { dashboard } from '@/routes';
 import { show as billingPackage } from '@/routes/billing/package';
+
+const page = usePage();
 
 defineOptions({
     layout: {
@@ -24,6 +26,7 @@ defineOptions({
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
         <Link
+            v-if="page.props.auth.user.role !== 'super_admin'"
             :href="billingPackage()"
             class="flex items-center gap-3 rounded-xl border p-4 hover:bg-muted"
         >

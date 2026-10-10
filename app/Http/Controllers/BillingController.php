@@ -21,6 +21,8 @@ class BillingController extends Controller
      */
     public function show(Request $request): Response
     {
+        abort_if($request->user()->isSuperAdmin(), 403);
+
         return Inertia::render('billing/Package', [
             ...$this->pageData->for($request->user()),
             'checkoutStatus' => $request->query('checkout'),

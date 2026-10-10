@@ -4,14 +4,13 @@ import Heading from '@/components/Heading.vue';
 import PackageOverview from '@/components/PackageOverview.vue';
 import PaymentHistory from '@/components/PaymentHistory.vue';
 import { show } from '@/routes/billing/package';
-import type { PaymentRow } from '@/types';
+import type { Paginated, PaymentRow } from '@/types';
 
 defineProps<{
     current: InstanceType<typeof PackageOverview>['$props']['current'];
-    canBuy: boolean;
     awaitingPayment: boolean;
     invoiceUrl: string | null;
-    payments: PaymentRow[];
+    payments: Paginated<PaymentRow>;
     checkoutStatus: string | null;
     packages: InstanceType<typeof PackageOverview>['$props']['packages'];
     errors: Record<string, string>;
@@ -33,7 +32,6 @@ defineOptions({
 
         <PackageOverview
             :current="current"
-            :can-buy="canBuy"
             :awaiting-payment="awaitingPayment"
             :invoice-url="invoiceUrl"
             :checkout-status="checkoutStatus"

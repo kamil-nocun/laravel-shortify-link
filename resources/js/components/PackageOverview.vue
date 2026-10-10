@@ -23,7 +23,6 @@ const props = defineProps<{
         billing_period: BillingPeriod | null;
         expires_at: string | null;
     };
-    canBuy: boolean;
     awaitingPayment: boolean;
     invoiceUrl?: string | null;
     checkoutStatus?: string | null;
@@ -126,7 +125,7 @@ const buy = (pkg: SellablePackage) =>
                 <InputError :message="errors?.billing_period" />
                 <Button
                     size="sm"
-                    :disabled="readonly || !canBuy || current.billing_period !== null || awaitingPayment"
+                    :disabled="readonly || current.billing_period !== null || awaitingPayment"
                     @click="buy(pkg)"
                     >Buy</Button
                 >

@@ -7,6 +7,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Package;
 use App\Models\Payment;
 use App\Models\User;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Throwable;
 
 class PackagePageData
@@ -16,7 +17,7 @@ class PackagePageData
     /**
      * The package page as the given account sees it.
      *
-     * @return array{current: array<string, mixed>, canBuy: bool, awaitingPayment: bool, invoiceUrl: ?string, payments: list<array<string, mixed>>, packages: list<array<string, mixed>>}
+     * @return array{current: array<string, mixed>, awaitingPayment: bool, invoiceUrl: ?string, payments: LengthAwarePaginator<int, array<string, mixed>>, packages: list<array<string, mixed>>}
      */
     public function for(User $user): array
     {
@@ -30,7 +31,6 @@ class PackagePageData
                 'billing_period' => $assignment?->billing_period->value,
                 'expires_at' => $assignment?->expires_at->toIso8601String(),
             ],
-            'canBuy' => ! $user->isSuperAdmin(),
             'awaitingPayment' => $this->isAwaitingPayment($user),
             'invoiceUrl' => $invoiceUrl,
             'payments' => $this->paymentsFor($user),
@@ -51,14 +51,15 @@ class PackagePageData
     }
 
     /**
-     * The latest payments of the user, newest first.
+     * One page of the user's payments, newest first.
      *
-     * @return list<array{id: string, issued_at: string, package_name: ?string, billing_period: ?string, amount: int, status: string, invoice_url: ?string}>
+     * @return LengthAwarePaginator<int, array{id: string, issued_at: string, package_name: ?string, billing_period: ?string, amount: int, status: string, invoice_url: ?string}>
      */
-    public function paymentsFor(User $user): array
+    public function paymentsFor(User $user): LengthAwarePaginator
     {
-        return $user->payments()->with('package')->latest('issued_at')->limit(20)->get()
-            ->map(fn (Payment $payment) => [
+        return $user->payments()->with('package')->latest('issued_at')
+            ->paginate(10, pageName: 'payments_page')->withQueryString()
+            ->through(fn (Payment $payment) => [
                 'id' => $payment->id,
                 'issued_at' => $payment->issued_at->toIso8601String(),
                 'package_name' => $payment->package?->name,
@@ -66,7 +67,7 @@ class PackagePageData
                 'amount' => $payment->amount,
                 'status' => $payment->status->value,
                 'invoice_url' => $payment->invoice_url,
-            ])->all();
+            ]);
     }
 
     /**

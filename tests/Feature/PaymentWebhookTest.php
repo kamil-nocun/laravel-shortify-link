@@ -89,6 +89,7 @@ test('drafts and zero-total invoices are not recorded', function (array $invoice
 })->with([
     'draft' => [['status' => 'draft']],
     'zero total' => [['total' => 0]],
+    'negative total' => [['total' => -500]],
 ]);
 
 test('an unknown customer is acknowledged without a record', function () {

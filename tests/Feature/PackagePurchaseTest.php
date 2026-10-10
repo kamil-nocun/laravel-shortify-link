@@ -79,8 +79,8 @@ test('a user with an active package cannot buy another one', function () {
     expect($this->billing->called())->toBe([]);
 });
 
-test('super admins see the package page but cannot buy', function () {
-    $this->actingAs(User::factory()->superAdmin()->create())->get(route('billing.package.show'))->assertOk()->assertInertia(fn ($page) => $page->where('canBuy', false));
+test('super admins have no package page', function () {
+    $this->actingAs(User::factory()->superAdmin()->create())->get(route('billing.package.show'))->assertForbidden();
 });
 
 test('super admins cannot start a checkout', function () {

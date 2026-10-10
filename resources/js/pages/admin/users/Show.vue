@@ -54,7 +54,7 @@ const props = defineProps<{
     packages: PackageOption[];
     effectiveLimit: number | null;
     invoiceUrl: string | null;
-    payments: PaymentRow[];
+    payments: Paginated<PaymentRow> | null;
     paymentState: "awaiting_payment" | "active" | "expired" | null;
     links: Paginated<Link>;
     period: StatsPeriodParams;
@@ -256,28 +256,7 @@ setLayoutProps({
             </div>
         </div>
 
-        <UserPackageCard
-            :user-id="user.id"
-            :assignment="packageAssignment"
-            :packages="packages"
-            :effective-limit="effectiveLimit"
-            :payment-state="paymentState"
-        />
-
-        <p v-if="invoiceUrl" class="flex flex-wrap items-center gap-2 text-sm">
-            <Badge variant="outline">Awaiting payment</Badge>
-            <a
-                :href="invoiceUrl"
-                target="_blank"
-                rel="noopener"
-                class="underline underline-offset-4"
-                >Open Stripe payment page</a
-            >
-        </p>
-
-        <PaymentHistory v-if="payments.length > 0" :payments="payments" />
-
-        <div v-if="user.can.assignAdministrators" class="space-y-2">
+        <div v-if="user.can.assignAdministrators" class="space-y-2 rounded-lg border p-4">
             <h2 class="font-medium">Assigned administrators</h2>
             <ul v-if="assignedAdministrators.length > 0" class="text-sm">
                 <li
@@ -299,6 +278,27 @@ setLayoutProps({
                 No administrators assigned.
             </p>
         </div>
+
+        <UserPackageCard
+            :user-id="user.id"
+            :assignment="packageAssignment"
+            :packages="packages"
+            :effective-limit="effectiveLimit"
+            :payment-state="paymentState"
+        />
+
+        <p v-if="invoiceUrl" class="flex flex-wrap items-center gap-2 text-sm">
+            <Badge variant="outline">Awaiting payment</Badge>
+            <a
+                :href="invoiceUrl"
+                target="_blank"
+                rel="noopener"
+                class="underline underline-offset-4"
+                >Open Stripe payment page</a
+            >
+        </p>
+
+        <PaymentHistory v-if="payments" :payments="payments" />
 
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 class="font-medium">Statistics</h2>

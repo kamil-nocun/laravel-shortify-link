@@ -58,7 +58,7 @@ Nowy listener na `WebhookReceived` obsługuje `invoice.finalized`, `invoice.paym
 
 ## Widoki
 
-Tabela „Payment history”: data, pakiet i okres, kwota, status, link do faktury (dla stanu `open` – „Pay”). Ostatnie 20 wpisów, bez paginacji.
+Tabela „Payment history”: data, pakiet i okres, kwota, status, link do faktury (dla stanu `open` – „Pay”). Najnowsze pierwsze, 10 wpisów na stronę z paginacją (parametr zapytania `payments_page`, osobny od innych paginacji na stronie).
 
 - Strona „My package”: własna historia.
 - Strona `admin/users/{id}`: historia konta według polityki `manages` (administrator widzi swoich klientów, super administrator wszystkich). Konto poza zakresem pozostaje niedostępne, jak dotychczas.

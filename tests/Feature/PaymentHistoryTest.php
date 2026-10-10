@@ -21,19 +21,19 @@ test('a user sees only their own payments on the package page', function () {
 
     $this->actingAs($this->client)->get(route('billing.package.show'))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('payments', 1)
-            ->where('payments.0.id', $own->id)
-            ->where('payments.0.package_name', 'Pro')
-            ->where('payments.0.billing_period', 'monthly')
-            ->where('payments.0.status', 'paid')
-            ->where('payments.0.amount', 1900));
+            ->has('payments.data', 1)
+            ->where('payments.data.0.id', $own->id)
+            ->where('payments.data.0.package_name', 'Pro')
+            ->where('payments.data.0.billing_period', 'monthly')
+            ->where('payments.data.0.status', 'paid')
+            ->where('payments.data.0.amount', 1900));
 });
 
 test('an administrator sees the payments of their client but not of a stranger', function () {
     Payment::factory()->paid()->create(['user_id' => $this->client->id]);
 
     $this->actingAs($this->admin)->get(route('admin.users.show', $this->client))
-        ->assertInertia(fn (Assert $page) => $page->has('payments', 1));
+        ->assertInertia(fn (Assert $page) => $page->has('payments.data', 1));
     $this->actingAs($this->admin)->get(route('admin.users.show', $this->stranger))->assertNotFound();
 });
 
@@ -41,22 +41,27 @@ test('a super administrator sees the payments of every account', function () {
     Payment::factory()->paid()->create(['user_id' => $this->stranger->id]);
 
     $this->actingAs($this->super)->get(route('admin.users.show', $this->stranger))
-        ->assertInertia(fn (Assert $page) => $page->has('payments', 1));
+        ->assertInertia(fn (Assert $page) => $page->has('payments.data', 1));
 });
 
 test('a plain user cannot open the admin user page', function () {
     $this->actingAs($this->stranger)->get(route('admin.users.show', $this->stranger))->assertForbidden();
 });
 
-test('payments are newest first and limited to twenty', function () {
+test('payments are newest first and paginated by ten', function () {
     foreach (range(1, 22) as $day) {
         Payment::factory()->create(['user_id' => $this->client->id, 'issued_at' => now()->subDays($day)]);
     }
 
     $this->actingAs($this->client)->get(route('billing.package.show'))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('payments', 20)
-            ->where('payments.0.issued_at', now()->subDay()->toIso8601String()));
+            ->has('payments.data', 10)
+            ->where('payments.data.0.issued_at', now()->subDay()->toIso8601String())
+            ->where('payments.last_page', 3)
+            ->where('payments.next_page_url', fn ($url) => str_contains($url, 'payments_page=2')));
+
+    $this->actingAs($this->client)->get(route('billing.package.show', ['payments_page' => 3]))
+        ->assertInertia(fn (Assert $page) => $page->has('payments.data', 2)->where('payments.next_page_url', null));
 });
 
 test('the pay link comes from the table without calling stripe', function () {
@@ -104,4 +109,21 @@ test('a stripe failure in the fallback leaves the page without a link', function
     $this->actingAs($this->client)->get(route('billing.package.show'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('invoiceUrl', null));
+});
+
+test('an administrator sees their own payments on the package page and their clients on the user page', function () {
+    Payment::factory()->paid()->create(['user_id' => $this->admin->id]);
+    Payment::factory()->paid()->create(['user_id' => $this->client->id]);
+
+    $this->actingAs($this->admin)->get(route('billing.package.show'))
+        ->assertInertia(fn (Assert $page) => $page->has('payments.data', 1)->where('payments.data.0.id', $this->admin->payments()->value('id')));
+    $this->actingAs($this->admin)->get(route('admin.users.show', $this->client))
+        ->assertInertia(fn (Assert $page) => $page->has('payments.data', 1)->where('payments.data.0.id', $this->client->payments()->value('id')));
+});
+
+test('a super administrator sees the history of administrators on the user page', function () {
+    Payment::factory()->paid()->create(['user_id' => $this->admin->id]);
+
+    $this->actingAs($this->super)->get(route('admin.users.show', $this->admin))
+        ->assertInertia(fn (Assert $page) => $page->has('payments.data', 1));
 });

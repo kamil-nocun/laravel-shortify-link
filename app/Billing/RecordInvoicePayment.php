@@ -46,7 +46,7 @@ class RecordInvoicePayment
     {
         $stripeStatus = $invoice['status'] ?? null;
 
-        if ($stripeStatus === 'draft' || ($invoice['total'] ?? 0) === 0) {
+        if ($stripeStatus === 'draft' || ($invoice['total'] ?? 0) <= 0) {
             return null;
         }
 

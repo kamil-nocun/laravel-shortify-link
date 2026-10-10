@@ -102,7 +102,7 @@ class UserController extends Controller
             'effectiveLimit' => $user->linkLimit(),
             'paymentState' => $request->user()->can('assignPackage', $user) ? $this->paymentState($user) : null,
             'invoiceUrl' => $request->user()->can('manages', $user) ? $this->packagePageData->invoiceUrlFor($user) : null,
-            'payments' => $request->user()->can('manages', $user) ? $this->packagePageData->paymentsFor($user) : [],
+            'payments' => $request->user()->can('manages', $user) ? $this->packagePageData->paymentsFor($user) : null,
             'packageAssignment' => $request->user()->can('assignPackage', $user) ? $this->presentAssignment($user) : null,
             'packages' => $request->user()->can('assignPackage', $user) ? $this->packageOptions() : [],
             'links' => $user->links()->withCount('clicks')->with('disabledBy:id,name')->latest()->paginate(15)->withQueryString()

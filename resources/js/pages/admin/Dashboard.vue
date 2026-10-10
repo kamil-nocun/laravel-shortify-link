@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
+import { Head, Link as InertiaLink, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import ClicksChart from '@/components/ClicksChart.vue';
 import Heading from '@/components/Heading.vue';
@@ -15,6 +15,8 @@ import type {
     TopLink,
     TopUser,
 } from '@/types';
+
+const page = usePage();
 
 const props = defineProps<{
     period: StatsPeriodParams;
@@ -74,7 +76,12 @@ defineOptions({
                 <Button variant="outline" size="sm" as-child>
                     <InertiaLink :href="usersIndex()">Users</InertiaLink>
                 </Button>
-                <Button variant="outline" size="sm" as-child>
+                <Button
+                    v-if="page.props.auth.user.role !== 'super_admin'"
+                    variant="outline"
+                    size="sm"
+                    as-child
+                >
                     <InertiaLink :href="billingPackage()">My package</InertiaLink>
                 </Button>
             </div>

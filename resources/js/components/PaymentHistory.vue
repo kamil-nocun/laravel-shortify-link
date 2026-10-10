@@ -1,15 +1,17 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { billingPeriodLabels, formatPrice, paymentStatusLabels } from '@/types';
-import type { PaymentRow } from '@/types';
+import type { Paginated, PaymentRow } from '@/types';
 
-defineProps<{ payments: PaymentRow[] }>();
+defineProps<{ payments: Paginated<PaymentRow> }>();
 </script>
 
 <template>
     <div class="space-y-3">
         <h2 class="text-sm font-medium">Payment history</h2>
-        <p v-if="payments.length === 0" class="text-sm text-muted-foreground">
+        <p v-if="payments.data.length === 0" class="text-sm text-muted-foreground">
             No payments yet.
         </p>
         <div v-else class="overflow-x-auto rounded-lg border">
@@ -24,7 +26,7 @@ defineProps<{ payments: PaymentRow[] }>();
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="payment in payments" :key="payment.id" class="border-b last:border-0">
+                    <tr v-for="payment in payments.data" :key="payment.id" class="border-b last:border-0">
                         <td class="p-3">
                             {{ new Date(payment.issued_at).toLocaleDateString() }}
                         </td>
@@ -53,6 +55,17 @@ defineProps<{ payments: PaymentRow[] }>();
                     </tr>
                 </tbody>
             </table>
+        </div>
+        <div v-if="payments.prev_page_url || payments.next_page_url" class="flex items-center gap-2">
+            <Button v-if="payments.prev_page_url" variant="outline" size="sm" as-child>
+                <Link :href="payments.prev_page_url" preserve-scroll>Previous</Link>
+            </Button>
+            <Button v-if="payments.next_page_url" variant="outline" size="sm" as-child>
+                <Link :href="payments.next_page_url" preserve-scroll>Next</Link>
+            </Button>
+            <span class="text-sm text-muted-foreground">
+                Page {{ payments.current_page }} of {{ payments.last_page }}
+            </span>
         </div>
     </div>
 </template>
