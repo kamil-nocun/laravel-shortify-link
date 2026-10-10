@@ -18,6 +18,7 @@ class PackageFactory extends Factory
         return [
             'name' => fake()->unique()->word(),
             'link_limit' => fake()->numberBetween(1, 100),
+            'domain_limit' => 0,
             'price_one_time' => null,
             'price_monthly' => null,
             'price_quarterly' => null,

@@ -87,6 +87,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * @return HasMany<Domain, $this>
+     */
+    public function domains(): HasMany
+    {
+        return $this->hasMany(Domain::class);
+    }
+
+    /**
      * @return HasMany<Link, $this>
      */
     public function links(): HasMany
@@ -151,6 +159,25 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return $this->activeAssignment()?->link_limit ?? Package::where('is_default', true)->value('link_limit') ?? 0;
+    }
+
+    /**
+     * Maximum number of custom domains, or null when unlimited. An assignment's snapshot wins over later package edits.
+     */
+    public function domainLimit(): ?int
+    {
+        if ($this->isSuperAdmin()) {
+            return null;
+        }
+
+        return $this->activeAssignment()?->domain_limit ?? Package::where('is_default', true)->value('domain_limit') ?? 0;
+    }
+
+    public function canAddDomain(): bool
+    {
+        $limit = $this->domainLimit();
+
+        return $limit === null || $this->domains()->count() < $limit;
     }
 
     public function canCreateLink(): bool

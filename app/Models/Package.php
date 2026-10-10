@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $name
  * @property int $link_limit
+ * @property int $domain_limit
  * @property int|null $price_one_time
  * @property int|null $price_monthly
  * @property int|null $price_quarterly
@@ -30,7 +31,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  */
-#[Fillable(['name', 'link_limit', 'price_one_time', 'price_monthly', 'price_quarterly', 'price_yearly', 'is_default'])]
+#[Fillable(['name', 'link_limit', 'domain_limit', 'price_one_time', 'price_monthly', 'price_quarterly', 'price_yearly', 'is_default'])]
 class Package extends Model
 {
     /** @use HasFactory<PackageFactory> */

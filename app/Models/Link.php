@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 /**
  * @property string $id
  * @property string $user_id
+ * @property string|null $domain_id
  * @property string|null $title
  * @property string $original_url
  * @property string $code
@@ -110,6 +111,14 @@ class Link extends Model
     public function disabledBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'disabled_by');
+    }
+
+    /**
+     * @return BelongsTo<Domain, $this>
+     */
+    public function domain(): BelongsTo
+    {
+        return $this->belongsTo(Domain::class);
     }
 
     /**

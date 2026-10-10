@@ -24,6 +24,7 @@ class PackageAssignmentFactory extends Factory
             'billing_period' => BillingPeriod::Monthly,
             'price' => 1000,
             'link_limit' => fn (array $attributes) => Package::withTrashed()->findOrFail($attributes['package_id'])->link_limit,
+            'domain_limit' => fn (array $attributes) => Package::withTrashed()->findOrFail($attributes['package_id'])->domain_limit,
             'starts_at' => now(),
             'expires_at' => now()->addMonth(),
         ];
