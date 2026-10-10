@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
