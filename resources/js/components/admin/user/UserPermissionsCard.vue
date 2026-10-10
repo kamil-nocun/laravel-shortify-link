@@ -26,10 +26,40 @@ const roleForm = useForm({ role_id: props.user.role_id ?? '' });
 const changeRole = () =>
     roleForm.patch(updateRole(props.user.id).url, { preserveScroll: true });
 
+/** A legacy admin.access override would make every save fail, so it is dropped from the form. */
 const permissionsForm = useForm({
-    granted: [...props.permissionOverrides.granted],
-    revoked: [...props.permissionOverrides.revoked],
+    granted: props.permissionOverrides.granted.filter(
+        (key) => key !== ROLE_ONLY_PERMISSION,
+    ),
+    revoked: props.permissionOverrides.revoked.filter(
+        (key) => key !== ROLE_ONLY_PERMISSION,
+    ),
 });
+
+const labelOf = (key: string): string =>
+    props.permissionGroups
+        .flatMap((group) => group.permissions)
+        .find((permission) => permission.key === key)?.label ?? key;
+
+/** Prefix an error on `granted.N` / `revoked.N` with the label of the permission it refers to. */
+const errorMessage = (
+    field: string,
+    message: string | undefined,
+): string | undefined => {
+    const [list, index] = field.split('.');
+
+    if (
+        !message ||
+        (list !== 'granted' && list !== 'revoked') ||
+        index === undefined
+    ) {
+        return message;
+    }
+
+    const key = permissionsForm[list][Number(index)];
+
+    return key ? `${labelOf(key)}: ${message}` : message;
+};
 
 const stateOf = (key: string): OverrideState =>
     permissionsForm.granted.includes(key)
@@ -150,7 +180,7 @@ const savePermissions = () =>
             <InputError
                 v-for="(message, field) in permissionsForm.errors"
                 :key="field"
-                :message="message"
+                :message="errorMessage(String(field), message)"
             />
 
             <Button
