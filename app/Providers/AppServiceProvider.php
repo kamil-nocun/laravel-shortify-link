@@ -11,10 +11,12 @@ use App\Models\Link;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Models\User;
+use App\Support\ClientDetector;
 use App\Support\DnsDomainVerifier;
 use App\Support\DomainVerifier;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -36,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(PackageBilling::class, StripePackageBilling::class);
         $this->app->bind(DomainVerifier::class, DnsDomainVerifier::class);
+        $this->app->singleton(ClientDetector::class, fn () => new ClientDetector(Cache::store('file')));
     }
 
     /**

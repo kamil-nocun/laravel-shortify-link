@@ -2,11 +2,18 @@
 
 namespace App\Support;
 
+use DeviceDetector\Cache\PSR16Bridge;
 use DeviceDetector\DeviceDetector;
+use Psr\SimpleCache\CacheInterface;
 
 class ClientDetector
 {
     public const BOT = 'bot';
+
+    /**
+     * The parser rules are expensive to load, so a cache keeps them across requests.
+     */
+    public function __construct(private readonly ?CacheInterface $cache = null) {}
 
     /**
      * Resolve browser, operating system and device type from a User-Agent; fields are null when unknown.
@@ -22,6 +29,11 @@ class ClientDetector
         }
 
         $detector = new DeviceDetector($userAgent);
+
+        if ($this->cache !== null) {
+            $detector->setCache(new PSR16Bridge($this->cache));
+        }
+
         $detector->parse();
 
         if ($detector->isBot()) {

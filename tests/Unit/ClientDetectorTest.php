@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\ClientDetector;
+use Psr\SimpleCache\CacheInterface;
 
 const CHROME_WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const IPHONE_SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
@@ -37,3 +38,12 @@ test('returns nulls for a missing or empty user agent', function (?string $userA
         'device_type' => null,
     ]);
 })->with([null, '', '   ']);
+
+test('stores parsed device data in the given cache', function () {
+    $cache = Mockery::spy(CacheInterface::class);
+    $cache->shouldReceive('get')->andReturn(false);
+
+    (new ClientDetector($cache))->detect(CHROME_WINDOWS);
+
+    $cache->shouldHaveReceived('set');
+});
