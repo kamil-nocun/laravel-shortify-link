@@ -51,4 +51,23 @@ class PermissionCatalog
         $role->forceFill($flags)->save();
         $role->permissions()->attach(PermissionRecord::whereIn('key', $keys)->pluck('id'));
     }
+
+    /**
+     * Permissions from the permissions table, grouped in catalog order.
+     *
+     * @return list<array{group: string, permissions: list<array{key: string, label: string}>}>
+     */
+    public static function groups(): array
+    {
+        $order = array_flip(array_map(fn (Permission $permission) => $permission->value, Permission::cases()));
+
+        return PermissionRecord::get(['key', 'label', 'group'])
+            ->sortBy(fn (PermissionRecord $permission) => $order[$permission->key] ?? PHP_INT_MAX)
+            ->groupBy('group')
+            ->map(fn ($permissions, string $group) => [
+                'group' => $group,
+                'permissions' => $permissions->map->only(['key', 'label'])->values()->all(),
+            ])
+            ->values()->all();
+    }
 }

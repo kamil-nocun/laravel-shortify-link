@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserDomainController;
 use App\Http\Controllers\Admin\UserLinkController;
 use App\Http\Controllers\Admin\UserPackageController;
+use App\Http\Controllers\Admin\UserPermissionController;
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\DomainCheckController;
@@ -64,6 +65,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::put('users/{user}/administrators', [UserAdministratorController::class, 'update'])->name('users.administrators.update');
     Route::put('users/{user}/package', [UserPackageController::class, 'update'])->name('users.package.update');
     Route::patch('users/{user}/role', UserRoleController::class)->name('users.role');
+    Route::put('users/{user}/permissions', [UserPermissionController::class, 'update'])->name('users.permissions.update');
 });
 
 require __DIR__.'/settings.php';

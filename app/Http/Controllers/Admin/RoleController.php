@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreRoleRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
 use App\Models\PermissionRecord;
 use App\Models\Role;
+use App\Support\PermissionCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -37,7 +37,7 @@ class RoleController extends Controller
     {
         Gate::authorize('create', Role::class);
 
-        return Inertia::render('admin/roles/Create', ['permissionGroups' => $this->permissionGroups()]);
+        return Inertia::render('admin/roles/Create', ['permissionGroups' => PermissionCatalog::groups()]);
     }
 
     /**
@@ -61,7 +61,7 @@ class RoleController extends Controller
 
         return Inertia::render('admin/roles/Edit', [
             'role' => [...$role->only(['id', 'name', 'description', 'is_super', 'is_default']), 'permissions' => $role->permissions()->pluck('key')->all()],
-            'permissionGroups' => $this->permissionGroups(),
+            'permissionGroups' => PermissionCatalog::groups(),
         ]);
     }
 
@@ -100,24 +100,5 @@ class RoleController extends Controller
             $role->fill($attributes)->save();
             $role->permissions()->sync(PermissionRecord::whereIn('key', $attributes['permissions'])->pluck('id'));
         });
-    }
-
-    /**
-     * Permissions from the permissions table, grouped in catalog order.
-     *
-     * @return list<array{group: string, permissions: list<array{key: string, label: string}>}>
-     */
-    private function permissionGroups(): array
-    {
-        $order = array_flip(array_map(fn (Permission $permission) => $permission->value, Permission::cases()));
-
-        return PermissionRecord::get(['key', 'label', 'group'])
-            ->sortBy(fn (PermissionRecord $permission) => $order[$permission->key] ?? PHP_INT_MAX)
-            ->groupBy('group')
-            ->map(fn ($permissions, string $group) => [
-                'group' => $group,
-                'permissions' => $permissions->map->only(['key', 'label'])->values()->all(),
-            ])
-            ->values()->all();
     }
 }

@@ -122,8 +122,33 @@ class UserController extends Controller
                 'client' => Role::where('name', PermissionCatalog::CLIENT_ROLE)->value('id'),
                 'administrator' => Role::where('name', PermissionCatalog::ADMINISTRATOR_ROLE)->value('id'),
             ],
+            ...$this->permissionOverrideData($request->user(), $user),
             ...$this->report->build($user, $request),
         ]);
+    }
+
+    /**
+     * Data for the per-user permission overrides card; empty unless the actor may change the user's role.
+     *
+     * @return array{permissionOverrides: array{granted: list<string>, revoked: list<string>}, rolePermissions: list<string>, permissionGroups: list<array<string, mixed>>, roles: list<array{id: string, name: string}>}
+     */
+    private function permissionOverrideData(User $actor, User $user): array
+    {
+        if (! $actor->can('changeRole', $user)) {
+            return ['permissionOverrides' => ['granted' => [], 'revoked' => []], 'rolePermissions' => [], 'permissionGroups' => [], 'roles' => []];
+        }
+
+        $overrides = $user->permissionOverrides()->get();
+
+        return [
+            'permissionOverrides' => [
+                'granted' => $overrides->filter(fn ($permission) => $permission->pivot->granted)->pluck('key')->values()->all(),
+                'revoked' => $overrides->reject(fn ($permission) => $permission->pivot->granted)->pluck('key')->values()->all(),
+            ],
+            'rolePermissions' => $user->role?->permissionKeys()->values()->all() ?? [],
+            'permissionGroups' => PermissionCatalog::groups(),
+            'roles' => Role::where('is_super', false)->orderBy('name')->get(['id', 'name'])->map->only(['id', 'name'])->all(),
+        ];
     }
 
     /**

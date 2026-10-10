@@ -45,7 +45,7 @@ test('admin routes are forbidden for regular users', function () {
 
 test('admin routes are not forbidden for admins', function (string $state) {
     foreach (adminRoutes() as [$method, $uri]) {
-        if ($state === 'admin' && (str_ends_with($uri, '/role') || str_starts_with($uri, '/admin/administrators') || str_starts_with($uri, '/admin/packages') || str_starts_with($uri, '/admin/roles') || str_ends_with($uri, '/package'))) {
+        if ($state === 'admin' && (str_ends_with($uri, '/role') || str_ends_with($uri, '/permissions') || str_starts_with($uri, '/admin/administrators') || str_starts_with($uri, '/admin/packages') || str_starts_with($uri, '/admin/roles') || str_ends_with($uri, '/package'))) {
             continue; // role changes, administrator, package and role management and assignment are super admin only (policy)
         }
 
@@ -63,4 +63,5 @@ test('administrators without package, administrator or role permissions are forb
     $this->get(route('admin.roles.index'))->assertForbidden();
     $this->put(route('admin.users.package.update', $client), [])->assertForbidden();
     $this->patch(route('admin.users.role', $client), [])->assertForbidden();
+    $this->put(route('admin.users.permissions.update', $client), [])->assertForbidden();
 });
