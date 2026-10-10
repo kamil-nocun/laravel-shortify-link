@@ -106,7 +106,7 @@ class UserController extends Controller
             'assignments' => $request->user()->can('manages', $user) ? $this->packagePageData->assignmentsFor($user) : null,
             'packageAssignment' => $request->user()->can('assignPackage', $user) ? $this->presentAssignment($user) : null,
             'packages' => $request->user()->can('assignPackage', $user) ? $this->packageOptions() : [],
-            'links' => $user->links()->withCount('clicks')->with('disabledBy:id,name')->latest()->paginate(15)->withQueryString()
+            'links' => $user->links()->withCount('clicks')->with(['domain', 'disabledBy:id,name'])->latest()->paginate(15)->withQueryString()
                 ->through(fn (Link $link) => [...$link->toArray(), 'disabled_by_name' => $link->disabledBy?->name]),
             ...$this->report->build($user, $request),
         ]);

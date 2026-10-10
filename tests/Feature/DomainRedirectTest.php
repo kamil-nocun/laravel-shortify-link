@@ -3,6 +3,7 @@
 use App\Models\Domain;
 use App\Models\Link;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     config(['app.url' => 'http://shortify.test']);
@@ -71,4 +72,23 @@ test('host matching ignores case', function () {
     Link::factory()->for($domain->user)->create(['domain_id' => $domain->id, 'code' => 'abc123']);
 
     $this->get('http://Example.COM/abc123')->assertRedirect();
+});
+
+test('admin user page lists domain short urls without a query per link', function () {
+    $admin = User::factory()->superAdmin()->create();
+    $domain = Domain::factory()->verified()->create(['host' => 'go.example.com']);
+    $count = function () use ($admin, $domain): int {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->actingAs($admin)->get(route('admin.users.show', $domain->user))->assertOk();
+
+        return count(DB::getQueryLog());
+    };
+
+    Link::factory()->for($domain->user)->create(['domain_id' => $domain->id]);
+    $before = $count();
+    Link::factory()->count(5)->for($domain->user)->create(['domain_id' => $domain->id]);
+
+    expect($count())->toBe($before)
+        ->and($domain->user->links()->with('domain')->first()->short_url)->toStartWith('http://go.example.com/');
 });
