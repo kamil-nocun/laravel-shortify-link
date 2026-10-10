@@ -189,6 +189,10 @@ setLayoutProps({
                         Registered
                         {{ new Date(user.created_at).toLocaleDateString() }}
                     </span>
+                    <span class="text-muted-foreground">
+                        Link limit:
+                        {{ effectiveLimit === null ? 'no limit' : effectiveLimit }}
+                    </span>
                 </div>
             </div>
 
@@ -283,7 +287,6 @@ setLayoutProps({
             :user-id="user.id"
             :assignment="packageAssignment"
             :packages="packages"
-            :effective-limit="effectiveLimit"
             :payment-state="paymentState"
         />
 

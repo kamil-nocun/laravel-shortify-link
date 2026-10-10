@@ -17,7 +17,6 @@ const props = defineProps<{
     userId: string;
     assignment: PackageAssignment | null;
     packages: PackageOption[];
-    effectiveLimit: number | null;
     paymentState: 'awaiting_payment' | 'active' | 'expired' | null;
 }>();
 
@@ -52,13 +51,7 @@ const submit = () =>
 
 <template>
     <div class="space-y-3 rounded-lg border p-4">
-        <div class="flex flex-wrap items-center gap-2">
-            <h2 class="text-sm font-medium">Package</h2>
-            <span class="text-sm text-muted-foreground">
-                Link limit:
-                {{ effectiveLimit === null ? 'no limit' : effectiveLimit }}
-            </span>
-        </div>
+        <h2 class="text-sm font-medium">Package</h2>
 
         <template v-if="packages.length > 0">
             <p v-if="assignment" class="flex flex-wrap items-center gap-2 text-sm">
