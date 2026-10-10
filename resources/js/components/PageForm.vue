@@ -49,12 +49,6 @@ const form = usePageForm();
         </div>
 
         <div class="grid gap-2">
-            <Label>Content</Label>
-            <RichTextEditor v-model="form.body" />
-            <InputError :message="form.errors.body" />
-        </div>
-
-        <div class="grid gap-2">
             <div class="flex items-start gap-2">
                 <Checkbox
                     id="is_legal_document"
@@ -69,6 +63,12 @@ const form = usePageForm();
                 >
             </div>
             <InputError :message="form.errors.is_legal_document" />
+        </div>
+
+        <div class="grid gap-2">
+            <Label>Content</Label>
+            <RichTextEditor v-model="form.body" />
+            <InputError :message="form.errors.body" />
         </div>
 
         <Button type="submit" :disabled="form.processing">{{

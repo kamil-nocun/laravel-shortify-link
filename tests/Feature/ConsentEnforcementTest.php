@@ -59,6 +59,7 @@ test('exempt routes work without consent', function () {
     $this->assertGuest();
 
     $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'wrong'])->assertSessionHasErrors('password');
+    $this->actingAs($user)->get(route('privacy.export'))->assertOk();
 });
 
 test('the short link redirect is unaffected', function () {
