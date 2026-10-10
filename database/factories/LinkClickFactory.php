@@ -29,4 +29,17 @@ class LinkClickFactory extends Factory
             'device_type' => 'desktop',
         ];
     }
+
+    /**
+     * Indicate that the row is a daily summary of several clicks.
+     */
+    public function summary(int $clicks = 5): static
+    {
+        return $this->state(fn () => [
+            'is_summary' => true,
+            'city' => null,
+            'clicks' => $clicks,
+            'clicked_at' => now()->startOfDay(),
+        ]);
+    }
 }

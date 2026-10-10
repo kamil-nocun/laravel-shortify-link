@@ -60,3 +60,18 @@ test('the foreign key and index carry the link_statistics prefix', function () {
         ->not->toContain('link_clicks_link_id_clicked_at_index')
         ->and($foreignKeys->all())->toBe(['link_statistics_link_id_foreign']);
 });
+
+test('a new click counts as one and is not a summary', function () {
+    $click = LinkClick::factory()->create()->fresh();
+
+    expect($click->clicks)->toBe(1)->and($click->is_summary)->toBeFalse();
+});
+
+test('summary state has no city and a day start time', function () {
+    $click = LinkClick::factory()->summary()->create()->fresh();
+
+    expect($click->is_summary)->toBeTrue()
+        ->and($click->clicks)->toBe(5)
+        ->and($click->city)->toBeNull()
+        ->and($click->clicked_at->equalTo($click->clicked_at->copy()->startOfDay()))->toBeTrue();
+});

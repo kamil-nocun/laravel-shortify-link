@@ -22,8 +22,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $device_type
  * @property string|null $entry
  * @property string|null $source
+ * @property int $clicks
+ * @property bool $is_summary
  */
-#[Fillable(['link_id', 'clicked_at', 'country_code', 'country', 'city', 'browser', 'os', 'device_type', 'entry', 'source'])]
+#[Fillable(['link_id', 'clicked_at', 'country_code', 'country', 'city', 'browser', 'os', 'device_type', 'entry', 'source', 'clicks', 'is_summary'])]
 class LinkClick extends Model
 {
     /** @use HasFactory<LinkClickFactory> */
@@ -42,6 +44,8 @@ class LinkClick extends Model
     {
         return [
             'clicked_at' => 'datetime',
+            'clicks' => 'integer',
+            'is_summary' => 'boolean',
         ];
     }
 
