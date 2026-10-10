@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateRoleRequest;
 use App\Models\PermissionRecord;
 use App\Models\Role;
 use App\Support\PermissionCatalog;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -78,13 +79,17 @@ class RoleController extends Controller
     }
 
     /**
-     * Delete an unused role.
+     * Delete an unused role; the restricting foreign key backs the policy up against a concurrent assignment.
      */
     public function destroy(Role $role): RedirectResponse
     {
         Gate::authorize('delete', $role);
 
-        $role->delete();
+        try {
+            $role->delete();
+        } catch (QueryException) {
+            abort(403, __('A role held by users cannot be deleted.')); // a user took the role after the policy check
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Role deleted.')]);
 
