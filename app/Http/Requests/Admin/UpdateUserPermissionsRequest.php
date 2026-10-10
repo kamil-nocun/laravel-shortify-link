@@ -19,7 +19,7 @@ class UpdateUserPermissionsRequest extends FormRequest
      */
     private function mayGrant(string $attribute, mixed $value, Closure $fail): void
     {
-        if (! $this->user()->isSuperAdmin() && ! $this->user()->hasPermission((string) $value)) {
+        if (is_string($value) && ! $this->user()->isSuperAdmin() && ! $this->user()->hasPermission($value)) {
             $fail(__('You can only grant permissions you hold yourself.'));
         }
     }
@@ -31,7 +31,7 @@ class UpdateUserPermissionsRequest extends FormRequest
      */
     public function rules(): array
     {
-        $key = ['string', Rule::exists('permissions', 'key'), Rule::notIn([Permission::AdminAccess->value])];
+        $key = ['bail', 'string', Rule::exists('permissions', 'key'), Rule::notIn([Permission::AdminAccess->value])];
 
         return [
             'granted' => ['present', 'array'],

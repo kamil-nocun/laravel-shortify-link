@@ -20,6 +20,6 @@ class StoreAdministratorRequest extends StoreUserRequest
      */
     protected function roleRules(): array
     {
-        return ['nullable', 'uuid', Rule::in(Role::administratorIds())];
+        return ['bail', 'nullable', 'uuid', Rule::in(Role::administratorIds())];
     }
 }

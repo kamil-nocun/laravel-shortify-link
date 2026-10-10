@@ -165,3 +165,31 @@ test('a non-super actor cannot change the overrides of a super admin', function 
     $this->actingAs($admin)->put(route('admin.users.permissions.update', $this->super), ['granted' => [], 'revoked' => ['links.manage']])->assertStatus(404);
     expect(DB::table('permission_user')->where('user_id', $this->super->id)->count())->toBe(0);
 });
+
+test('malformed input from a non-super actor is a validation error', function (string $route, array $payload, string $field) {
+    [$admin, $client] = overrideAdminWithClient();
+    $this->actingAs($admin);
+
+    $response = $route === 'role'
+        ? $this->patch(route('admin.users.role', $client), $payload)
+        : $this->put(route('admin.users.permissions.update', $client), $payload);
+
+    $response->assertSessionHasErrors($field);
+})->with([
+    'nested granted' => ['permissions', ['granted' => [['x']], 'revoked' => []], 'granted.0'],
+    'array role_id' => ['role', ['role_id' => ['x']], 'role_id'],
+    'garbage role_id' => ['role', ['role_id' => 'garbage'], 'role_id'],
+]);
+
+test('creating a user is limited to roles within the actor permissions', function () {
+    $admin = User::factory()->admin()->create();
+    $admin->permissionOverrides()->attach(PermissionRecord::whereIn('key', ['users.change_role'])->get(), ['granted' => true]);
+    $tooMuch = roleWith([Permission::LinksManage, Permission::RolesManage]);
+    $subset = roleWith([Permission::UsersChangeRole]);
+    $payload = fn (Role $role, string $email) => ['name' => 'N', 'email' => $email, 'role_id' => $role->id];
+
+    $this->actingAs($admin)->post(route('admin.users.store'), $payload($tooMuch, 'a@example.com'))->assertSessionHasErrors('role_id');
+    $this->post(route('admin.users.store'), $payload($subset, 'b@example.com'))->assertSessionHasNoErrors();
+    $this->actingAs($this->super)->post(route('admin.users.store'), $payload($tooMuch, 'c@example.com'))->assertSessionHasNoErrors();
+    expect(User::whereIn('email', ['a@example.com', 'b@example.com', 'c@example.com'])->count())->toBe(2);
+});

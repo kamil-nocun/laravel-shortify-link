@@ -6,6 +6,7 @@ use App\Concerns\ProfileValidationRules;
 use App\Enums\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Rules\RoleWithinActorPermissions;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,7 @@ class StoreUserRequest extends FormRequest
         }
 
         if ($this->user()->hasPermission(Permission::UsersChangeRole)) {
-            $rules['role_id'] = $this->roleRules();
+            $rules['role_id'] = [...$this->roleRules(), new RoleWithinActorPermissions($this->user())];
         }
 
         return $rules;
@@ -45,6 +46,6 @@ class StoreUserRequest extends FormRequest
      */
     protected function roleRules(): array
     {
-        return ['nullable', 'uuid', Rule::exists('roles', 'id')->where('is_super', false)->whereNotIn('id', Role::administratorIds())];
+        return ['bail', 'nullable', 'uuid', Rule::exists('roles', 'id')->where('is_super', false)->whereNotIn('id', Role::administratorIds())];
     }
 }
