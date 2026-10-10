@@ -2,6 +2,7 @@
 
 use App\Models\Package;
 use App\Models\PackageAssignment;
+use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -91,6 +92,7 @@ test('super admins cannot start a checkout', function () {
 });
 
 test('the package page links to the open Stripe invoice', function () {
+    Payment::factory()->open()->create(['user_id' => $this->user->id, 'invoice_url' => null]);
     $this->billing->pendingInvoiceUrl = 'https://invoice.stripe.test/i/abc';
 
     $this->actingAs($this->user)->get(route('billing.package.show'))

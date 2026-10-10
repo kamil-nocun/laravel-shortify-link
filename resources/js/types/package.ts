@@ -40,3 +40,28 @@ export const billingPeriodLabels: Record<BillingPeriod, string> = {
 export function formatPrice(cents: number | null): string {
     return cents === null ? '—' : `${(cents / 100).toFixed(2)} PLN`;
 }
+
+export type PaymentStatus =
+    | 'open'
+    | 'paid'
+    | 'payment_failed'
+    | 'void'
+    | 'uncollectible';
+
+export type PaymentRow = {
+    id: string;
+    issued_at: string;
+    package_name: string | null;
+    billing_period: BillingPeriod | null;
+    amount: number;
+    status: PaymentStatus;
+    invoice_url: string | null;
+};
+
+export const paymentStatusLabels: Record<PaymentStatus, string> = {
+    open: 'Awaiting payment',
+    paid: 'Paid',
+    payment_failed: 'Payment failed',
+    void: 'Cancelled',
+    uncollectible: 'Uncollectible',
+};

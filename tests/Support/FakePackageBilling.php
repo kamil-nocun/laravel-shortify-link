@@ -19,6 +19,8 @@ class FakePackageBilling implements PackageBilling
 
     public ?string $pendingInvoiceUrl = null;
 
+    public bool $failPendingInvoiceUrl = false;
+
     /**
      * @var array<string, list<array<string, mixed>>>
      */
@@ -52,6 +54,12 @@ class FakePackageBilling implements PackageBilling
 
     public function pendingInvoiceUrl(User $user): ?string
     {
+        $this->calls[] = ['pendingInvoiceUrl', [$user->id]];
+
+        if ($this->failPendingInvoiceUrl) {
+            throw new RuntimeException('Stripe is unavailable.');
+        }
+
         return $this->pendingInvoiceUrl;
     }
 

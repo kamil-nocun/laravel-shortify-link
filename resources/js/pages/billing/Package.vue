@@ -2,13 +2,16 @@
 import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import PackageOverview from '@/components/PackageOverview.vue';
+import PaymentHistory from '@/components/PaymentHistory.vue';
 import { show } from '@/routes/billing/package';
+import type { PaymentRow } from '@/types';
 
 defineProps<{
     current: InstanceType<typeof PackageOverview>['$props']['current'];
     canBuy: boolean;
     awaitingPayment: boolean;
     invoiceUrl: string | null;
+    payments: PaymentRow[];
     checkoutStatus: string | null;
     packages: InstanceType<typeof PackageOverview>['$props']['packages'];
     errors: Record<string, string>;
@@ -37,5 +40,7 @@ defineOptions({
             :packages="packages"
             :errors="errors"
         />
+
+        <PaymentHistory :payments="payments" />
     </div>
 </template>

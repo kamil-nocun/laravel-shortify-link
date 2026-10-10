@@ -4,6 +4,7 @@ use App\Billing\PackageBilling;
 use App\Enums\BillingPeriod;
 use App\Models\Package;
 use App\Models\PackageAssignment;
+use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -142,6 +143,9 @@ test('payment links are visible only for accounts within the actor scope', funct
     $this->billing->pendingInvoiceUrl = 'https://invoice.stripe.test/i/abc';
     $admin = User::factory()->admin()->create();
     $managed = User::factory()->assignedTo($admin)->create();
+    foreach ([$this->client, $managed] as $account) {
+        Payment::factory()->open()->create(['user_id' => $account->id, 'invoice_url' => null]);
+    }
     $showsLink = fn (Assert $page) => $page->where('invoiceUrl', 'https://invoice.stripe.test/i/abc');
 
     $this->actingAs($this->super)->get(route('admin.users.show', $this->client))->assertInertia($showsLink);

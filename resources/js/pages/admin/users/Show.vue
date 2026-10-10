@@ -8,6 +8,7 @@ import {
 } from "@inertiajs/vue3";
 import { computed, ref, useTemplateRef } from "vue";
 import ClicksChart from "@/components/ClicksChart.vue";
+import PaymentHistory from "@/components/PaymentHistory.vue";
 import UserPackageCard from "@/components/UserPackageCard.vue";
 import Heading from "@/components/Heading.vue";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ import type {
     Link,
     PackageAssignment,
     PackageOption,
+    PaymentRow,
     Paginated,
     StatsPeriodParams,
 } from "@/types";
@@ -52,6 +54,7 @@ const props = defineProps<{
     packages: PackageOption[];
     effectiveLimit: number | null;
     invoiceUrl: string | null;
+    payments: PaymentRow[];
     paymentState: "awaiting_payment" | "active" | "expired" | null;
     links: Paginated<Link>;
     period: StatsPeriodParams;
@@ -271,6 +274,8 @@ setLayoutProps({
                 >Open Stripe payment page</a
             >
         </p>
+
+        <PaymentHistory v-if="payments.length > 0" :payments="payments" />
 
         <div v-if="user.can.assignAdministrators" class="space-y-2">
             <h2 class="font-medium">Assigned administrators</h2>
