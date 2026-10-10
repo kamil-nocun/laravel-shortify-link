@@ -98,7 +98,7 @@ defineOptions({
                     :total="total"
                 />
                 <div class="space-y-6">
-                    <TopLinks :links="topLinks" :href="linkStats" />
+                    <TopLinks as-table :links="topLinks" :href="linkStats" />
                     <LinkStatusTable
                         :active="counters.activeLinks"
                         :disabled="counters.disabledLinks"
