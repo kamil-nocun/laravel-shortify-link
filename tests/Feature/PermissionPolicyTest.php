@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Permission;
+use App\Models\Domain;
 use App\Models\Link;
 use App\Models\Package;
 use App\Models\PackageAssignment;
@@ -136,3 +137,41 @@ test('billing needs billing.manage', function () {
     $this->actingAs(userWithPermissions([Permission::BillingManage]))->get(route('billing.package.show'))->assertOk();
 });
 
+test('changing or deleting an own link needs links.manage', function (array $permissions, bool $allowed) {
+    $owner = userWithPermissions($permissions);
+    $link = Link::factory()->for($owner)->create(['original_url' => 'https://before.example', 'is_active' => true]);
+
+    expect(Gate::forUser($owner)->allows('update', $link))->toBe($allowed)
+        ->and(Gate::forUser($owner)->allows('toggle', $link))->toBe($allowed)
+        ->and(Gate::forUser($owner)->allows('delete', $link))->toBe($allowed);
+
+    $this->actingAs($owner)->patch(route('links.update', $link), ['original_url' => 'https://after.example', 'is_active' => true])->assertRedirect(route('links.index'));
+    $this->actingAs($owner)->put(route('links.update', $link), ['original_url' => 'https://after.example', 'is_active' => true])->assertRedirect(route('links.index'));
+    expect($link->fresh()->original_url)->toBe($allowed ? 'https://after.example' : 'https://before.example');
+
+    $this->actingAs($owner)->patch(route('links.toggle', $link))->assertRedirect();
+    expect($link->fresh()->is_active)->toBe(! $allowed);
+
+    $this->actingAs($owner)->delete(route('links.destroy', $link))->assertRedirect(route('links.index'));
+    expect($link->fresh() === null)->toBe($allowed);
+})->with([
+    'without links.manage' => [[Permission::LinksStats], false],
+    'with links.manage' => [[Permission::LinksManage], true],
+]);
+
+test('verifying or deleting an own domain needs domains.manage', function (array $permissions, bool $allowed) {
+    $owner = userWithPermissions($permissions);
+    $domain = Domain::factory()->for($owner)->create();
+    $this->verifier->verified = [$domain->id];
+
+    $verify = $this->actingAs($owner)->post(route('domains.verify', $domain));
+    $allowed ? $verify->assertRedirect(route('domains.index')) : $verify->assertForbidden();
+    expect($domain->fresh()->verified_at !== null)->toBe($allowed);
+
+    $destroy = $this->actingAs($owner)->delete(route('domains.destroy', $domain));
+    $allowed ? $destroy->assertRedirect() : $destroy->assertForbidden();
+    expect($domain->fresh() === null)->toBe($allowed);
+})->with([
+    'without domains.manage' => [[Permission::LinksManage], false],
+    'with domains.manage' => [[Permission::DomainsManage], true],
+]);
