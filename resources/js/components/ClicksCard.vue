@@ -4,8 +4,6 @@ import { computed, onMounted, ref } from 'vue';
 import ClicksChart from '@/components/ClicksChart.vue';
 import ClicksLineChart from '@/components/ClicksLineChart.vue';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import type { DailyClicks } from '@/types';
 
 const props = defineProps<{
@@ -19,7 +17,6 @@ type View = 'table' | 'chart' | 'line';
 
 const views: View[] = ['table', 'chart', 'line'];
 const view = ref<View>('table');
-const hideEmpty = ref(true);
 
 onMounted(() => {
     try {
@@ -46,11 +43,7 @@ const maxCount = computed(() =>
     Math.max(1, ...props.series.map((row) => row.count)),
 );
 
-const rows = computed(() =>
-    [...props.series]
-        .reverse()
-        .filter((row) => !hideEmpty.value || row.count > 0),
-);
+const rows = computed(() => [...props.series].reverse());
 
 function formatDate(date: string): string {
     const monthly = props.granularity === 'month';
@@ -83,17 +76,6 @@ function formatDate(date: string): string {
                 </span>
             </h2>
             <div class="flex items-center gap-3">
-                <div v-if="view === 'table'" class="flex items-center gap-2">
-                    <Checkbox
-                        id="hide-empty-days"
-                        :model-value="hideEmpty"
-                        @update:model-value="hideEmpty = $event === true"
-                    />
-                    <Label for="hide-empty-days" class="text-sm">
-                        Hide empty
-                        {{ granularity === 'month' ? 'months' : 'days' }}
-                    </Label>
-                </div>
                 <div class="flex items-center gap-1 rounded-lg border p-1">
                     <Button
                         type="button"
