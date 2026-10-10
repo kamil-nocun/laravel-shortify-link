@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import { Activity, Link2, MousePointerClick } from '@lucide/vue';
 import ClicksCard from '@/components/ClicksCard.vue';
 import Heading from '@/components/Heading.vue';
-import LinkStatusChart from '@/components/LinkStatusChart.vue';
+import LinkStatusTable from '@/components/LinkStatusTable.vue';
 import PackageCard from '@/components/PackageCard.vue';
 import PeriodSelector from '@/components/PeriodSelector.vue';
 import StatCards from '@/components/StatCards.vue';
@@ -99,7 +99,7 @@ defineOptions({
                 />
                 <div class="space-y-6">
                     <TopLinks :links="topLinks" :href="linkStats" />
-                    <LinkStatusChart
+                    <LinkStatusTable
                         :active="counters.activeLinks"
                         :disabled="counters.disabledLinks"
                     />
