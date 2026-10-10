@@ -79,4 +79,4 @@ Route::get('internal/domain-check', DomainCheckController::class)->name('domains
         PreventRequestForgery::class,
     ]);
 
-Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z]+')->name('links.redirect');
+Route::get('{code}', RedirectLinkController::class)->where('code', '[0-9A-Za-z_-]+')->name('links.redirect');

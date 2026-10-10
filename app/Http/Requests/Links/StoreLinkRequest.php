@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Links;
 
 use App\Models\User;
+use App\Support\ReservedAliases;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,7 +27,20 @@ class StoreLinkRequest extends FormRequest
                 ->whereNull('disabled_by_admin_at')],
             'is_active' => ['boolean'],
             'expires_at' => ['nullable', 'date', 'after:now'],
+            'alias' => $this->linkOwner()->allowsCustomAlias() ? [
+                'nullable', 'string', 'min:3', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/',
+                fn (string $attribute, mixed $value, Closure $fail) => ReservedAliases::isReserved((string) $value) ? $fail(__('This alias is reserved.')) : null,
+                Rule::unique('links', 'code')->where('domain_id', $this->input('domain_id')),
+            ] : ['prohibited'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['alias.prohibited' => __('Your package does not include custom aliases.')];
     }
 
     /**
@@ -46,6 +61,7 @@ class StoreLinkRequest extends FormRequest
         return [
             'original_url' => __('target URL'),
             'expires_at' => __('expiry date'),
+            'alias' => __('alias'),
         ];
     }
 }

@@ -25,7 +25,7 @@ class UpdateLinkRequest extends StoreLinkRequest
     public function rules(): array
     {
         $rules = parent::rules();
-        unset($rules['domain_id']);
+        unset($rules['domain_id'], $rules['alias']);
 
         if ($this->expiresAtIsUnchanged()) {
             $rules['expires_at'] = ['nullable', 'date'];

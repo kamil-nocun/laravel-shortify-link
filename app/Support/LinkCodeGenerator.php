@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Link;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Validation\ValidationException;
 
 class LinkCodeGenerator
 {
@@ -29,12 +30,23 @@ class LinkCodeGenerator
     }
 
     /**
-     * Create a link for the user with a generated code, retrying once on a race-condition collision.
+     * Create a link for the user with the given alias or a generated code, retrying once on a race-condition collision.
      *
      * @param  array<string, mixed>  $attributes
      */
     public function createFor(User $user, array $attributes): Link
     {
+        $alias = $attributes['alias'] ?? null;
+        unset($attributes['alias']);
+
+        if ($alias !== null) {
+            try {
+                return $user->links()->create([...$attributes, 'code' => $alias]);
+            } catch (UniqueConstraintViolationException) {
+                throw ValidationException::withMessages(['alias' => __('This alias is already taken.')]);
+            }
+        }
+
         $create = fn () => $user->links()->create([...$attributes, 'code' => $this->generate($attributes['domain_id'] ?? null)]);
 
         try {
