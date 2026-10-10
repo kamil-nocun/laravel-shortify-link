@@ -5,10 +5,10 @@ use App\Enums\PageStatus;
 use App\Models\Page;
 use Database\Seeders\LegalPagesSeeder;
 
-test('seeds published privacy and cookies policy pages', function () {
+test('seeds published privacy, cookies and terms pages', function () {
     $this->seed(LegalPagesSeeder::class);
 
-    foreach (['privacy-policy' => 'Privacy policy', 'cookies-policy' => 'Cookies policy'] as $slug => $title) {
+    foreach (['privacy-policy' => 'Privacy policy', 'cookies-policy' => 'Cookies policy', 'terms' => 'Terms of service'] as $slug => $title) {
         $page = Page::firstWhere('slug', $slug);
 
         expect($page->status)->toBe(PageStatus::Published)
@@ -26,7 +26,7 @@ test('seeding twice neither duplicates pages nor overwrites edited content', fun
 
     $this->seed(LegalPagesSeeder::class);
 
-    expect(Page::count())->toBe(2)
+    expect(Page::count())->toBe(3)
         ->and($page->fresh()->versions()->count())->toBe(2)
         ->and($page->fresh()->currentVersion->title)->toBe('Edited');
 });

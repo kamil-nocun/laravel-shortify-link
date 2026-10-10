@@ -16,7 +16,7 @@ class LegalPagesSeeder extends Seeder
      */
     public function run(SavePageVersion $savePageVersion): void
     {
-        foreach (['privacy-policy' => 'Privacy policy', 'cookies-policy' => 'Cookies policy'] as $slug => $title) {
+        foreach (['privacy-policy' => 'Privacy policy', 'cookies-policy' => 'Cookies policy', 'terms' => 'Terms of service'] as $slug => $title) {
             $page = Page::firstOrCreate(['slug' => $slug], ['status' => PageStatus::Published]);
 
             if ($page->wasRecentlyCreated) {
