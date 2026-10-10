@@ -109,7 +109,7 @@ test('version show renders the stored version', function () {
     $page = pageWithVersion();
 
     $this->actingAs($this->super)->get(route('admin.pages.versions.show', [$page, $page->current_version_id]))
-        ->assertInertia(fn (Assert $inertia) => $inertia->component('admin/pages/VersionShow')->where('version.body', '<p>One</p>'));
+        ->assertInertia(fn (Assert $inertia) => $inertia->component('admin/pages/VersionShow')->where('version.body', '<p>One</p>')->where('page.status', 'draft'));
 });
 
 test('restore creates a new version with the old content and keeps history', function () {

@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
+import { Head, Link as InertiaLink } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import PageForm from '@/components/PageForm.vue';
+import PageStatusButton from '@/components/PageStatusButton.vue';
+import PageViewButton from '@/components/PageViewButton.vue';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes/admin';
-import { index, status, update } from '@/routes/admin/pages';
+import { index, update } from '@/routes/admin/pages';
 import { index as versionsIndex } from '@/routes/admin/pages/versions';
 import type { PageContent } from '@/types';
 
@@ -22,12 +24,6 @@ defineOptions({
         ],
     },
 });
-
-function toggleStatus(): void {
-    router.patch(status(props.page.id).url, {
-        status: props.page.status === 'published' ? 'draft' : 'published',
-    });
-}
 </script>
 
 <template>
@@ -37,7 +33,7 @@ function toggleStatus(): void {
         <div class="flex flex-wrap items-center justify-between gap-2">
             <Heading
                 title="Edit page"
-                :description="`/content/${props.page.slug} (${props.page.status})`"
+                :description="`/content/${props.page.slug} (${props.page.status === 'published' ? 'enabled' : 'disabled'})`"
             />
             <div class="flex gap-2">
                 <Button as-child variant="outline">
@@ -45,9 +41,14 @@ function toggleStatus(): void {
                         >History</InertiaLink
                     >
                 </Button>
-                <Button variant="secondary" @click="toggleStatus">{{
-                    props.page.status === 'published' ? 'Unpublish' : 'Publish'
-                }}</Button>
+                <PageViewButton
+                    :slug="props.page.slug"
+                    :status="props.page.status"
+                />
+                <PageStatusButton
+                    :id="props.page.id"
+                    :status="props.page.status"
+                />
             </div>
         </div>
         <InputError :message="errors.status" />

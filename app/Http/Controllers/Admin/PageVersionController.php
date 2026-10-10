@@ -22,7 +22,7 @@ class PageVersionController extends Controller
         Gate::authorize('update', $page);
 
         return Inertia::render('admin/pages/Versions', [
-            'page' => ['id' => $page->id, 'slug' => $page->slug],
+            'page' => ['id' => $page->id, 'slug' => $page->slug, 'status' => $page->status->value],
             'versions' => $page->versions()->with('author:id,name')->latest('created_at')->latest('id')->get()->map(fn (PageVersion $version) => [
                 'id' => $version->id,
                 'title' => $version->title,
@@ -41,7 +41,7 @@ class PageVersionController extends Controller
         Gate::authorize('update', $page);
 
         return Inertia::render('admin/pages/VersionShow', [
-            'page' => ['id' => $page->id, 'slug' => $page->slug],
+            'page' => ['id' => $page->id, 'slug' => $page->slug, 'status' => $page->status->value],
             'version' => $version->only(['id', 'title', 'body', 'created_at']),
         ]);
     }

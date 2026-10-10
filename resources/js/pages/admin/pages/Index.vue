@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { Head, Link as InertiaLink } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import InputError from '@/components/InputError.vue';
+import PageStatusButton from '@/components/PageStatusButton.vue';
+import PageViewButton from '@/components/PageViewButton.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes/admin';
 import { create, edit, index } from '@/routes/admin/pages';
 import type { PageListItem } from '@/types';
 
-defineProps<{ pages: PageListItem[] }>();
+defineProps<{
+    pages: PageListItem[];
+    errors: Record<string, string>;
+}>();
 
 defineOptions({
     layout: {
@@ -33,6 +39,8 @@ defineOptions({
             </Button>
         </div>
 
+        <InputError :message="errors.status" />
+
         <div class="overflow-x-auto rounded-lg border">
             <table class="w-full text-left text-sm">
                 <thead class="bg-muted/50 text-muted-foreground">
@@ -54,10 +62,24 @@ defineOptions({
                                         ? 'default'
                                         : 'secondary'
                                 "
-                                >{{ page.status }}</Badge
+                                >{{
+                                    page.status === 'published'
+                                        ? 'Enabled'
+                                        : 'Disabled'
+                                }}</Badge
                             >
                         </td>
-                        <td class="p-3 text-right">
+                        <td class="flex justify-end gap-2 p-3">
+                            <PageViewButton
+                                :slug="page.slug"
+                                :status="page.status"
+                                size="sm"
+                            />
+                            <PageStatusButton
+                                :id="page.id"
+                                :status="page.status"
+                                size="sm"
+                            />
                             <Button as-child variant="outline" size="sm">
                                 <InertiaLink :href="edit(page.id)"
                                     >Edit</InertiaLink

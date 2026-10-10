@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { Head, Link as InertiaLink } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import PageViewButton from '@/components/PageViewButton.vue';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes/admin';
 import { index } from '@/routes/admin/pages';
 import { index as versionsIndex } from '@/routes/admin/pages/versions';
+import type { PageStatus } from '@/types';
 
 const props = defineProps<{
-    page: { id: string; slug: string };
+    page: { id: string; slug: string; status: PageStatus };
     version: { id: string; title: string; body: string; created_at: string };
 }>();
 
@@ -32,11 +34,17 @@ defineOptions({
                     new Date(props.version.created_at).toLocaleString()
                 "
             />
-            <Button as-child variant="outline">
-                <InertiaLink :href="versionsIndex(props.page.id)"
-                    >Back to history</InertiaLink
-                >
-            </Button>
+            <div class="flex gap-2">
+                <PageViewButton
+                    :slug="props.page.slug"
+                    :status="props.page.status"
+                />
+                <Button as-child variant="outline">
+                    <InertiaLink :href="versionsIndex(props.page.id)"
+                        >Back to history</InertiaLink
+                    >
+                </Button>
+            </div>
         </div>
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div
