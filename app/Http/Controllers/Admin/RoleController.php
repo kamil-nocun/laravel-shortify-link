@@ -53,11 +53,11 @@ class RoleController extends Controller
     }
 
     /**
-     * Show the edit form.
+     * Show the edit form; the super role is shown read-only to anyone who may list roles.
      */
     public function edit(Role $role): Response
     {
-        Gate::authorize('update', $role);
+        $role->is_super ? Gate::authorize('viewAny', Role::class) : Gate::authorize('update', $role);
 
         return Inertia::render('admin/roles/Edit', [
             'role' => [...$role->only(['id', 'name', 'description', 'is_super', 'is_default']), 'permissions' => $role->permissions()->pluck('key')->all()],

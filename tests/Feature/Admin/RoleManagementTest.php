@@ -130,11 +130,13 @@ test('updating a role may keep its own name but not take another one', function 
     $this->actingAs($this->super)->put(route('admin.roles.update', $role), ['name' => PermissionCatalog::CLIENT_ROLE, 'permissions' => []])->assertSessionHasErrors('name');
 });
 
-test('the super role cannot be edited', function () {
+test('the super role is shown read-only and cannot be edited', function () {
     $superRole = Role::findOrFail(roleId(PermissionCatalog::SUPER_ADMIN_ROLE));
 
-    $this->actingAs($this->super)->get(route('admin.roles.edit', $superRole))->assertForbidden();
+    $this->actingAs($this->super)->get(route('admin.roles.edit', $superRole))
+        ->assertInertia(fn (Assert $page) => $page->component('admin/roles/Edit')->where('role.is_super', true));
     $this->actingAs($this->super)->put(route('admin.roles.update', $superRole), ['name' => 'Renamed', 'permissions' => []])->assertForbidden();
+    $this->actingAs($this->super)->delete(route('admin.roles.destroy', $superRole))->assertForbidden();
 
     expect($superRole->fresh()->name)->toBe(PermissionCatalog::SUPER_ADMIN_ROLE);
 });
@@ -157,6 +159,7 @@ test('roles that are super, default or held by users cannot be deleted', functio
 test('actor cannot remove roles.manage from their own role', function () {
     $role = roleGranting([Permission::AdminAccess, Permission::RolesManage]);
     $actor = User::factory()->create(['role_id' => $role->id]);
+    $actor->permissionOverrides()->attach(PermissionRecord::where('key', Permission::UsersView)->firstOrFail(), ['granted' => true]);
 
     $this->actingAs($actor)->put(route('admin.roles.update', $role), ['name' => $role->name, 'permissions' => ['admin.access']])
         ->assertSessionHasErrors('permissions');
@@ -187,4 +190,65 @@ test('changing a client to a custom role with admin panel access detaches assign
 
     expect($client->fresh()->isAdmin())->toBeTrue()
         ->and($client->assignedAdmins()->exists())->toBeFalse();
+});
+
+test('actor cannot remove admin.access from their own role', function () {
+    $role = roleGranting([Permission::AdminAccess, Permission::RolesManage]);
+    $actor = User::factory()->create(['role_id' => $role->id]);
+
+    $this->actingAs($actor)->put(route('admin.roles.update', $role), ['name' => $role->name, 'permissions' => ['roles.manage']])
+        ->assertSessionHasErrors('permissions');
+
+    expect($role->permissionKeys()->sort()->values()->all())->toBe(['admin.access', 'roles.manage']);
+});
+
+test('a non-super roles manager only puts permissions they hold into a role', function () {
+    $actor = User::factory()->create(['role_id' => roleGranting([Permission::AdminAccess, Permission::RolesManage, Permission::LinksManage])->id]);
+    $role = roleGranting([Permission::LinksManage]);
+
+    $this->actingAs($actor)->post(route('admin.roles.store'), ['name' => 'Escalated', 'permissions' => ['links.manage', 'users.block']])
+        ->assertSessionHasErrors('permissions.1');
+    $this->actingAs($actor)->put(route('admin.roles.update', $role), ['name' => $role->name, 'permissions' => ['links.manage', 'users.block']])
+        ->assertSessionHasErrors('permissions.1');
+    expect(Role::where('name', 'Escalated')->exists())->toBeFalse()
+        ->and($role->permissionKeys()->all())->toBe(['links.manage']);
+
+    $this->actingAs($actor)->post(route('admin.roles.store'), ['name' => 'Linker', 'permissions' => ['links.manage']])->assertSessionHasNoErrors();
+    $this->actingAs($actor)->put(route('admin.roles.update', $role), ['name' => $role->name, 'permissions' => ['links.manage', 'admin.access']])
+        ->assertSessionHasNoErrors();
+    expect($role->permissionKeys()->sort()->values()->all())->toBe(['admin.access', 'links.manage']);
+});
+
+test('a non-super roles manager cannot edit or delete a role holding permissions they lack', function () {
+    $actor = User::factory()->create(['role_id' => roleGranting([Permission::AdminAccess, Permission::RolesManage, Permission::LinksManage])->id]);
+    $role = roleGranting([Permission::LinksManage, Permission::UsersBlock]);
+
+    $this->actingAs($actor)->get(route('admin.roles.edit', $role))->assertForbidden();
+    $this->actingAs($actor)->put(route('admin.roles.update', $role), ['name' => 'Renamed', 'permissions' => ['links.manage']])->assertForbidden();
+    $this->actingAs($actor)->delete(route('admin.roles.destroy', $role))->assertForbidden();
+
+    expect($role->fresh()->name)->not->toBe('Renamed')
+        ->and($role->permissionKeys()->sort()->values()->all())->toBe(['links.manage', 'users.block']);
+});
+
+test('non-string role permissions are rejected, not a server error', function (mixed $permission) {
+    $actor = User::factory()->create(['role_id' => roleGranting([Permission::AdminAccess, Permission::RolesManage])->id]);
+
+    foreach ([$actor, $this->super] as $user) {
+        $this->actingAs($user)->post(route('admin.roles.store'), ['name' => 'X', 'permissions' => [$permission]])
+            ->assertSessionHasErrors('permissions.0');
+    }
+})->with([
+    'nested array' => [['links.manage']],
+    'integer' => [42],
+]);
+
+test('the default role cannot be given admin panel access', function () {
+    $default = Role::findOrFail(roleId(PermissionCatalog::CLIENT_ROLE));
+    $keys = $default->permissionKeys()->all();
+
+    $this->actingAs($this->super)->put(route('admin.roles.update', $default), ['name' => $default->name, 'permissions' => [...$keys, 'admin.access']])
+        ->assertSessionHasErrors('permissions');
+
+    expect($default->permissionKeys()->all())->not->toContain('admin.access');
 });

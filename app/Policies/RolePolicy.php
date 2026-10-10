@@ -26,7 +26,7 @@ class RolePolicy
     }
 
     /**
-     * Determine whether the user may edit the role; the super role grants everything and stays as it is.
+     * Determine whether the user may edit the role; the super role grants everything and stays as it is, and a role above the user's own permissions is out of reach.
      */
     public function update(User $user, Role $role): Response|bool
     {
@@ -34,11 +34,15 @@ class RolePolicy
             return false;
         }
 
-        return $role->is_super ? Response::deny(__('The super admin role cannot be edited.')) : true;
+        return match (true) {
+            $role->is_super => Response::deny(__('The super admin role cannot be edited.')),
+            ! $role->isWithinPermissionsOf($user) => Response::deny(__('This role holds permissions you do not have.')),
+            default => true,
+        };
     }
 
     /**
-     * Determine whether the user may delete the role; only an unused, non-super, non-default role goes.
+     * Determine whether the user may delete the role; only an unused, non-super, non-default role within the user's permissions goes.
      */
     public function delete(User $user, Role $role): Response|bool
     {
@@ -49,6 +53,7 @@ class RolePolicy
         return match (true) {
             $role->is_super => Response::deny(__('The super admin role cannot be deleted.')),
             $role->is_default => Response::deny(__('The default role cannot be deleted.')),
+            ! $role->isWithinPermissionsOf($user) => Response::deny(__('This role holds permissions you do not have.')),
             $role->users()->exists() => Response::deny(__('A role held by users cannot be deleted.')),
             default => true,
         };
