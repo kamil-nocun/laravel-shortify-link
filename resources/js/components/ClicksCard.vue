@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ChartColumn, ChartLine, Table } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
-import ClicksChart from '@/components/ClicksChart.vue';
-import ClicksLineChart from '@/components/ClicksLineChart.vue';
+import ClicksTrendChart from '@/components/ClicksTrendChart.vue';
 import { Button } from '@/components/ui/button';
 import type { DailyClicks } from '@/types';
 
@@ -113,21 +112,13 @@ function formatDate(date: string): string {
         <p v-if="total === 0" class="px-4 pb-4 text-sm text-muted-foreground">
             No clicks in this period yet.
         </p>
-        <div v-else-if="view !== 'table'" class="space-y-2 px-4 pb-4">
-            <ClicksChart
-                v-if="view === 'chart'"
+        <div v-else-if="view !== 'table'" class="px-4 pb-4">
+            <ClicksTrendChart
+                :type="view === 'chart' ? 'bar' : 'line'"
                 :series="series"
                 :granularity="granularity"
+                :format-date="formatDate"
             />
-            <ClicksLineChart
-                v-else
-                :series="series"
-                :granularity="granularity"
-            />
-            <div class="flex justify-between text-xs text-muted-foreground">
-                <span>{{ formatDate(series[0].date) }}</span>
-                <span>{{ formatDate(series[series.length - 1].date) }}</span>
-            </div>
         </div>
         <div v-else class="max-h-80 overflow-y-auto">
             <table class="w-full text-left text-sm">
