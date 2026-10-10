@@ -48,7 +48,7 @@ class LinkController extends Controller
     {
         Gate::authorize('create', Link::class);
 
-        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host']), 'canSetAlias' => $request->user()->allowsCustomAlias(), 'mainHost' => $this->mainHost()]);
+        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host']), 'canSetAlias' => $request->user()->allowsCustomAlias(), 'mainHost' => Link::mainHost()]);
     }
 
     /**
@@ -72,7 +72,7 @@ class LinkController extends Controller
     {
         Gate::authorize('update', $link);
 
-        return Inertia::render('links/Edit', ['link' => $link, 'canSetAlias' => $link->user->allowsCustomAlias(), 'mainHost' => $this->mainHost()]);
+        return Inertia::render('links/Edit', ['link' => $link, 'canSetAlias' => $link->user->allowsCustomAlias(), 'mainHost' => Link::mainHost()]);
     }
 
     /**
@@ -103,11 +103,6 @@ class LinkController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Link deleted.')]);
 
         return to_route('links.index');
-    }
-
-    private function mainHost(): string
-    {
-        return parse_url(config('app.url'), PHP_URL_HOST).(parse_url(config('app.url'), PHP_URL_PORT) ? ':'.parse_url(config('app.url'), PHP_URL_PORT) : '');
     }
 
     /**

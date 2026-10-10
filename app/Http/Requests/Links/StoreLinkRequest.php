@@ -29,7 +29,7 @@ class StoreLinkRequest extends FormRequest
             'is_active' => ['boolean'],
             'expires_at' => ['nullable', 'date', 'after:now'],
             'alias' => $this->linkOwner()->allowsCustomAlias() ? [
-                'nullable', 'string', 'min:3', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/',
+                'bail', 'nullable', 'string', 'min:3', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/',
                 fn (string $attribute, mixed $value, Closure $fail) => ReservedAliases::isReserved((string) $value) ? $fail(__('This alias is reserved.')) : null,
                 fn (string $attribute, mixed $value, Closure $fail) => Link::isCodeOrAliasTaken($this->aliasDomainId(), (string) $value, $this->ignoredLinkId()) ? $fail(__('This alias is already taken.')) : null,
             ] : ['prohibited'],

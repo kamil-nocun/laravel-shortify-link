@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserLinkRequest;
+use App\Models\Link;
 use App\Models\User;
 use App\Support\LinkCodeGenerator;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,7 @@ class UserLinkController extends Controller
     {
         Gate::authorize('createLink', $user);
 
-        return Inertia::render('admin/users/links/Create', ['user' => $user->only(['id', 'name']), 'domains' => $user->domains()->active()->get(['id', 'host']), 'canSetAlias' => $user->allowsCustomAlias(), 'mainHost' => parse_url(config('app.url'), PHP_URL_HOST).(parse_url(config('app.url'), PHP_URL_PORT) ? ':'.parse_url(config('app.url'), PHP_URL_PORT) : '')]);
+        return Inertia::render('admin/users/links/Create', ['user' => $user->only(['id', 'name']), 'domains' => $user->domains()->active()->get(['id', 'host']), 'canSetAlias' => $user->allowsCustomAlias(), 'mainHost' => Link::mainHost()]);
     }
 
     /**

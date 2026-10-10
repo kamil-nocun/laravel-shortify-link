@@ -88,6 +88,14 @@ class Link extends Model
     }
 
     /**
+     * Host (with port, if any) of the main application domain.
+     */
+    public static function mainHost(): string
+    {
+        return parse_url(config('app.url'), PHP_URL_HOST).(parse_url(config('app.url'), PHP_URL_PORT) ? ':'.parse_url(config('app.url'), PHP_URL_PORT) : '');
+    }
+
+    /**
      * Whether the value is already a code or alias of another link within the domain (null = main domain).
      */
     public static function isCodeOrAliasTaken(?string $domainId, string $value, ?string $ignoreLinkId = null): bool

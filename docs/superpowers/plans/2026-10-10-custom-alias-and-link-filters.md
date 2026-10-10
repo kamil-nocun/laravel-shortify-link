@@ -1,5 +1,7 @@
 # Własny alias linku i filtry listy linków — plan implementacji
 
+> Zastąpiony przez docs/superpowers/plans/2026-10-10-link-alias-column.md w części dotyczącej aliasu (alias w osobnej kolumnie, nie w `code`); zadania filtrów pozostają aktualne.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Użytkownik z pakietem dającym uprawnienie tworzy link z własnym aliasem, a lista linków ma wyszukiwanie i filtry.

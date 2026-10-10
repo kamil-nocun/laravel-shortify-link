@@ -42,7 +42,7 @@ class LinkCodeGenerator
 
         try {
             return $create();
-        } catch (UniqueConstraintViolationException $exception) {
+        } catch (UniqueConstraintViolationException) {
             if ($alias !== null && Link::isCodeOrAliasTaken($domainId, $alias)) {
                 throw ValidationException::withMessages(['alias' => __('This alias is already taken.')]);
             }

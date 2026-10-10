@@ -282,3 +282,48 @@ test('an inactive or expired link is not reachable via its alias', function (str
 
     $this->get('/hidden1')->assertNotFound();
 })->with(['inactive', 'expired']);
+
+test('an array alias is a validation error, not a server error', function () {
+    $user = userWithAlias();
+    $link = Link::factory()->for($user)->create(['domain_id' => null]);
+
+    storeLink($user, ['alias' => ['x']])->assertSessionHasErrors('alias');
+    updateLink($user, $link, ['alias' => ['x']])->assertSessionHasErrors('alias');
+});
+
+test('an unchanged alias stays editable after it became reserved', function () {
+    $user = userWithAlias();
+    $link = Link::factory()->for($user)->create(['alias' => 'admin', 'domain_id' => null]);
+
+    updateLink($user, $link, ['alias' => 'admin', 'title' => 'Still ok'])->assertSessionHasNoErrors();
+
+    expect($link->fresh()->title)->toBe('Still ok');
+});
+
+test('a user without permission cannot add an alias to a link without one', function () {
+    $user = User::factory()->create();
+    $link = Link::factory()->for($user)->create(['alias' => null, 'domain_id' => null]);
+
+    updateLink($user, $link, ['alias' => 'newone'])->assertSessionHasErrors('alias');
+
+    expect($link->fresh()->alias)->toBeNull();
+});
+
+test('domain_id is ignored on update', function () {
+    $user = userWithAlias();
+    $domain = Domain::factory()->verified()->create(['user_id' => $user->id]);
+    $link = Link::factory()->for($user)->create(['domain_id' => null]);
+
+    updateLink($user, $link, ['domain_id' => $domain->id])->assertSessionHasNoErrors();
+
+    expect($link->fresh()->domain_id)->toBeNull();
+});
+
+test('an alias equal to the own code is accepted on update', function () {
+    $user = userWithAlias();
+    $link = Link::factory()->for($user)->create(['code' => 'owncode1', 'domain_id' => null]);
+
+    updateLink($user, $link, ['alias' => 'owncode1'])->assertSessionHasNoErrors();
+
+    expect($link->fresh()->alias)->toBe('owncode1');
+});

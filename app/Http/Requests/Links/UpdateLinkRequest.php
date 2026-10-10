@@ -30,7 +30,7 @@ class UpdateLinkRequest extends StoreLinkRequest
         $rules = parent::rules();
         unset($rules['domain_id']);
 
-        if (! $this->linkOwner()->allowsCustomAlias()) {
+        if (! $this->linkOwner()->allowsCustomAlias() || ($this->input('alias') ?: null) === $this->route('link')->alias) {
             unset($rules['alias']);
         }
 

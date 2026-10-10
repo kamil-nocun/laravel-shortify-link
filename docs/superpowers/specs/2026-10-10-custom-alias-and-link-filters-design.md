@@ -47,7 +47,7 @@ Migracje:
 - uprawnienie sprawdzane dla `linkOwner()` i tylko wtedy, gdy wartość aliasu faktycznie się zmienia. Użytkownik bez uprawnienia, który wyśle inną wartość niż obecna, dostaje błąd walidacji. Samo ukrycie pola w UI nie wystarcza. Wysłanie niezmienionej wartości (lub niewysłanie pola) nie blokuje edycji pozostałych danych.
 - pusty alias przy edycji usuwa alias (kod nadal działa); przy tworzeniu oznacza brak aliasu.
 
-Właścicielem sprawdzanego uprawnienia jest `linkOwner()`. Dzięki temu admin tworzący lub edytujący link w imieniu klienta podlega uprawnieniom klienta, a nie własnym.
+Właścicielem sprawdzanego uprawnienia jest `linkOwner()`. Dzięki temu admin tworzący link w imieniu klienta podlega uprawnieniom klienta, a nie własnym.
 
 Lista zarezerwowanych słów obejmuje co najmniej: `admin dashboard links domains billing settings login logout register forgot-password reset-password verify-email email two-factor-challenge user up internal api build storage stripe`. Test porównuje listę z pierwszymi segmentami tras z routera oraz z katalogami najwyższego poziomu w `public/`.
 
@@ -83,7 +83,7 @@ Alias:
 - generator nie zwraca kodu równego istniejącemu aliasowi w tej samej domenie;
 - ten sam alias w dwóch różnych domenach (w tym głównej) jest dozwolony; `Promo` i `promo` na jednej domenie są dozwolone razem;
 - użytkownik bez uprawnienia wysyłający alias przy tworzeniu dostaje błąd, link nie powstaje; przy edycji zmiana aliasu jest odrzucona, a edycja z niezmienionym aliasem przechodzi;
-- admin tworzący i edytujący link klienta podlega uprawnieniu klienta;
+- admin tworzący link klientowi podlega uprawnieniu klienta;
 - edycja zmienia alias, stary alias przestaje działać, kod działa nadal; pusty alias usuwa alias; edytowany link nie koliduje z własnym kodem ani aliasem;
 - kolizja w wyścigu (`createFor` i `update`) zwraca błąd walidacji z kluczem `alias`;
 - utrata uprawnienia nie psuje przekierowania istniejącego aliasu;
