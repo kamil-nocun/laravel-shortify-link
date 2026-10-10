@@ -16,7 +16,7 @@ function exportFiles(User $user): array
     $files = [];
 
     for ($index = 0; $index < $zip->numFiles; $index++) {
-        $files[$zip->getNameIndex($index)] = $zip->getFromIndex($index);
+        $files[$zip->getNameIndex($index)] = preg_replace('/^\xEF\xBB\xBF/', '', $zip->getFromIndex($index));
     }
 
     $zip->close();
@@ -100,4 +100,15 @@ test('payments and consents appear', function () {
 
     expect($files['payments.csv'])->toContain('in_mine')
         ->and($files['consents.csv'])->toContain('Terms,terms,');
+});
+
+test('every csv starts with a utf-8 byte order mark so Excel reads Polish characters', function () {
+    $user = User::factory()->create(['name' => 'Zażółć Gęślą']);
+    $response = $this->actingAs($user)->get(route('privacy.export'))->assertOk();
+    $zip = new ZipArchive;
+    $zip->open($response->getFile()->getPathname());
+
+    for ($index = 0; $index < $zip->numFiles; $index++) {
+        expect(str_starts_with($zip->getFromIndex($index), "\xEF\xBB\xBF"))->toBeTrue();
+    }
 });

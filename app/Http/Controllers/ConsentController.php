@@ -36,7 +36,9 @@ class ConsentController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        ConsentDocuments::accept($request->user());
+        $validated = $request->validate(['versions' => ['nullable', 'array'], 'versions.*' => ['string']]);
+
+        ConsentDocuments::accept($request->user(), $validated['versions'] ?? null);
 
         return redirect()->intended(route('dashboard'));
     }

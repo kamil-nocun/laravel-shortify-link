@@ -118,3 +118,26 @@ test('the cookies policy is one of the documents to accept', function () {
 
     $this->actingAs(User::factory()->create())->get(route('dashboard'))->assertRedirect(route('consent.show'));
 });
+
+test('a stale page submitting a non-GET request is redirected with 303 so the browser does not repeat the method', function () {
+    $user = User::factory()->create();
+    $link = Link::factory()->for($user)->create();
+    documentPage('terms');
+
+    $this->actingAs($user)->delete(route('links.destroy', $link))->assertStatus(303)->assertRedirect(route('consent.show'));
+
+    expect(Link::whereKey($link->id)->exists())->toBeTrue();
+});
+
+test('accepting records only the versions that were shown', function () {
+    $terms = documentPage('terms');
+    $user = User::factory()->create();
+    $shown = $terms->current_version_id;
+
+    app(SavePageVersion::class)($terms, 'Terms', '<p>Published while the user was reading</p>', null);
+
+    $this->actingAs($user)->post(route('consent.store'), ['versions' => [$shown]])->assertRedirect();
+
+    expect($user->consents()->pluck('page_version_id')->all())->toBe([$shown]);
+    $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('consent.show'));
+});

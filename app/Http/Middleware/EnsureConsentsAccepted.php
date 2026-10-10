@@ -24,6 +24,6 @@ class EnsureConsentsAccepted
 
         abort_if($request->expectsJson(), 409, __('You have to accept the current documents first.'));
 
-        return redirect()->guest(route('consent.show'));
+        return redirect()->guest(route('consent.show'), 303);
     }
 }

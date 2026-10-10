@@ -14,7 +14,7 @@ import { store } from '@/routes/register';
 
 defineProps<{
     passwordRules: string;
-    consentDocuments: { title: string; slug: string }[];
+    consentDocuments: { id: string; title: string; slug: string }[];
 }>();
 
 defineOptions({
@@ -93,6 +93,13 @@ defineOptions({
             </div>
 
             <div v-if="consentDocuments.length" class="grid gap-2">
+                <input
+                    v-for="document in consentDocuments"
+                    :key="document.id"
+                    type="hidden"
+                    name="versions[]"
+                    :value="document.id"
+                />
                 <div class="flex items-start gap-2">
                     <Checkbox
                         id="accept_terms"

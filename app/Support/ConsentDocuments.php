@@ -43,11 +43,18 @@ class ConsentDocuments
     }
 
     /**
-     * Record the user's acceptance of every current version; repeating it changes nothing.
+     * Record the user's acceptance of the current versions, or of exactly the given versions when the user saw only those
+     * (a version published after the form was rendered stays pending). Repeating it changes nothing.
+     *
+     * @param  list<string>|null  $versionIds
      */
-    public static function accept(User $user): void
+    public static function accept(User $user, ?array $versionIds = null): void
     {
-        $rows = self::current()->map(fn (PageVersion $version): array => [
+        $versions = $versionIds === null
+            ? self::current()
+            : PageVersion::query()->whereIn('id', $versionIds)->whereHas('page', fn ($query) => $query->where('is_legal_document', true))->get();
+
+        $rows = $versions->map(fn (PageVersion $version): array => [
             'id' => (string) Str::uuid7(),
             'user_id' => $user->id,
             'page_version_id' => $version->id,

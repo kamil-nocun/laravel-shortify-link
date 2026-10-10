@@ -84,7 +84,7 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::registerView(fn () => Inertia::render('auth/Register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
             'consentDocuments' => ConsentDocuments::current()
-                ->map(fn (PageVersion $version): array => ['title' => $version->title, 'slug' => $version->page->slug])
+                ->map(fn (PageVersion $version): array => ['id' => $version->id, 'title' => $version->title, 'slug' => $version->page->slug])
                 ->all(),
         ]));
 

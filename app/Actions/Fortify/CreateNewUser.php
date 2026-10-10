@@ -32,7 +32,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $input['password'],
         ]);
 
-        ConsentDocuments::accept($user);
+        ConsentDocuments::accept($user, is_array($input['versions'] ?? null) ? array_values(array_filter($input['versions'], 'is_string')) : null);
 
         return $user;
     }

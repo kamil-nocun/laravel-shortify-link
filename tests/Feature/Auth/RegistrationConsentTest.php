@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\SavePageVersion;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -40,4 +41,22 @@ test('the register page exposes the documents to accept', function () {
         ->component('auth/Register')
         ->where('consentDocuments.0.slug', 'terms')
         ->where('consentDocuments.0.title', 'Terms'));
+});
+
+test('registration records only the versions that were shown on the form', function () {
+    $terms = documentPage('terms');
+    $shown = $terms->current_version_id;
+    app(SavePageVersion::class)($terms, 'Terms', '<p>Newer</p>', null);
+
+    $this->post(route('register.store'), registrationInput(['accept_terms' => '1', 'versions' => [$shown]]));
+
+    $user = User::sole();
+    expect($user->consents()->pluck('page_version_id')->all())->toBe([$shown]);
+    $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('consent.show'));
+});
+
+test('the register page exposes the version ids to post back', function () {
+    $terms = documentPage('terms');
+
+    $this->get(route('register'))->assertInertia(fn (Assert $page) => $page->where('consentDocuments.0.id', $terms->current_version_id));
 });

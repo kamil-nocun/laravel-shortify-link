@@ -77,3 +77,14 @@ test('a version with consents cannot be deleted', function () {
 
     PageVersion::whereKey($terms->current_version_id)->delete();
 })->throws(QueryException::class);
+
+test('accept with version ids records exactly the legal document versions that were shown', function () {
+    $terms = documentPage('terms');
+    $privacy = documentPage('privacy-policy');
+    $user = User::factory()->create();
+
+    ConsentDocuments::accept($user, [$terms->current_version_id, 'not-a-current-version']);
+
+    expect($user->consents()->pluck('page_version_id')->all())->toBe([$terms->current_version_id])
+        ->and(ConsentDocuments::pendingFor($user)->pluck('id')->all())->toBe([$privacy->current_version_id]);
+});
