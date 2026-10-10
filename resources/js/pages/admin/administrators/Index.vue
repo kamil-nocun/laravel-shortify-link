@@ -42,9 +42,7 @@ defineOptions({
     },
 });
 
-const isSuperAdmin = computed(
-    () => usePage().props.auth.isSuperAdmin,
-);
+const isSuperAdmin = computed(() => usePage().props.auth.isSuperAdmin);
 </script>
 
 <template>
@@ -75,6 +73,7 @@ const isSuperAdmin = computed(
                     <tr>
                         <th class="p-3">Name</th>
                         <th class="p-3">Email</th>
+                        <th class="p-3">Role</th>
                         <th class="p-3">Status</th>
                         <th class="p-3">Registered</th>
                         <th class="p-3">Actions</th>
@@ -86,7 +85,7 @@ const isSuperAdmin = computed(
                         class="border-t"
                     >
                         <td
-                            colspan="5"
+                            colspan="6"
                             class="p-6 text-center text-muted-foreground"
                         >
                             {{
@@ -110,6 +109,9 @@ const isSuperAdmin = computed(
                             </InertiaLink>
                         </td>
                         <td class="p-3">{{ user.email }}</td>
+                        <td class="p-3">
+                            <Badge variant="outline">{{ user.role }}</Badge>
+                        </td>
                         <td class="p-3">
                             <Badge
                                 :variant="

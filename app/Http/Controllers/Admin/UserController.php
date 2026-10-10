@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Billing\PackagePageData;
 use App\Enums\BillingPeriod;
+use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminStatsRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
@@ -66,7 +67,13 @@ class UserController extends Controller
     {
         Gate::authorize('create', User::class);
 
-        return Inertia::render('admin/users/Create', ['administrators' => $this->administratorOptions($request->user())]);
+        $roles = $request->user()->hasPermission(Permission::UsersChangeRole) ? Role::assignableBy($request->user(), false) : collect();
+
+        return Inertia::render('admin/users/Create', [
+            'administrators' => $this->administratorOptions($request->user()),
+            'roles' => $roles->map->only(['id', 'name'])->all(),
+            'defaultRoleId' => $roles->firstWhere('is_default', true)?->id,
+        ]);
     }
 
     /**

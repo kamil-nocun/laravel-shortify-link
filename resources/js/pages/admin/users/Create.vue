@@ -10,7 +10,11 @@ import type { AdministratorOption } from "@/types";
 import { dashboard } from "@/routes/admin";
 import { index, store } from "@/routes/admin/users";
 
-defineProps<{ administrators: AdministratorOption[] }>();
+defineProps<{
+    administrators: AdministratorOption[];
+    roles: { id: string; name: string }[];
+    defaultRoleId: string | null;
+}>();
 
 defineOptions({
     layout: {
@@ -52,6 +56,25 @@ defineOptions({
                 <Label>Assigned administrators</Label>
                 <AdministratorPicker :administrators="administrators" />
                 <InputError :message="errors.administrators" />
+            </div>
+
+            <div v-if="roles.length > 0" class="grid gap-2">
+                <Label for="role_id">Role</Label>
+                <select
+                    id="role_id"
+                    name="role_id"
+                    :value="defaultRoleId ?? ''"
+                    class="rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                    <option
+                        v-for="role in roles"
+                        :key="role.id"
+                        :value="role.id"
+                    >
+                        {{ role.name }}
+                    </option>
+                </select>
+                <InputError :message="errors.role_id" />
             </div>
 
             <div class="flex items-center gap-2">

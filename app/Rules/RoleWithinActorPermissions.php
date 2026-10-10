@@ -17,11 +17,11 @@ class RoleWithinActorPermissions implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if ($this->actor->isSuperAdmin() || ! is_string($value) || ! Str::isUuid($value)) {
+        if (! is_string($value) || ! Str::isUuid($value)) {
             return;
         }
 
-        if (Role::find($value)?->permissionKeys()->diff($this->actor->permissionKeys())->isNotEmpty()) {
+        if (Role::find($value)?->isWithinPermissionsOf($this->actor) === false) {
             $fail(__('You can only assign roles whose permissions you hold yourself.'));
         }
     }

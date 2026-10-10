@@ -405,3 +405,25 @@ test('users index resolves roles and permissions without a query per row', funct
 
     expect($count())->toBe($before);
 })->with(['superAdmin', 'admin']);
+
+test('user create page offers only assignable client roles to a role changer', function () {
+    $custom = Role::factory()->create(['name' => 'Custom']);
+    $super = User::factory()->superAdmin()->create();
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($super)->get(route('admin.users.create'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('roles', fn ($roles) => collect($roles)->pluck('name')->sort()->values()->all() === collect([PermissionCatalog::CLIENT_ROLE, 'Custom'])->sort()->values()->all())
+            ->where('defaultRoleId', roleId(PermissionCatalog::CLIENT_ROLE)));
+
+    $this->actingAs($admin)->get(route('admin.users.create'))
+        ->assertInertia(fn (Assert $page) => $page->where('roles', [])->where('defaultRoleId', null));
+});
+
+test('users index lists the role name', function () {
+    $admin = User::factory()->admin()->create();
+    User::factory()->assignedTo($admin)->create();
+
+    $this->actingAs($admin)->get(route('admin.users.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('users.data.0.role', PermissionCatalog::CLIENT_ROLE));
+});

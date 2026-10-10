@@ -42,6 +42,7 @@ class AdministratorController extends Controller
             ->withQueryString()
             ->through(fn (User $user) => [
                 ...$user->only(['id', 'name', 'email', 'blocked_at', 'created_at']),
+                'role' => $user->role?->name,
                 'blocked_by_id' => $user->blocked_by,
                 'blocked_by_name' => $user->blockedBy?->name,
                 'can' => [
@@ -56,11 +57,16 @@ class AdministratorController extends Controller
     /**
      * Show the create form.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         Gate::authorize('manageAdministrators', User::class);
 
-        return Inertia::render('admin/administrators/Create');
+        $roles = Role::assignableBy($request->user(), true);
+
+        return Inertia::render('admin/administrators/Create', [
+            'roles' => $roles->map->only(['id', 'name'])->all(),
+            'defaultRoleId' => $roles->firstWhere('name', PermissionCatalog::ADMINISTRATOR_ROLE)?->id,
+        ]);
     }
 
     /**

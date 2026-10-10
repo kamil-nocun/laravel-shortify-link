@@ -8,6 +8,11 @@ import { Label } from "@/components/ui/label";
 import { dashboard } from "@/routes/admin";
 import { index, store } from "@/routes/admin/administrators";
 
+defineProps<{
+    roles: { id: string; name: string }[];
+    defaultRoleId: string | null;
+}>();
+
 defineOptions({
     layout: {
         breadcrumbs: [
@@ -42,6 +47,25 @@ defineOptions({
                 <Label for="email">Email address</Label>
                 <Input id="email" type="email" name="email" required />
                 <InputError :message="errors.email" />
+            </div>
+
+            <div v-if="roles.length > 0" class="grid gap-2">
+                <Label for="role_id">Role</Label>
+                <select
+                    id="role_id"
+                    name="role_id"
+                    :value="defaultRoleId ?? ''"
+                    class="rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                    <option
+                        v-for="role in roles"
+                        :key="role.id"
+                        :value="role.id"
+                    >
+                        {{ role.name }}
+                    </option>
+                </select>
+                <InputError :message="errors.role_id" />
             </div>
 
             <div class="flex items-center gap-2">

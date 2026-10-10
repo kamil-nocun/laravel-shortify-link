@@ -72,4 +72,27 @@ class Role extends Model
             ->whereHas('permissions', fn ($query) => $query->where('key', Permission::AdminAccess))
             ->pluck('id')->all();
     }
+
+    /**
+     * Whether every permission of this role is held by the actor; the super admin is unrestricted.
+     */
+    public function isWithinPermissionsOf(User $actor): bool
+    {
+        return $actor->isSuperAdmin() || $this->permissionKeys()->diff($actor->permissionKeys())->isEmpty();
+    }
+
+    /**
+     * Non-super roles the actor may assign: administrator roles or client roles, within the actor's own permissions.
+     *
+     * @return Collection<int, Role>
+     */
+    public static function assignableBy(User $actor, bool $administrators): Collection
+    {
+        $administratorIds = self::administratorIds();
+
+        return self::where('is_super', false)
+            ->when($administrators, fn ($query) => $query->whereIn('id', $administratorIds), fn ($query) => $query->whereNotIn('id', $administratorIds))
+            ->with('permissions')->orderBy('name')->get()
+            ->filter(fn (Role $role) => $role->isWithinPermissionsOf($actor))->values();
+    }
 }

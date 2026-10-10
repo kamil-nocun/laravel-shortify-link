@@ -61,3 +61,20 @@ test('administrator role must grant admin access and not be super', function (st
     'client role' => fn () => roleId(PermissionCatalog::CLIENT_ROLE),
     'super role' => fn () => roleId(PermissionCatalog::SUPER_ADMIN_ROLE),
 ]);
+
+test('administrator create page offers administrator roles', function () {
+    $super = User::factory()->superAdmin()->create();
+
+    $this->actingAs($super)->get(route('admin.administrators.create'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('roles', fn ($roles) => collect($roles)->pluck('name')->all() === [PermissionCatalog::ADMINISTRATOR_ROLE])
+            ->where('defaultRoleId', roleId(PermissionCatalog::ADMINISTRATOR_ROLE)));
+});
+
+test('administrators index lists the role name', function () {
+    $super = User::factory()->superAdmin()->create();
+    User::factory()->admin()->create();
+
+    $this->actingAs($super)->get(route('admin.administrators.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('administrators.data.0.role', PermissionCatalog::ADMINISTRATOR_ROLE));
+});
