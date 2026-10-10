@@ -377,7 +377,7 @@ test('creating a user takes a client role only from a role changer', function ()
         ->and(User::where('email', 'c@example.com')->exists())->toBeFalse();
 });
 
-test('shared auth props and role options expose the role kind', function () {
+test('shared auth props expose the role kind', function () {
     $super = User::factory()->superAdmin()->create();
     $user = User::factory()->create();
 
@@ -386,10 +386,7 @@ test('shared auth props and role options expose the role kind', function () {
             ->where('auth.isAdmin', true)
             ->where('auth.isSuperAdmin', true)
             ->where('user.role', PermissionCatalog::CLIENT_ROLE)
-            ->where('roleOptions', [
-                'client' => roleId(PermissionCatalog::CLIENT_ROLE),
-                'administrator' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE),
-            ]));
+            ->missing('roleOptions'));
 });
 
 test('users index resolves roles and permissions without a query per row', function (string $viewerState) {

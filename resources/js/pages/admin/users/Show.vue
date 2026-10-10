@@ -5,6 +5,7 @@ import UserDomainsTable from '@/components/admin/user/UserDomainsTable.vue';
 import UserHeader from '@/components/admin/user/UserHeader.vue';
 import UserLinksTable from '@/components/admin/user/UserLinksTable.vue';
 import UserPackageCard from '@/components/admin/user/UserPackageCard.vue';
+import UserPermissionsCard from '@/components/admin/user/UserPermissionsCard.vue';
 import UserStatsSection from '@/components/admin/user/UserStatsSection.vue';
 import { dashboard } from '@/routes/admin';
 import { index, show } from '@/routes/admin/users';
@@ -20,12 +21,16 @@ import type {
     PackageOption,
     Paginated,
     PaymentRow,
+    PermissionGroup,
     StatsPeriodParams,
 } from '@/types';
 
 const props = defineProps<{
     user: AdminUser;
-    roleOptions: { client: string; administrator: string };
+    permissionOverrides: { granted: string[]; revoked: string[] };
+    rolePermissions: string[];
+    permissionGroups: PermissionGroup[];
+    roles: { id: string; name: string }[];
     assignedAdministrators: AdministratorOption[];
     packageAssignment: PackageAssignment | null;
     packages: PackageOption[];
@@ -57,15 +62,20 @@ setLayoutProps({
     <Head :title="user.name" />
 
     <div class="space-y-6 p-4">
-        <UserHeader
-            :user="user"
-            :effective-limit="effectiveLimit"
-            :role-options="roleOptions"
-        />
+        <UserHeader :user="user" :effective-limit="effectiveLimit" />
 
         <UserAdministratorsCard
             v-if="user.can.assignAdministrators"
             :administrators="assignedAdministrators"
+        />
+
+        <UserPermissionsCard
+            v-if="roles.length > 0"
+            :user="user"
+            :roles="roles"
+            :permission-groups="permissionGroups"
+            :role-permissions="rolePermissions"
+            :permission-overrides="permissionOverrides"
         />
 
         <UserPackageCard

@@ -14,19 +14,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    block,
-    destroy,
-    role as updateRole,
-    show,
-    unblock,
-} from '@/routes/admin/users';
+import { block, destroy, show, unblock } from '@/routes/admin/users';
 import type { AdminUser } from '@/types';
 
 const props = defineProps<{
     user: AdminUser;
     effectiveLimit: number | null;
-    roleOptions: { client: string; administrator: string };
 }>();
 
 const isSuperAdmin = computed(() => usePage().props.auth.isSuperAdmin);
@@ -35,31 +28,6 @@ const toggleBlock = () =>
     props.user.blocked_at
         ? router.delete(unblock(props.user.id).url, { preserveScroll: true })
         : router.patch(block(props.user.id).url, {}, { preserveScroll: true });
-
-const isAdministrator = computed(
-    () => props.user.role_id === props.roleOptions.administrator,
-);
-const targetRoleLabel = computed(() =>
-    isAdministrator.value ? 'Client' : 'Administrator',
-);
-
-const isRoleOpen = ref(false);
-
-const changeRole = () =>
-    router.patch(
-        updateRole(props.user.id).url,
-        {
-            role_id: isAdministrator.value
-                ? props.roleOptions.client
-                : props.roleOptions.administrator,
-        },
-        {
-            preserveScroll: true,
-            onFinish: () => {
-                isRoleOpen.value = false;
-            },
-        },
-    );
 
 const isDeleteOpen = ref(false);
 const isDeleting = ref(false);
@@ -114,29 +82,6 @@ const deleteUser = () =>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <Dialog v-if="user.can.changeRole" v-model:open="isRoleOpen">
-                <DialogTrigger as-child>
-                    <Button variant="outline" size="sm">
-                        Change role to {{ targetRoleLabel }}
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Change role?</DialogTitle>
-                        <DialogDescription>
-                            {{ user.name }} will become {{ targetRoleLabel }}.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter class="gap-2">
-                        <DialogClose as-child>
-                            <Button variant="secondary">Cancel</Button>
-                        </DialogClose>
-                        <Button @click="changeRole"
-                            >Change role to {{ targetRoleLabel }}</Button
-                        >
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
             <Button
                 v-if="user.can.block"
                 variant="outline"

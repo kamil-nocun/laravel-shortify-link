@@ -118,10 +118,6 @@ class UserController extends Controller
             'domainLimit' => $user->domainLimit(),
             'links' => $user->links()->withCount('clicks')->with(['domain', 'disabledBy:id,name'])->latest()->paginate(15)->withQueryString()
                 ->through(fn (Link $link) => [...$link->toArray(), 'disabled_by_name' => $link->disabledBy?->name]),
-            'roleOptions' => [
-                'client' => Role::where('name', PermissionCatalog::CLIENT_ROLE)->value('id'),
-                'administrator' => Role::where('name', PermissionCatalog::ADMINISTRATOR_ROLE)->value('id'),
-            ],
             ...$this->permissionOverrideData($request->user(), $user),
             ...$this->report->build($user, $request),
         ]);
