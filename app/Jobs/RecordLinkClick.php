@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\LinkEntry;
 use App\Models\Link;
 use App\Support\ClientDetector;
 use App\Support\GeoLocator;
@@ -19,7 +20,8 @@ class RecordLinkClick implements ShouldQueue
     public ?string $userAgent = null;
 
     /**
-     * Not promoted: jobs queued before this property existed are restored without it.
+     * Not promoted: jobs queued before this property existed are restored without it;
+     * those clicks could only come through the code.
      */
     public ?string $entry = null;
 
@@ -52,7 +54,7 @@ class RecordLinkClick implements ShouldQueue
             ...$geoLocator->locate($this->ip),
             ...$clientDetector->detect($this->userAgent),
             'clicked_at' => $this->clickedAt,
-            'entry' => $this->entry,
+            'entry' => $this->entry ?? LinkEntry::Code->value,
         ]);
     }
 }

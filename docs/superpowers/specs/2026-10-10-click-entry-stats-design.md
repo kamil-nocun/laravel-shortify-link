@@ -6,13 +6,13 @@ Link ma standardowy kod i opcjonalny alias, a oba przekierowują na ten sam cel 
 
 Cel: na stronie statystyk linku (użytkownika i admina) pojawia się nowy podział "Short URL used": ile kliknięć przyszło przez **kod**, a ile przez **alias**. Podział działa tak jak pozostałe (tabela lub wykres kołowy, sortowanie, paginacja, filtr (lista wyboru), opcje filtrów) i łączy się z istniejącymi filtrami i okresem.
 
-Poza zakresem: podział po konkretnych wartościach aliasu (kliknięcia przez wcześniejsze aliasy łączą się w "Alias"), statystyki zbiorcze panelu admina (`AdminStatsReport`), uzupełnianie starych kliknięć.
+Poza zakresem: podział po konkretnych wartościach aliasu (kliknięcia przez wcześniejsze aliasy łączą się w "Alias"), statystyki zbiorcze panelu admina (`AdminStatsReport`).
 
 ## Decyzje
 
 - **Zapisujemy typ wejścia, nie wartość.** Kolumna `link_statistics.entry` przyjmuje `Code` albo `Alias`. Odrzucone: zapis dokładnej wartości (wiersz na każdy alias, tekst użytkownika w statystykach, więcej danych) — wybrano prostszy wariant A.
 - **Wartości w bazie to etykiety wyświetlane** (`Code`, `Alias`), tak jak `country`, `browser` czy `os` przechowują nazwy wyświetlane. Dzięki temu istniejący kod raportu (grupowanie, filtr po wartości, `Unknown` dla `NULL`) działa bez specjalnych przypadków.
-- **Stare kliknięcia mają `entry = NULL`** i są pokazywane jako `Unknown`. Nie da się ich odtworzyć wstecz, bo alias można zmieniać i usuwać.
+- **Kliknięcia bez zapisanego wejścia liczą się jako `Code`.** Przed wprowadzeniem aliasów każde kliknięcie mogło pójść tylko przez kod, więc migracja uzupełniająca ustawia `entry = 'Code'` dla wierszy z `NULL`, a zadanie z kolejki bez wartości (sprzed zmiany) zapisuje `Code`. Założenie: żadne kliknięcie przez alias nie zostało zapisane z `NULL` przed wdrożeniem kolumny. Migracja nie jest odwracalna (uzupełnionych wierszy nie da się odróżnić od zapisanych). Obsługa `Unknown` w raporcie zostaje generyczna, ale w praktyce wiersze `NULL` nie powstają.
 - **Wejście ustala przekierowanie**, bo tylko ono wie, którą wartością dopasowano link. Kody i aliasy dzielą jedną przestrzeń nazw w domenie, więc porównanie `$link->code === $code` jest jednoznaczne (kolacja binarna).
 
 ## Dane
@@ -24,7 +24,7 @@ Migracja: `link_statistics.entry` — `string(5)`, nullable, po kolumnie `device
 ## Zapis kliknięcia
 
 - `RedirectLinkController` wylicza `LinkEntry` (`$link->code === $code` → `Code`, w przeciwnym razie `Alias`) i przekazuje go do `RecordLinkClick::dispatch(...)`.
-- `RecordLinkClick` dostaje opcjonalny argument `?string $entry = null` zapisywany tak jak `userAgent`: właściwość niepromowana, ustawiana w konstruktorze, z komentarzem, że zadania odłożone w kolejce przed zmianą są odtwarzane bez niej. `handle()` dopisuje `'entry' => $this->entry` do zapisywanej rekordu. Zadanie bez wartości zapisuje `NULL` (`Unknown`).
+- `RecordLinkClick` dostaje opcjonalny argument `?string $entry = null` zapisywany tak jak `userAgent`: właściwość niepromowana, ustawiana w konstruktorze, z komentarzem, że zadania odłożone w kolejce przed zmianą są odtwarzane bez niej. `handle()` dopisuje `'entry' => $this->entry` do zapisywanej rekordu. Zadanie bez wartości zapisuje `Code`.
 
 ## Raport statystyk
 

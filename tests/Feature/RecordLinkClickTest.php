@@ -116,13 +116,13 @@ test('records which entry the click came through', function () {
     expect(LinkClick::sole()->entry)->toBe('Alias');
 });
 
-test('records a null entry when none is given', function () {
+test('records the Code entry when none is given', function () {
     fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
     $link = Link::factory()->create();
 
     RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now());
 
-    expect(LinkClick::sole()->entry)->toBeNull();
+    expect(LinkClick::sole()->entry)->toBe('Code');
 });
 
 test('a job queued before entries were recorded still runs', function () {
@@ -135,5 +135,5 @@ test('a job queued before entries were recorded still runs', function () {
 
     app()->call([$job, 'handle']);
 
-    expect(LinkClick::sole()->entry)->toBeNull();
+    expect(LinkClick::sole()->entry)->toBe('Code');
 });
