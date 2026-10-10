@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { CreditCard } from '@lucide/vue';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 import { dashboard } from '@/routes';
+import { show as billingPackage } from '@/routes/billing/package';
 
 defineOptions({
     layout: {
@@ -21,6 +23,13 @@ defineOptions({
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
+        <Link
+            :href="billingPackage()"
+            class="flex items-center gap-3 rounded-xl border p-4 hover:bg-muted"
+        >
+            <CreditCard class="size-5" />
+            <span class="font-medium">My package and payments</span>
+        </Link>
         <div class="grid auto-rows-min gap-4 md:grid-cols-3">
             <div
                 class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"

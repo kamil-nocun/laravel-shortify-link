@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Billing\PackageBilling;
+use App\Billing\PackagePageData;
 use App\Enums\BillingPeriod;
 use App\Http\Requests\Billing\CheckoutRequest;
 use App\Models\Package;
@@ -13,40 +14,16 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class BillingController extends Controller
 {
-    public function __construct(private readonly PackageBilling $billing) {}
+    public function __construct(private readonly PackageBilling $billing, private readonly PackagePageData $pageData) {}
 
     /**
      * Show the user's package and the packages they can buy.
      */
     public function show(Request $request): Response
     {
-        $user = $request->user();
-        abort_if($user->isSuperAdmin(), 403);
-
-        $assignment = $user->activeAssignment();
-
         return Inertia::render('billing/Package', [
-            'current' => [
-                'package_name' => $user->package()?->name,
-                'link_limit' => $user->linkLimit(),
-                'billing_period' => $assignment?->billing_period->value,
-                'expires_at' => $assignment?->expires_at->toIso8601String(),
-            ],
-            'awaitingPayment' => $user->subscriptions()->incomplete()->exists(),
+            ...$this->pageData->for($request->user()),
             'checkoutStatus' => $request->query('checkout'),
-            'packages' => Package::where('is_default', false)->orderBy('name')->get()
-                ->map(fn (Package $package) => [
-                    'id' => $package->id,
-                    'name' => $package->name,
-                    'link_limit' => $package->link_limit,
-                    'prices' => collect($package->availablePeriods())
-                        ->filter(fn (BillingPeriod $period) => $package->stripePriceId($period) !== null)
-                        ->mapWithKeys(fn (BillingPeriod $period) => [$period->value => $package->priceFor($period)])
-                        ->all(),
-                ])
-                ->filter(fn (array $package) => $package['prices'] !== [])
-                ->values()
-                ->all(),
         ]);
     }
 

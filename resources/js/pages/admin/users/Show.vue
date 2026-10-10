@@ -51,6 +51,7 @@ const props = defineProps<{
     packageAssignment: PackageAssignment | null;
     packages: PackageOption[];
     effectiveLimit: number | null;
+    invoiceUrl: string | null;
     paymentState: "awaiting_payment" | "active" | "expired" | null;
     links: Paginated<Link>;
     period: StatsPeriodParams;
@@ -259,6 +260,17 @@ setLayoutProps({
             :effective-limit="effectiveLimit"
             :payment-state="paymentState"
         />
+
+        <p v-if="invoiceUrl" class="flex flex-wrap items-center gap-2 text-sm">
+            <Badge variant="outline">Awaiting payment</Badge>
+            <a
+                :href="invoiceUrl"
+                target="_blank"
+                rel="noopener"
+                class="underline underline-offset-4"
+                >Open Stripe payment page</a
+            >
+        </p>
 
         <div v-if="user.can.assignAdministrators" class="space-y-2">
             <h2 class="font-medium">Assigned administrators</h2>

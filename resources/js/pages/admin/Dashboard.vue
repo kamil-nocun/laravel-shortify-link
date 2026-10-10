@@ -5,6 +5,7 @@ import ClicksChart from '@/components/ClicksChart.vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes/admin';
+import { show as billingPackage } from '@/routes/billing/package';
 import { stats as linkStats } from '@/routes/admin/links';
 import { index as usersIndex, show as showUser } from '@/routes/admin/users';
 import type {
@@ -72,6 +73,9 @@ defineOptions({
                 </Button>
                 <Button variant="outline" size="sm" as-child>
                     <InertiaLink :href="usersIndex()">Users</InertiaLink>
+                </Button>
+                <Button variant="outline" size="sm" as-child>
+                    <InertiaLink :href="billingPackage()">My package</InertiaLink>
                 </Button>
             </div>
         </div>

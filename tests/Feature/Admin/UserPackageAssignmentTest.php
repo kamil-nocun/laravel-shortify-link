@@ -137,3 +137,17 @@ test('only packages with Stripe prices are offered for assignment', function () 
         ->assertInertia(fn (Assert $page) => $page->where('packages', fn ($packages) => collect($packages)->pluck('name')->all() === [$this->package->name]
             && $packages[0]['available_periods'] === ['one_time', 'monthly']));
 });
+
+test('payment links are visible only for accounts within the actor scope', function () {
+    $this->billing->pendingInvoiceUrl = 'https://invoice.stripe.test/i/abc';
+    $admin = User::factory()->admin()->create();
+    $managed = User::factory()->assignedTo($admin)->create();
+    $showsLink = fn (Assert $page) => $page->where('invoiceUrl', 'https://invoice.stripe.test/i/abc');
+
+    $this->actingAs($this->super)->get(route('admin.users.show', $this->client))->assertInertia($showsLink);
+    $this->actingAs($admin)->get(route('admin.users.show', $managed))->assertInertia($showsLink);
+    $this->actingAs($admin)->get(route('admin.users.show', $this->client))->assertNotFound();
+    $this->actingAs($this->client)->get(route('billing.package.show'))
+        ->assertInertia(fn (Assert $page) => $page->where('invoiceUrl', 'https://invoice.stripe.test/i/abc'));
+    $this->actingAs($this->client)->get(route('admin.users.show', $this->client))->assertForbidden();
+});

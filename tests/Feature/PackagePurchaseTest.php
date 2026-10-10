@@ -78,6 +78,28 @@ test('a user with an active package cannot buy another one', function () {
     expect($this->billing->called())->toBe([]);
 });
 
-test('super admins cannot buy packages', function () {
-    $this->actingAs(User::factory()->superAdmin()->create())->get(route('billing.package.show'))->assertForbidden();
+test('super admins see the package page but cannot buy', function () {
+    $this->actingAs(User::factory()->superAdmin()->create())->get(route('billing.package.show'))->assertOk()->assertInertia(fn ($page) => $page->where('canBuy', false));
+});
+
+test('super admins cannot start a checkout', function () {
+    $package = Package::factory()->create(['is_default' => false]);
+
+    $this->actingAs(User::factory()->superAdmin()->create())
+        ->post(route('billing.package.checkout'), ['package_id' => $package->id, 'billing_period' => 'monthly'])
+        ->assertForbidden();
+});
+
+test('the package page links to the open Stripe invoice', function () {
+    $this->billing->pendingInvoiceUrl = 'https://invoice.stripe.test/i/abc';
+
+    $this->actingAs($this->user)->get(route('billing.package.show'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('invoiceUrl', 'https://invoice.stripe.test/i/abc')
+            ->where('awaitingPayment', true));
+});
+
+test('the package page has no invoice link when nothing is open', function () {
+    $this->actingAs($this->user)->get(route('billing.package.show'))
+        ->assertInertia(fn (Assert $page) => $page->where('invoiceUrl', null)->where('awaitingPayment', false));
 });

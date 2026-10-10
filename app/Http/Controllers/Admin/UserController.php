@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Billing\PackagePageData;
 use App\Enums\BillingPeriod;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
@@ -24,7 +25,7 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function __construct(private readonly AdminStatsReport $report) {}
+    public function __construct(private readonly AdminStatsReport $report, private readonly PackagePageData $packagePageData) {}
 
     /**
      * List regular users, optionally filtered by name or e-mail.
@@ -100,6 +101,7 @@ class UserController extends Controller
                 : [],
             'effectiveLimit' => $user->linkLimit(),
             'paymentState' => $request->user()->can('assignPackage', $user) ? $this->paymentState($user) : null,
+            'invoiceUrl' => $request->user()->can('manages', $user) ? $this->packagePageData->pendingInvoiceUrl($user) : null,
             'packageAssignment' => $request->user()->can('assignPackage', $user) ? $this->presentAssignment($user) : null,
             'packages' => $request->user()->can('assignPackage', $user) ? $this->packageOptions() : [],
             'links' => $user->links()->withCount('clicks')->with('disabledBy:id,name')->latest()->paginate(15)->withQueryString()

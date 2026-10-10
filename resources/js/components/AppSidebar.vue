@@ -55,9 +55,7 @@ const mainNavItems = computed<NavItem[]>(() => {
             ? [{ title: "Users", href: usersIndex(), icon: Users }]
             : []),
         ...baseNavItems,
-        ...(role !== "super_admin"
-            ? [{ title: "My package", href: billingPackage(), icon: CreditCard }]
-            : []),
+        { title: "My package", href: billingPackage(), icon: CreditCard },
     ];
 });
 

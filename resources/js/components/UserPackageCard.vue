@@ -133,5 +133,9 @@ const submit = () =>
                 </div>
             </form>
         </template>
+        <p v-else class="text-sm text-muted-foreground">
+            No package is available for sale. Create a paid package with at
+            least one price first.
+        </p>
     </div>
 </template>
