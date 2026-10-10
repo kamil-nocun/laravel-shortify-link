@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Head, Link as InertiaLink, router } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, ref } from 'vue';
-import Heading from '@/components/Heading.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Head, Link as InertiaLink, router } from "@inertiajs/vue3";
+import { computed, onBeforeUnmount, ref } from "vue";
+import Heading from "@/components/Heading.vue";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogClose,
@@ -14,10 +14,18 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { create, destroy, edit, index, stats, toggle } from '@/routes/links';
-import type { Link, LinkFilters, Paginated } from '@/types';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+    create,
+    destroy,
+    edit,
+    index,
+    qr,
+    stats,
+    toggle,
+} from "@/routes/links";
+import type { Link, LinkFilters, Paginated } from "@/types";
 
 const props = defineProps<{
     links: Paginated<Link>;
@@ -35,9 +43,17 @@ const limitReached = computed(
     () => props.quota.limit !== null && props.quota.used >= props.quota.limit,
 );
 
-const search = ref(props.filters.search ?? '');
-const status = ref(props.filters.status ?? '');
-const domain = ref(props.filters.domain ?? '');
+const qrTypes = ref<Record<string, "code" | "alias">>({});
+
+function qrType(link: Link): "code" | "alias" {
+    return link.alias !== null && qrTypes.value[link.id] === "alias"
+        ? "alias"
+        : "code";
+}
+
+const search = ref(props.filters.search ?? "");
+const status = ref(props.filters.status ?? "");
+const domain = ref(props.filters.domain ?? "");
 
 const hasFilters = computed(
     () =>
@@ -54,7 +70,7 @@ function applyFilters(): void {
             search: search.value,
             status: status.value,
             domain: domain.value,
-        }).filter(([, value]) => value !== ''),
+        }).filter(([, value]) => value !== ""),
     );
 
     router.get(index().url, params, {
@@ -74,15 +90,15 @@ function onSearchInput(): void {
 onBeforeUnmount(() => clearTimeout(searchTimer));
 
 function clearFilters(): void {
-    search.value = '';
-    status.value = '';
-    domain.value = '';
+    search.value = "";
+    status.value = "";
+    domain.value = "";
     applyFilters();
 }
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'My links', href: index() }],
+        breadcrumbs: [{ title: "My links", href: index() }],
     },
 });
 </script>
@@ -116,7 +132,8 @@ defineOptions({
                 Package {{ packageNotice.package_name }} is being withdrawn.
                 From
                 {{ new Date(packageNotice.ends_at).toLocaleDateString() }}
-                {{ packageNotice.default_package_name ?? 'default' }} package applies.
+                {{ packageNotice.default_package_name ?? "default" }} package
+                applies.
             </AlertDescription>
         </Alert>
 
@@ -193,7 +210,7 @@ defineOptions({
                         :key="link.id"
                         class="border-t"
                     >
-                        <td class="p-3">{{ link.title ?? '—' }}</td>
+                        <td class="p-3">{{ link.title ?? "—" }}</td>
                         <td class="max-w-64 truncate p-3">
                             {{ link.original_url }}
                         </td>
@@ -201,7 +218,7 @@ defineOptions({
                             {{ link.short_url }}
                         </td>
                         <td class="p-3 font-mono">
-                            {{ link.alias_url ?? '—' }}
+                            {{ link.alias_url ?? "—" }}
                         </td>
                         <td class="p-3">{{ link.clicks_count ?? 0 }}</td>
                         <td class="p-3">
@@ -246,7 +263,7 @@ defineOptions({
                             {{
                                 link.expires_at
                                     ? new Date(link.expires_at).toLocaleString()
-                                    : '—'
+                                    : "—"
                             }}
                         </td>
                         <td class="space-x-2 p-3 text-right">
@@ -260,6 +277,86 @@ defineOptions({
                                     >Edit</InertiaLink
                                 >
                             </Button>
+                            <Dialog>
+                                <DialogTrigger as-child>
+                                    <Button variant="outline" size="sm"
+                                        >QR</Button
+                                    >
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>QR code</DialogTitle>
+                                        <DialogDescription>
+                                            {{
+                                                qrType(link) === "alias"
+                                                    ? link.alias_url
+                                                    : link.short_url
+                                            }}
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div
+                                        v-if="link.alias !== null"
+                                        class="flex gap-2"
+                                    >
+                                        <Button
+                                            size="sm"
+                                            :variant="
+                                                qrType(link) === 'code'
+                                                    ? 'default'
+                                                    : 'outline'
+                                            "
+                                            @click="qrTypes[link.id] = 'code'"
+                                            >Code</Button
+                                        >
+                                        <Button
+                                            size="sm"
+                                            :variant="
+                                                qrType(link) === 'alias'
+                                                    ? 'default'
+                                                    : 'outline'
+                                            "
+                                            @click="qrTypes[link.id] = 'alias'"
+                                            >Alias</Button
+                                        >
+                                    </div>
+                                    <img
+                                        :src="
+                                            qr({
+                                                link: link.id,
+                                                type: qrType(link),
+                                            }).url
+                                        "
+                                        :alt="`QR code of ${link.code}`"
+                                        class="mx-auto size-64 rounded bg-white p-2"
+                                    />
+                                    <DialogFooter class="gap-2">
+                                        <DialogClose as-child>
+                                            <Button variant="secondary"
+                                                >Close</Button
+                                            >
+                                        </DialogClose>
+                                        <Button as-child>
+                                            <a
+                                                :href="
+                                                    qr(
+                                                        {
+                                                            link: link.id,
+                                                            type: qrType(link),
+                                                        },
+                                                        {
+                                                            query: {
+                                                                download: 1,
+                                                            },
+                                                        },
+                                                    ).url
+                                                "
+                                                download
+                                                >Download SVG</a
+                                            >
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                             <Dialog>
                                 <DialogTrigger as-child>
                                     <Button variant="destructive" size="sm"
