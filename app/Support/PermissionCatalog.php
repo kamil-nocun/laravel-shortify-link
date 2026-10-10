@@ -15,7 +15,7 @@ class PermissionCatalog
     public const CLIENT_ROLE = 'Client';
 
     /**
-     * Upsert the permissions and create any missing starting role; existing roles are left untouched.
+     * Upsert the permissions and create any missing starting role (Administrator = admin groups plus client permissions); existing roles are left untouched.
      */
     public static function sync(): void
     {
@@ -32,7 +32,7 @@ class PermissionCatalog
             ->map->value;
 
         self::createRole(self::SUPER_ADMIN_ROLE, ['is_super' => true], []);
-        self::createRole(self::ADMINISTRATOR_ROLE, [], $administratorKeys->all());
+        self::createRole(self::ADMINISTRATOR_ROLE, [], [...$administratorKeys->all(), ...array_map(fn (Permission $permission) => $permission->value, Permission::forClients())]);
         self::createRole(self::CLIENT_ROLE, ['is_default' => true], array_map(fn (Permission $permission) => $permission->value, Permission::forClients()));
     }
 
