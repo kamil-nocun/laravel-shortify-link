@@ -23,6 +23,7 @@ class StorePackageRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'link_limit' => ['required', 'integer', 'min:0', 'max:4294967295'],
+            'domain_limit' => ['required', 'integer', 'min:0', 'max:4294967295'],
             'price_one_time' => $price,
             'price_monthly' => $price,
             'price_quarterly' => $price,

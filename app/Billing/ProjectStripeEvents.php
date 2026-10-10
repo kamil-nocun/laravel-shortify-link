@@ -80,6 +80,7 @@ class ProjectStripeEvents
             'billing_period' => $period,
             'price' => $invoice['amount_paid'],
             'link_limit' => $package->link_limit,
+            'domain_limit' => $package->domain_limit,
             'cancelled_at' => null,
         ];
 

@@ -57,6 +57,7 @@ defineOptions({
                     <tr>
                         <th class="p-3">Name</th>
                         <th class="p-3">Link limit</th>
+                        <th class="p-3">Domain limit</th>
                         <th class="p-3">One month (single payment)</th>
                         <th class="p-3">Monthly</th>
                         <th class="p-3">Quarterly</th>
@@ -74,6 +75,7 @@ defineOptions({
                             >
                         </td>
                         <td class="p-3">{{ pkg.link_limit }}</td>
+                        <td class="p-3">{{ pkg.domain_limit }}</td>
                         <td class="p-3">{{ formatPrice(pkg.price_one_time) }}</td>
                         <td class="p-3">{{ formatPrice(pkg.price_monthly) }}</td>
                         <td class="p-3">

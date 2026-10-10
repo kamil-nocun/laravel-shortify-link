@@ -33,6 +33,8 @@ class PackagePageData
             'current' => [
                 'package_name' => $user->package()?->name,
                 'link_limit' => $user->linkLimit(),
+                'domain_limit' => $user->domainLimit(),
+                'domains_used' => $user->domains()->count(),
                 'billing_period' => $assignment?->billing_period->value,
                 'expires_at' => $assignment?->expires_at->toIso8601String(),
                 'cancellable' => $assignment !== null && $assignment->cancelled_at === null && ! $subscription?->ended() && ! $subscription?->onGracePeriod(),

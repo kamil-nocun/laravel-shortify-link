@@ -9,7 +9,7 @@ beforeEach(function () {
 });
 
 test('saving a new package syncs it with Stripe', function () {
-    $this->actingAs($this->super)->post(route('admin.packages.store'), ['name' => 'Pro', 'link_limit' => 50, 'price_monthly' => 1900])
+    $this->actingAs($this->super)->post(route('admin.packages.store'), ['name' => 'Pro', 'link_limit' => 50, 'domain_limit' => 0, 'price_monthly' => 1900])
         ->assertRedirect(route('admin.packages.index'));
 
     expect($this->billing->called())->toBe(['syncPackage']);
@@ -18,7 +18,7 @@ test('saving a new package syncs it with Stripe', function () {
 test('editing a package syncs it again', function () {
     $package = Package::factory()->create();
 
-    $this->actingAs($this->super)->put(route('admin.packages.update', $package), ['name' => 'Renamed', 'link_limit' => 5, 'price_monthly' => 2500])
+    $this->actingAs($this->super)->put(route('admin.packages.update', $package), ['name' => 'Renamed', 'link_limit' => 5, 'domain_limit' => 0, 'price_monthly' => 2500])
         ->assertRedirect();
 
     expect($this->billing->calls)->toBe([['syncPackage', [$package->id]]]);
@@ -27,7 +27,7 @@ test('editing a package syncs it again', function () {
 test('the default package is never synced', function () {
     $default = Package::where('is_default', true)->firstOrFail();
 
-    $this->actingAs($this->super)->put(route('admin.packages.update', $default), ['name' => 'Free', 'link_limit' => 12, 'is_default' => true])
+    $this->actingAs($this->super)->put(route('admin.packages.update', $default), ['name' => 'Free', 'link_limit' => 12, 'domain_limit' => 0, 'is_default' => true])
         ->assertRedirect();
 
     expect($this->billing->called())->toBe([]);
@@ -36,7 +36,7 @@ test('the default package is never synced', function () {
 test('a failing sync rolls the package back and reports an error', function () {
     $this->billing->failSync = true;
 
-    $this->actingAs($this->super)->post(route('admin.packages.store'), ['name' => 'Pro', 'link_limit' => 50])
+    $this->actingAs($this->super)->post(route('admin.packages.store'), ['name' => 'Pro', 'link_limit' => 50, 'domain_limit' => 0])
         ->assertSessionHasErrors('stripe');
 
     expect(Package::where('name', 'Pro')->exists())->toBeFalse();

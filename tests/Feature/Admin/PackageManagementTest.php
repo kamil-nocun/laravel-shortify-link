@@ -21,13 +21,13 @@ test('super admin lists packages with assignment counts', function () {
 
 test('super admin creates and updates a package', function () {
     $this->actingAs($this->super)->post(route('admin.packages.store'), [
-        'name' => 'Pro', 'link_limit' => 100, 'price_monthly' => 1900, 'price_yearly' => null, 'is_default' => false,
+        'name' => 'Pro', 'link_limit' => 100, 'domain_limit' => 0, 'price_monthly' => 1900, 'price_yearly' => null, 'is_default' => false,
     ])->assertRedirect(route('admin.packages.index'));
 
     $package = Package::where('name', 'Pro')->firstOrFail();
     expect($package->price_monthly)->toBe(1900)->and($package->price_yearly)->toBeNull();
 
-    $this->actingAs($this->super)->put(route('admin.packages.update', $package), ['name' => 'Pro+', 'link_limit' => 200])
+    $this->actingAs($this->super)->put(route('admin.packages.update', $package), ['name' => 'Pro+', 'link_limit' => 200, 'domain_limit' => 0])
         ->assertRedirect(route('admin.packages.index'));
 
     expect($package->fresh()->name)->toBe('Pro+')->and($package->fresh()->link_limit)->toBe(200);
@@ -39,9 +39,9 @@ test('only super admin can manage packages', function (string $role) {
 
     $this->actingAs($actor)->get(route('admin.packages.index'))->assertForbidden();
     $this->actingAs($actor)->get(route('admin.packages.create'))->assertForbidden();
-    $this->actingAs($actor)->post(route('admin.packages.store'), ['name' => 'X', 'link_limit' => 1])->assertForbidden();
+    $this->actingAs($actor)->post(route('admin.packages.store'), ['name' => 'X', 'link_limit' => 1, 'domain_limit' => 0])->assertForbidden();
     $this->actingAs($actor)->get(route('admin.packages.edit', $package))->assertForbidden();
-    $this->actingAs($actor)->put(route('admin.packages.update', $package), ['name' => 'X', 'link_limit' => 1])->assertForbidden();
+    $this->actingAs($actor)->put(route('admin.packages.update', $package), ['name' => 'X', 'link_limit' => 1, 'domain_limit' => 0])->assertForbidden();
     $this->actingAs($actor)->delete(route('admin.packages.destroy', $package))->assertForbidden();
 })->with(['admin']);
 
@@ -52,22 +52,22 @@ test('regular user cannot reach package routes', function () {
 test('package data is validated', function (array $payload, string $field) {
     $this->actingAs($this->super)->post(route('admin.packages.store'), $payload)->assertSessionHasErrors($field);
 })->with([
-    'missing name' => [['link_limit' => 1], 'name'],
+    'missing name' => [['link_limit' => 1, 'domain_limit' => 0], 'name'],
     'negative limit' => [['name' => 'X', 'link_limit' => -1], 'link_limit'],
-    'non numeric price' => [['name' => 'X', 'link_limit' => 1, 'price_monthly' => 'abc'], 'price_monthly'],
-    'negative price' => [['name' => 'X', 'link_limit' => 1, 'price_yearly' => -5], 'price_yearly'],
+    'non numeric price' => [['name' => 'X', 'link_limit' => 1, 'domain_limit' => 0, 'price_monthly' => 'abc'], 'price_monthly'],
+    'negative price' => [['name' => 'X', 'link_limit' => 1, 'domain_limit' => 0, 'price_yearly' => -5], 'price_yearly'],
 ]);
 
 test('marking a package as default leaves exactly one default', function () {
     $old = Package::where('is_default', true)->firstOrFail();
 
-    $this->actingAs($this->super)->post(route('admin.packages.store'), ['name' => 'New default', 'link_limit' => 3, 'is_default' => true]);
+    $this->actingAs($this->super)->post(route('admin.packages.store'), ['name' => 'New default', 'link_limit' => 3, 'domain_limit' => 0, 'is_default' => true]);
 
     expect(Package::where('is_default', true)->count())->toBe(1)
         ->and(Package::where('is_default', true)->first()->name)->toBe('New default')
         ->and($old->fresh()->is_default)->toBeFalse();
 
-    $this->actingAs($this->super)->put(route('admin.packages.update', $old), ['name' => 'Free', 'link_limit' => 10, 'is_default' => true]);
+    $this->actingAs($this->super)->put(route('admin.packages.update', $old), ['name' => 'Free', 'link_limit' => 10, 'domain_limit' => 0, 'is_default' => true]);
 
     expect(Package::where('is_default', true)->pluck('id')->all())->toBe([$old->id]);
 });
@@ -81,7 +81,7 @@ test('the default package cannot be deleted', function () {
 });
 
 test('a package with assignments is withdrawn instead of deleted', function () {
-    $used = Package::factory()->create(['link_limit' => 7]);
+    $used = Package::factory()->create(['link_limit' => 7, 'domain_limit' => 0]);
     $assignment = PackageAssignment::factory()->for($used)->create();
 
     $this->actingAs($this->super)->delete(route('admin.packages.destroy', $used))->assertRedirect(route('admin.packages.index'));
@@ -105,7 +105,7 @@ test('unused package can be deleted', function () {
 test('the current default package cannot be unmarked directly', function () {
     $default = Package::where('is_default', true)->firstOrFail();
 
-    $this->actingAs($this->super)->put(route('admin.packages.update', $default), ['name' => 'Free', 'link_limit' => 10, 'is_default' => false])
+    $this->actingAs($this->super)->put(route('admin.packages.update', $default), ['name' => 'Free', 'link_limit' => 10, 'domain_limit' => 0, 'is_default' => false])
         ->assertSessionHasErrors('is_default');
 
     expect($default->fresh()->is_default)->toBeTrue();

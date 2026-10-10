@@ -20,6 +20,8 @@ const props = defineProps<{
     current: {
         package_name: string | null;
         link_limit: number | null;
+        domain_limit: number | null;
+        domains_used: number;
         billing_period: BillingPeriod | null;
         expires_at: string | null;
         cancellable: boolean;
@@ -99,6 +101,10 @@ const buy = (pkg: SellablePackage) =>
                     · valid until
                     {{ new Date(current.expires_at).toLocaleDateString() }}
                 </template>
+            </p>
+            <p class="text-sm">
+                Domains: {{ current.domains_used }} /
+                {{ current.domain_limit === null ? 'no limit' : current.domain_limit }}
             </p>
             <p v-if="current.cancels" class="text-sm text-muted-foreground">
                 Package cancelled — it will not renew.

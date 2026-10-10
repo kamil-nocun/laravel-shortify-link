@@ -28,6 +28,7 @@ function usePackageForm() {
     return useForm({
         name: props.package?.name ?? '',
         link_limit: props.package?.link_limit ?? 10,
+        domain_limit: props.package?.domain_limit ?? 0,
         price_one_time: toInput(props.package?.price_one_time),
         price_monthly: toInput(props.package?.price_monthly),
         price_quarterly: toInput(props.package?.price_quarterly),
@@ -63,6 +64,18 @@ const form = usePackageForm();
                 required
             />
             <InputError :message="form.errors.link_limit" />
+        </div>
+
+        <div class="grid gap-2">
+            <Label for="domain_limit">Domain limit</Label>
+            <Input
+                id="domain_limit"
+                v-model.number="form.domain_limit"
+                type="number"
+                min="0"
+                required
+            />
+            <InputError :message="form.errors.domain_limit" />
         </div>
 
         <fieldset class="grid gap-4 sm:grid-cols-2">
