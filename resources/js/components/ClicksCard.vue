@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ChartColumn, ChartLine, Table } from '@lucide/vue';
-import { computed, onMounted, ref } from 'vue';
+import { ChartColumn, ChartLine } from '@lucide/vue';
+import { onMounted, ref } from 'vue';
 import ClicksTrendChart from '@/components/ClicksTrendChart.vue';
 import { Button } from '@/components/ui/button';
 import type { DailyClicks } from '@/types';
@@ -11,18 +11,18 @@ const props = defineProps<{
     total: number;
 }>();
 
-const storageKey = 'clicks-card-view';
-type View = 'table' | 'chart' | 'line';
+type View = 'bar' | 'line';
 
-const views: View[] = ['table', 'chart', 'line'];
-const view = ref<View>('table');
+const storageKey = 'clicks-card-view';
+const view = ref<View>('line');
 
 onMounted(() => {
     try {
-        const stored = localStorage.getItem(storageKey) as View | null;
+        const stored = localStorage.getItem(storageKey);
 
-        view.value =
-            stored !== null && views.includes(stored) ? stored : 'table';
+        if (stored === 'bar' || stored === 'line') {
+            view.value = stored;
+        }
     } catch {
         // storage unavailable: keep the default view
     }
@@ -37,12 +37,6 @@ function setView(next: View): void {
         // storage unavailable: the choice just is not remembered
     }
 }
-
-const maxCount = computed(() =>
-    Math.max(1, ...props.series.map((row) => row.count)),
-);
-
-const rows = computed(() => [...props.series].reverse());
 
 function formatDate(date: string): string {
     const monthly = props.granularity === 'month';
@@ -74,89 +68,39 @@ function formatDate(date: string): string {
                     {{ total }} total
                 </span>
             </h2>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-1 rounded-lg border p-1">
-                    <Button
-                        type="button"
-                        size="sm"
-                        :variant="view === 'table' ? 'default' : 'ghost'"
-                        :aria-pressed="view === 'table'"
-                        aria-label="Table view"
-                        @click="setView('table')"
-                    >
-                        <Table />
-                    </Button>
-                    <Button
-                        type="button"
-                        size="sm"
-                        :variant="view === 'chart' ? 'default' : 'ghost'"
-                        :aria-pressed="view === 'chart'"
-                        aria-label="Bar chart view"
-                        @click="setView('chart')"
-                    >
-                        <ChartColumn />
-                    </Button>
-                    <Button
-                        type="button"
-                        size="sm"
-                        :variant="view === 'line' ? 'default' : 'ghost'"
-                        :aria-pressed="view === 'line'"
-                        aria-label="Line chart view"
-                        @click="setView('line')"
-                    >
-                        <ChartLine />
-                    </Button>
-                </div>
+            <div class="flex items-center gap-1 rounded-lg border p-1">
+                <Button
+                    type="button"
+                    size="sm"
+                    :variant="view === 'line' ? 'default' : 'ghost'"
+                    :aria-pressed="view === 'line'"
+                    aria-label="Line chart view"
+                    @click="setView('line')"
+                >
+                    <ChartLine />
+                </Button>
+                <Button
+                    type="button"
+                    size="sm"
+                    :variant="view === 'bar' ? 'default' : 'ghost'"
+                    :aria-pressed="view === 'bar'"
+                    aria-label="Bar chart view"
+                    @click="setView('bar')"
+                >
+                    <ChartColumn />
+                </Button>
             </div>
         </div>
         <p v-if="total === 0" class="px-4 pb-4 text-sm text-muted-foreground">
             No clicks in this period yet.
         </p>
-        <div v-else-if="view !== 'table'" class="px-4 pb-4">
+        <div v-else class="px-4 pb-4">
             <ClicksTrendChart
-                :type="view === 'chart' ? 'bar' : 'line'"
+                :type="view"
                 :series="series"
                 :granularity="granularity"
                 :format-date="formatDate"
             />
-        </div>
-        <div v-else class="max-h-80 overflow-y-auto">
-            <table class="w-full text-left text-sm">
-                <thead class="sticky top-0 bg-muted text-muted-foreground">
-                    <tr>
-                        <th class="p-3">
-                            {{ granularity === 'month' ? 'Month' : 'Day' }}
-                        </th>
-                        <th class="w-full p-3"></th>
-                        <th class="p-3 text-right">Clicks</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="row in rows"
-                        :key="row.date"
-                        class="border-t"
-                        :class="{ 'text-muted-foreground': row.count === 0 }"
-                    >
-                        <td class="p-3 whitespace-nowrap">
-                            {{ formatDate(row.date) }}
-                        </td>
-                        <td class="p-3">
-                            <div class="h-2 rounded-full bg-muted">
-                                <div
-                                    class="h-full rounded-full bg-primary"
-                                    :style="{
-                                        width: `${(row.count / maxCount) * 100}%`,
-                                    }"
-                                />
-                            </div>
-                        </td>
-                        <td class="p-3 text-right tabular-nums">
-                            {{ row.count }}
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
     </section>
 </template>
