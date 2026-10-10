@@ -8,6 +8,7 @@ export type Package = {
     price_quarterly: number | null;
     price_yearly: number | null;
     is_default: boolean;
+    allows_custom_alias: boolean;
     assignments_count?: number;
 };
 

@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $price_quarterly
  * @property int|null $price_yearly
  * @property bool $is_default
+ * @property bool $allows_custom_alias
  * @property string|null $stripe_product_id
  * @property string|null $stripe_price_id_one_time
  * @property string|null $stripe_price_id_monthly
@@ -31,7 +32,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  */
-#[Fillable(['name', 'link_limit', 'domain_limit', 'price_one_time', 'price_monthly', 'price_quarterly', 'price_yearly', 'is_default'])]
+#[Fillable(['name', 'link_limit', 'domain_limit', 'price_one_time', 'price_monthly', 'price_quarterly', 'price_yearly', 'is_default', 'allows_custom_alias'])]
 class Package extends Model
 {
     /** @use HasFactory<PackageFactory> */
@@ -42,7 +43,7 @@ class Package extends Model
      */
     protected function casts(): array
     {
-        return ['is_default' => 'boolean'];
+        return ['is_default' => 'boolean', 'allows_custom_alias' => 'boolean'];
     }
 
     /**

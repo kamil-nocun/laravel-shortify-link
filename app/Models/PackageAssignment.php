@@ -20,13 +20,14 @@ use Illuminate\Support\Carbon;
  * @property int $price
  * @property int $link_limit
  * @property int $domain_limit
+ * @property bool $allows_custom_alias
  * @property Carbon $starts_at
  * @property Carbon $expires_at
  * @property Carbon|null $cancelled_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'package_id', 'subscription_id', 'billing_period', 'price', 'link_limit', 'domain_limit', 'starts_at', 'expires_at', 'cancelled_at'])]
+#[Fillable(['user_id', 'package_id', 'subscription_id', 'billing_period', 'price', 'link_limit', 'domain_limit', 'allows_custom_alias', 'starts_at', 'expires_at', 'cancelled_at'])]
 class PackageAssignment extends Model
 {
     /** @use HasFactory<PackageAssignmentFactory> */
@@ -39,6 +40,7 @@ class PackageAssignment extends Model
     {
         return [
             'billing_period' => BillingPeriod::class,
+            'allows_custom_alias' => 'boolean',
             'starts_at' => 'datetime',
             'expires_at' => 'datetime',
             'cancelled_at' => 'datetime',

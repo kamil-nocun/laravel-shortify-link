@@ -24,12 +24,18 @@ class PackageFactory extends Factory
             'price_quarterly' => null,
             'price_yearly' => null,
             'is_default' => false,
+            'allows_custom_alias' => false,
         ];
     }
 
     public function default(): static
     {
         return $this->state(['is_default' => true]);
+    }
+
+    public function withCustomAlias(): static
+    {
+        return $this->state(['allows_custom_alias' => true]);
     }
 
     public function withPrices(): static

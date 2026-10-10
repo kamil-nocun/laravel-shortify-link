@@ -29,6 +29,7 @@ class StorePackageRequest extends FormRequest
             'price_quarterly' => $price,
             'price_yearly' => $price,
             'is_default' => ['boolean'],
+            'allows_custom_alias' => ['boolean'],
         ];
     }
 }

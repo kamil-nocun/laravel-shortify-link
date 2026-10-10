@@ -260,6 +260,15 @@ class User extends Authenticatable implements MustVerifyEmail
         return $limit === null || $this->domains()->count() < $limit;
     }
 
+    public function allowsCustomAlias(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        return (bool) ($this->activeAssignment()?->allows_custom_alias ?? Package::where('is_default', true)->value('allows_custom_alias') ?? false);
+    }
+
     public function canCreateLink(): bool
     {
         $limit = $this->linkLimit();

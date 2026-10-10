@@ -81,6 +81,7 @@ class ProjectStripeEvents
             'price' => $invoice['amount_paid'],
             'link_limit' => $package->link_limit,
             'domain_limit' => $package->domain_limit,
+            'allows_custom_alias' => $package->allows_custom_alias,
             'cancelled_at' => null,
         ];
 

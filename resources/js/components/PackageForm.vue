@@ -34,6 +34,7 @@ function usePackageForm() {
         price_quarterly: toInput(props.package?.price_quarterly),
         price_yearly: toInput(props.package?.price_yearly),
         is_default: props.package?.is_default ?? false,
+        allows_custom_alias: props.package?.allows_custom_alias ?? false,
     }).transform((data) => ({
         ...data,
         price_one_time: toCents(data.price_one_time),
@@ -107,6 +108,15 @@ const form = usePackageForm();
                 >Default package (used when a user has no active
                 assignment)</Label
             >
+        </div>
+
+        <div class="flex items-center gap-2">
+            <Checkbox
+                id="allows_custom_alias"
+                :model-value="form.allows_custom_alias"
+                @update:model-value="form.allows_custom_alias = $event === true"
+            />
+            <Label for="allows_custom_alias">Allow custom link aliases</Label>
         </div>
 
         <Button type="submit" :disabled="form.processing">{{

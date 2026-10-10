@@ -25,6 +25,7 @@ class PackageAssignmentFactory extends Factory
             'price' => 1000,
             'link_limit' => fn (array $attributes) => Package::withTrashed()->findOrFail($attributes['package_id'])->link_limit,
             'domain_limit' => fn (array $attributes) => Package::withTrashed()->findOrFail($attributes['package_id'])->domain_limit,
+            'allows_custom_alias' => fn (array $attributes) => Package::withTrashed()->findOrFail($attributes['package_id'])->allows_custom_alias,
             'starts_at' => now(),
             'expires_at' => now()->addMonth(),
         ];
