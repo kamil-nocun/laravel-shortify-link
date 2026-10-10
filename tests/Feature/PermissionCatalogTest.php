@@ -7,6 +7,7 @@ use App\Models\PermissionRecord;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\PermissionCatalog;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 
 test('sync is idempotent', function () {
@@ -53,9 +54,8 @@ test('sync does not overwrite an edited role', function () {
 });
 
 test('migrations seed the starting roles', function () {
-    $this->artisan('migrate:fresh')->assertSuccessful();
-
-    expect(Role::count())->toBe(3);
+    expect(Role::orderBy('name')->pluck('name')->all())
+        ->toBe([PermissionCatalog::ADMINISTRATOR_ROLE, PermissionCatalog::CLIENT_ROLE, PermissionCatalog::SUPER_ADMIN_ROLE]);
 });
 
 test('administrator role holds the client permissions but not the super-only ones', function () {
@@ -91,4 +91,17 @@ test('data migration restores client permissions on the administrator role once'
     $attached = $role->permissionKeys();
     expect($attached)->toContain(...$keys)
         ->and($role->permissions()->count())->toBe($before + count($keys));
+});
+
+test('data migration gives users without a role the default role and leaves others alone', function () {
+    $orphan = User::factory()->create();
+    $admin = User::factory()->admin()->create();
+    DB::table('users')->where('id', $orphan->id)->update(['role_id' => null]);
+    $migration = require database_path('migrations/2026_10_10_120749_assign_default_role_to_users_without_one.php');
+
+    $migration->up();
+    $migration->up();
+
+    expect($orphan->fresh()->role_id)->toBe(roleId(PermissionCatalog::CLIENT_ROLE))
+        ->and($admin->fresh()->role_id)->toBe(roleId(PermissionCatalog::ADMINISTRATOR_ROLE));
 });
