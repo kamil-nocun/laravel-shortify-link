@@ -59,6 +59,11 @@ class Domain extends Model
         return $this->verified_at !== null;
     }
 
+    public function markVerified(): void
+    {
+        $this->forceFill(['verified_at' => now()])->save();
+    }
+
     public function isActive(): bool
     {
         return $this->isVerified()

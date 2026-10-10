@@ -10,6 +10,8 @@ use App\Models\Link;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Models\User;
+use App\Support\DnsDomainVerifier;
+use App\Support\DomainVerifier;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
@@ -32,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(PackageBilling::class, StripePackageBilling::class);
+        $this->app->bind(DomainVerifier::class, DnsDomainVerifier::class);
     }
 
     /**
