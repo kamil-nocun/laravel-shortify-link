@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Billing\PackageBilling;
 use App\Billing\PackagePageData;
 use App\Enums\BillingPeriod;
+use App\Enums\Permission;
 use App\Http\Requests\Billing\CheckoutRequest;
 use App\Models\Package;
 use Illuminate\Http\RedirectResponse;
@@ -23,7 +24,7 @@ class BillingController extends Controller
      */
     public function show(Request $request): Response
     {
-        abort_if($request->user()->isSuperAdmin(), 403);
+        abort_if($request->user()->isSuperAdmin() || ! $request->user()->hasPermission(Permission::BillingManage), 403);
 
         return Inertia::render('billing/Package', [
             ...$this->pageData->for($request->user()),
@@ -36,7 +37,7 @@ class BillingController extends Controller
      */
     public function cancel(Request $request): RedirectResponse
     {
-        abort_if($request->user()->isSuperAdmin(), 403);
+        abort_if($request->user()->isSuperAdmin() || ! $request->user()->hasPermission(Permission::BillingManage), 403);
 
         $assignment = $request->user()->activeAssignment();
         $subscription = $assignment?->subscription;

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Billing;
 
 use App\Enums\BillingPeriod;
+use App\Enums\Permission;
 use App\Models\Package;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,7 +14,7 @@ class CheckoutRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return ! $this->user()->isSuperAdmin();
+        return ! $this->user()->isSuperAdmin() && $this->user()->hasPermission(Permission::BillingManage);
     }
 
     /**

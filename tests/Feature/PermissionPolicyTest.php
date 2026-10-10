@@ -118,3 +118,21 @@ test('an administrator granted users.change_role changes roles only of clients t
     $this->actingAs($admin)->patch(route('admin.users.role', $unassigned), ['role_id' => roleId('Administrator')])->assertNotFound();
     expect($unassigned->fresh()->role_id)->toBe(roleId('Client'));
 });
+
+test('billing needs billing.manage', function () {
+    $package = Package::factory()->create(['is_default' => false, 'stripe_price_id_monthly' => 'price_m']);
+    $withoutRole = userWithPermissions([Permission::LinksManage]);
+    $revoked = User::factory()->create();
+    $revoked->permissionOverrides()->attach(PermissionRecord::where('key', Permission::BillingManage)->firstOrFail(), ['granted' => false]);
+
+    foreach ([$withoutRole, $revoked] as $user) {
+        PackageAssignment::factory()->for($user)->for(Package::factory()->create())->create();
+        $this->actingAs($user)->get(route('billing.package.show'))->assertForbidden();
+        $this->actingAs($user)->delete(route('billing.package.cancel'))->assertForbidden();
+        $this->actingAs($user)->post(route('billing.package.checkout'), ['package_id' => $package->id, 'billing_period' => 'monthly'])->assertForbidden();
+        expect($user->activeAssignment()->cancelled_at)->toBeNull();
+    }
+
+    $this->actingAs(userWithPermissions([Permission::BillingManage]))->get(route('billing.package.show'))->assertOk();
+});
+
