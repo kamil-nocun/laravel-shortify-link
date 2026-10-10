@@ -23,12 +23,17 @@ const maxDaily = computed(() =>
         <div
             v-for="day in series"
             :key="day.date"
-            class="min-w-px flex-1 rounded-t bg-primary"
-            :style="{
-                height: `${(day.count / maxDaily) * 100}%`,
-                minHeight: day.count > 0 ? '2px' : '0',
-            }"
+            class="flex h-full min-w-px flex-1 items-end justify-center"
             :title="`${day.date}: ${day.count}`"
-        />
+        >
+            <div
+                class="w-full max-w-6 rounded-t"
+                :class="day.count > 0 ? 'bg-primary' : 'bg-muted'"
+                :style="{
+                    height: `${(day.count / maxDaily) * 100}%`,
+                    minHeight: '2px',
+                }"
+            />
+        </div>
     </div>
 </template>

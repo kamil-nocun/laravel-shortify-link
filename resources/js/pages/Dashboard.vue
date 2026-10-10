@@ -2,7 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { Activity, Link2, MousePointerClick } from '@lucide/vue';
-import ClicksByDayTable from '@/components/ClicksByDayTable.vue';
+import ClicksCard from '@/components/ClicksCard.vue';
 import Heading from '@/components/Heading.vue';
 import PackageCard from '@/components/PackageCard.vue';
 import PeriodSelector from '@/components/PeriodSelector.vue';
@@ -90,7 +90,7 @@ defineOptions({
             <StatCards :cards="cards" />
 
             <div class="grid items-start gap-6 lg:grid-cols-3">
-                <ClicksByDayTable
+                <ClicksCard
                     class="lg:col-span-2"
                     :series="series"
                     :granularity="granularity"

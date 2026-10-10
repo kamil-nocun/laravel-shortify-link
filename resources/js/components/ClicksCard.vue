@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ChartColumn, Table } from '@lucide/vue';
+import { computed, onMounted, ref } from 'vue';
+import ClicksChart from '@/components/ClicksChart.vue';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import type { DailyClicks } from '@/types';
@@ -10,7 +13,28 @@ const props = defineProps<{
     total: number;
 }>();
 
+const storageKey = 'clicks-card-view';
+const view = ref<'table' | 'chart'>('table');
 const hideEmpty = ref(true);
+
+onMounted(() => {
+    try {
+        view.value =
+            localStorage.getItem(storageKey) === 'chart' ? 'chart' : 'table';
+    } catch {
+        // storage unavailable: keep the default view
+    }
+});
+
+function setView(next: 'table' | 'chart'): void {
+    view.value = next;
+
+    try {
+        localStorage.setItem(storageKey, next);
+    } catch {
+        // storage unavailable: the choice just is not remembered
+    }
+}
 
 const maxCount = computed(() =>
     Math.max(1, ...props.series.map((row) => row.count)),
@@ -52,20 +76,52 @@ function formatDate(date: string): string {
                     {{ total }} total
                 </span>
             </h2>
-            <div class="flex items-center gap-2">
-                <Checkbox
-                    id="hide-empty-days"
-                    :model-value="hideEmpty"
-                    @update:model-value="hideEmpty = $event === true"
-                />
-                <Label for="hide-empty-days" class="text-sm">
-                    Hide empty {{ granularity === 'month' ? 'months' : 'days' }}
-                </Label>
+            <div class="flex items-center gap-3">
+                <div v-if="view === 'table'" class="flex items-center gap-2">
+                    <Checkbox
+                        id="hide-empty-days"
+                        :model-value="hideEmpty"
+                        @update:model-value="hideEmpty = $event === true"
+                    />
+                    <Label for="hide-empty-days" class="text-sm">
+                        Hide empty
+                        {{ granularity === 'month' ? 'months' : 'days' }}
+                    </Label>
+                </div>
+                <div class="flex items-center gap-1 rounded-lg border p-1">
+                    <Button
+                        type="button"
+                        size="sm"
+                        :variant="view === 'table' ? 'default' : 'ghost'"
+                        :aria-pressed="view === 'table'"
+                        aria-label="Table view"
+                        @click="setView('table')"
+                    >
+                        <Table />
+                    </Button>
+                    <Button
+                        type="button"
+                        size="sm"
+                        :variant="view === 'chart' ? 'default' : 'ghost'"
+                        :aria-pressed="view === 'chart'"
+                        aria-label="Chart view"
+                        @click="setView('chart')"
+                    >
+                        <ChartColumn />
+                    </Button>
+                </div>
             </div>
         </div>
         <p v-if="total === 0" class="px-4 pb-4 text-sm text-muted-foreground">
             No clicks in this period yet.
         </p>
+        <div v-else-if="view === 'chart'" class="space-y-2 px-4 pb-4">
+            <ClicksChart :series="series" :granularity="granularity" />
+            <div class="flex justify-between text-xs text-muted-foreground">
+                <span>{{ formatDate(series[0].date) }}</span>
+                <span>{{ formatDate(series[series.length - 1].date) }}</span>
+            </div>
+        </div>
         <div v-else class="max-h-80 overflow-y-auto">
             <table class="w-full text-left text-sm">
                 <thead class="sticky top-0 bg-muted text-muted-foreground">
