@@ -24,26 +24,10 @@ class PackagePageData
      */
     public function for(User $user): array
     {
-        $assignment = $user->activeAssignment();
-        $subscription = $assignment?->subscription;
-        $queued = $user->queuedAssignment();
         $invoiceUrl = $this->invoiceUrlFor($user);
 
         return [
-            'current' => [
-                'package_name' => $user->package()?->name,
-                'link_limit' => $user->linkLimit(),
-                'domain_limit' => $user->domainLimit(),
-                'domains_used' => $user->domains()->count(),
-                'billing_period' => $assignment?->billing_period->value,
-                'expires_at' => $assignment?->expires_at->toIso8601String(),
-                'cancellable' => $assignment !== null && $assignment->cancelled_at === null && ! $subscription?->ended() && ! $subscription?->onGracePeriod(),
-                'can_buy' => ($assignment === null || $assignment->isCancelled()) && $queued === null,
-                'next_package_name' => $queued?->package->name,
-                'next_starts_at' => $queued?->starts_at->toIso8601String(),
-                'one_off' => $assignment !== null && $subscription === null,
-                'cancels' => $assignment?->isCancelled() ?? false,
-            ],
+            'current' => $this->current($user),
             'awaitingPayment' => $this->isAwaitingPayment($user),
             'invoiceUrl' => $invoiceUrl,
             'payments' => $this->paymentsFor($user),
@@ -62,6 +46,33 @@ class PackagePageData
                 ->filter(fn (array $package) => $package['prices'] !== [])
                 ->values()
                 ->all(),
+        ];
+    }
+
+    /**
+     * The user's current package and what they may still do with it; makes no Stripe calls.
+     *
+     * @return array{package_name: ?string, link_limit: ?int, domain_limit: ?int, domains_used: int, billing_period: ?string, expires_at: ?string, cancellable: bool, can_buy: bool, next_package_name: ?string, next_starts_at: ?string, one_off: bool, cancels: bool}
+     */
+    public function current(User $user): array
+    {
+        $assignment = $user->activeAssignment();
+        $subscription = $assignment?->subscription;
+        $queued = $user->queuedAssignment();
+
+        return [
+            'package_name' => $user->package()?->name,
+            'link_limit' => $user->linkLimit(),
+            'domain_limit' => $user->domainLimit(),
+            'domains_used' => $user->domains()->count(),
+            'billing_period' => $assignment?->billing_period->value,
+            'expires_at' => $assignment?->expires_at->toIso8601String(),
+            'cancellable' => $assignment !== null && $assignment->cancelled_at === null && ! $subscription?->ended() && ! $subscription?->onGracePeriod(),
+            'can_buy' => ($assignment === null || $assignment->isCancelled()) && $queued === null,
+            'next_package_name' => $queued?->package->name,
+            'next_starts_at' => $queued?->starts_at->toIso8601String(),
+            'one_off' => $assignment !== null && $subscription === null,
+            'cancels' => $assignment?->isCancelled() ?? false,
         ];
     }
 
