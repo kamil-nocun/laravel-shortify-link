@@ -5,7 +5,11 @@ import LinkForm from '@/components/LinkForm.vue';
 import { edit, index, update } from '@/routes/links';
 import type { Link } from '@/types';
 
-const props = defineProps<{ link: Link }>();
+const props = defineProps<{
+    link: Link;
+    canSetAlias: boolean;
+    mainHost: string;
+}>();
 
 defineOptions({
     layout: {
@@ -21,6 +25,8 @@ defineOptions({
         <Heading title="Edit link" :description="props.link.code" />
         <LinkForm
             :link="props.link"
+            :can-set-alias="props.canSetAlias"
+            :main-host="props.mainHost"
             submit-label="Save changes"
             :action="(form) => form.patch(update(props.link.id).url)"
         />

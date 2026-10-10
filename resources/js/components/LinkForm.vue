@@ -34,7 +34,7 @@ function toLocalInput(iso: string | null | undefined): string {
 function useLinkForm() {
     return useForm({
         domain_id: '',
-        alias: '',
+        alias: props.link?.alias ?? '',
         original_url: props.link?.original_url ?? '',
         title: props.link?.title ?? '',
         is_active: props.link?.is_active ?? true,
@@ -53,7 +53,9 @@ const form = useLinkForm();
 
 const aliasHost = computed(
     () =>
-        props.domains?.find((d) => d.id === form.domain_id)?.host ??
+        (props.link
+            ? new URL(props.link.short_url).host
+            : props.domains?.find((d) => d.id === form.domain_id)?.host) ??
         props.mainHost,
 );
 </script>
@@ -92,19 +94,26 @@ const aliasHost = computed(
             <InputError :message="form.errors.original_url" />
         </div>
 
-        <div v-if="!link" class="grid gap-2">
+        <div class="grid gap-2">
             <Label for="alias">Custom alias</Label>
             <template v-if="canSetAlias">
                 <Input id="alias" v-model="form.alias" placeholder="Optional" />
                 <p class="text-xs text-muted-foreground">
                     {{ aliasHost }}/{{ form.alias }}
                 </p>
+                <p v-if="link" class="text-xs text-muted-foreground">
+                    Changing or clearing the alias disables the old alias. The
+                    standard short URL keeps working.
+                </p>
             </template>
             <template v-else>
                 <Input
                     id="alias"
                     disabled
-                    model-value="Custom aliases are included in selected packages"
+                    :model-value="
+                        link?.alias ??
+                        'Custom aliases are included in selected packages'
+                    "
                 />
                 <InertiaLink
                     :href="showPackage().url"

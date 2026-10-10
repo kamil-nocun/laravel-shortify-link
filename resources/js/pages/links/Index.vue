@@ -196,7 +196,15 @@ defineOptions({
                         <td class="max-w-64 truncate p-3">
                             {{ link.original_url }}
                         </td>
-                        <td class="p-3 font-mono">{{ link.short_url }}</td>
+                        <td class="p-3 font-mono">
+                            {{ link.short_url }}
+                            <div
+                                v-if="link.alias_url"
+                                class="text-xs text-muted-foreground"
+                            >
+                                {{ link.alias_url }}
+                            </div>
+                        </td>
                         <td class="p-3">{{ link.clicks_count ?? 0 }}</td>
                         <td class="p-3">
                             <div class="flex items-center gap-2">
