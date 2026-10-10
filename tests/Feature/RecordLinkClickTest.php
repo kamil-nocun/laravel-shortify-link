@@ -137,3 +137,13 @@ test('a job queued before entries were recorded still runs', function () {
 
     expect(LinkClick::sole()->entry)->toBe('Code');
 });
+
+test('records the Link source by default and keeps a given QR source', function () {
+    fakeGeoLocator(['country_code' => null, 'country' => null, 'city' => null]);
+    $link = Link::factory()->create();
+
+    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now());
+    RecordLinkClick::dispatchSync($link->id, '203.0.113.7', now(), null, 'Code', 'QR');
+
+    expect(LinkClick::orderBy('source')->pluck('source')->all())->toBe(['Link', 'QR']);
+});

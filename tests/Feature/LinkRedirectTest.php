@@ -140,3 +140,23 @@ test('redirect records whether the code or the alias was used', function () {
     Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Code');
     Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Alias');
 });
+
+test('redirect marks qr scans on the code and on the alias', function () {
+    Queue::fake();
+    $link = Link::factory()->create(['alias' => 'my-alias']);
+
+    $this->get('/'.$link->code.'?qr=1')->assertRedirect($link->original_url);
+    $this->get('/'.$link->alias.'?qr=1')->assertRedirect($link->original_url);
+
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Code' && $job->source === 'QR');
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->entry === 'Alias' && $job->source === 'QR');
+});
+
+test('redirect without a qr marker records the Link source', function (string $query) {
+    Queue::fake();
+    $link = Link::factory()->create();
+
+    $this->get('/'.$link->code.$query);
+
+    Queue::assertPushed(RecordLinkClick::class, fn (RecordLinkClick $job) => $job->source === 'Link');
+})->with(['no parameter' => '', 'qr=0' => '?qr=0', 'qr=abc' => '?qr=abc']);

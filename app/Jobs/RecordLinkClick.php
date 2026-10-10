@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\LinkEntry;
+use App\Enums\LinkSource;
 use App\Models\Link;
 use App\Support\ClientDetector;
 use App\Support\GeoLocator;
@@ -26,6 +27,12 @@ class RecordLinkClick implements ShouldQueue
     public ?string $entry = null;
 
     /**
+     * Not promoted: jobs queued before this property existed are restored without it;
+     * those clicks could not come from a QR code.
+     */
+    public ?string $source = null;
+
+    /**
      * The IP and User-Agent are only used for lookups and are never stored with the click.
      */
     public function __construct(
@@ -34,9 +41,11 @@ class RecordLinkClick implements ShouldQueue
         public CarbonInterface $clickedAt,
         ?string $userAgent = null,
         ?string $entry = null,
+        ?string $source = null,
     ) {
         $this->userAgent = $userAgent;
         $this->entry = $entry;
+        $this->source = $source;
     }
 
     /**
@@ -55,6 +64,7 @@ class RecordLinkClick implements ShouldQueue
             ...$clientDetector->detect($this->userAgent),
             'clicked_at' => $this->clickedAt,
             'entry' => $this->entry ?? LinkEntry::Code->value,
+            'source' => $this->source ?? LinkSource::Link->value,
         ]);
     }
 }
