@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\RecordLinkClick;
+use App\Models\Domain;
 use App\Models\Link;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,16 @@ class RedirectLinkController extends Controller
      */
     public function __invoke(Request $request, string $code): RedirectResponse
     {
-        $link = Link::active()->where('code', $code)->firstOrFail();
+        $mainHost = strtolower((string) parse_url(config('app.url'), PHP_URL_HOST));
+        $links = Link::active()->where('code', $code);
+
+        if ($request->getHost() === $mainHost) {
+            $links->whereNull('domain_id');
+        } else {
+            $links->where('domain_id', Domain::active()->where('host', $request->getHost())->firstOrFail()->id);
+        }
+
+        $link = $links->firstOrFail();
 
         RecordLinkClick::dispatch($link->id, (string) $request->ip(), now(), $request->userAgent());
 

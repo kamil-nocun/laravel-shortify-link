@@ -10,6 +10,7 @@ import type { Link } from '@/types';
 
 const props = defineProps<{
     link?: Link;
+    domains?: { id: string; host: string }[];
     submitLabel: string;
     action: (form: ReturnType<typeof useLinkForm>) => void;
 }>();
@@ -28,12 +29,14 @@ function toLocalInput(iso: string | null | undefined): string {
 
 function useLinkForm() {
     return useForm({
+        domain_id: '',
         original_url: props.link?.original_url ?? '',
         title: props.link?.title ?? '',
         is_active: props.link?.is_active ?? true,
         expires_at: toLocalInput(props.link?.expires_at),
     }).transform((data) => ({
         ...data,
+        domain_id: data.domain_id || null,
         expires_at: data.expires_at
             ? new Date(data.expires_at).toISOString()
             : null,
@@ -48,6 +51,21 @@ const form = useLinkForm();
         <div v-if="link" class="grid gap-2">
             <Label for="short_url">Short URL</Label>
             <Input id="short_url" :model-value="link.short_url" readonly />
+        </div>
+
+        <div v-if="!link && domains?.length" class="grid gap-2">
+            <Label for="domain_id">Domain</Label>
+            <select
+                id="domain_id"
+                v-model="form.domain_id"
+                class="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            >
+                <option value="">Main domain</option>
+                <option v-for="d in domains" :key="d.id" :value="d.id">
+                    {{ d.host }}
+                </option>
+            </select>
+            <InputError :message="form.errors.domain_id" />
         </div>
 
         <div class="grid gap-2">

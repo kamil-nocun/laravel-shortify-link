@@ -22,7 +22,7 @@ class LinkController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('links/Index', [
-            'links' => $request->user()->links()->withCount('clicks')->latest()->paginate(15),
+            'links' => $request->user()->links()->with('domain')->withCount('clicks')->latest()->paginate(15),
             'packageNotice' => $this->packageNotice($request->user()),
             'quota' => ['used' => $request->user()->links()->count(), 'limit' => $request->user()->linkLimit()],
         ]);
@@ -31,11 +31,11 @@ class LinkController extends Controller
     /**
      * Show the form for creating a link.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         Gate::authorize('create', Link::class);
 
-        return Inertia::render('links/Create');
+        return Inertia::render('links/Create', ['domains' => $request->user()->domains()->active()->get(['id', 'host'])]);
     }
 
     /**

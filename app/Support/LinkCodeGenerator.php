@@ -15,15 +15,15 @@ class LinkCodeGenerator
     public function __construct(private float $fillThreshold = 0.99) {}
 
     /**
-     * Return a code that does not exist yet.
+     * Return a code unused within the domain (null = main domain).
      */
-    public function generate(): string
+    public function generate(?string $domainId = null): string
     {
         $length = $this->currentLength();
 
         do {
             $code = $this->randomCode($length);
-        } while (Link::where('code', $code)->exists());
+        } while (Link::where('domain_id', $domainId)->where('code', $code)->exists());
 
         return $code;
     }
@@ -35,7 +35,7 @@ class LinkCodeGenerator
      */
     public function createFor(User $user, array $attributes): Link
     {
-        $create = fn () => $user->links()->create([...$attributes, 'code' => $this->generate()]);
+        $create = fn () => $user->links()->create([...$attributes, 'code' => $this->generate($attributes['domain_id'] ?? null)]);
 
         try {
             return $create();

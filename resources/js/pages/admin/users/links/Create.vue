@@ -6,7 +6,7 @@ import { dashboard } from '@/routes/admin';
 import { index, show } from '@/routes/admin/users';
 import { store } from '@/routes/admin/users/links';
 
-const props = defineProps<{ user: { id: string; name: string } }>();
+const props = defineProps<{ user: { id: string; name: string }; domains: { id: string; host: string }[] }>();
 
 defineOptions({
     layout: {
@@ -27,6 +27,7 @@ defineOptions({
             description="The user will own this link and can edit it"
         />
         <LinkForm
+            :domains="props.domains"
             submit-label="Create link"
             :action="(form) => form.post(store(props.user.id).url)"
         />

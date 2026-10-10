@@ -30,7 +30,7 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['title', 'original_url', 'code', 'is_active', 'expires_at'])]
+#[Fillable(['domain_id', 'title', 'original_url', 'code', 'is_active', 'expires_at'])]
 class Link extends Model
 {
     /** @use HasFactory<LinkFactory> */
@@ -62,7 +62,15 @@ class Link extends Model
      */
     protected function shortUrl(): Attribute
     {
-        return Attribute::get(fn (): string => Str::of(config('app.url'))->rtrim('/')->append('/', $this->code)->toString());
+        return Attribute::get(function (): string {
+            $base = Str::of(config('app.url'))->rtrim('/');
+
+            if ($this->domain_id !== null) {
+                $base = Str::of(parse_url((string) $base, PHP_URL_SCHEME).'://'.$this->domain->host);
+            }
+
+            return $base->append('/', $this->code)->toString();
+        });
     }
 
     /**
@@ -76,6 +84,7 @@ class Link extends Model
         $query->where('is_active', true)
             ->whereNull('disabled_by_admin_at')
             ->whereHas('user', fn (Builder $query) => $query->whereNull('blocked_at'))
+            ->where(fn (Builder $query) => $query->whereNull('domain_id')->orWhereHas('domain', fn (Builder $query) => $query->active()))
             ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()));
     }
 

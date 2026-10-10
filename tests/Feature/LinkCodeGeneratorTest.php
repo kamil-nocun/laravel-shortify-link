@@ -53,7 +53,7 @@ test('createFor retries once on a unique constraint violation', function () {
     {
         public int $calls = 0;
 
-        public function generate(): string
+        public function generate(?string $domainId = null): string
         {
             return $this->calls++ === 0 ? 'taken1' : 'fresh2';
         }
