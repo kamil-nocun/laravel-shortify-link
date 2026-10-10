@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePageRequest;
 use App\Http\Requests\Admin\UpdatePageRequest;
 use App\Models\Page;
-use App\Support\HtmlSanitizer;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -51,9 +51,13 @@ class PageController extends Controller
      */
     public function store(StorePageRequest $request): RedirectResponse
     {
-        $page = Page::create(['slug' => $request->validated('slug'), 'is_legal_document' => $request->boolean('is_legal_document')]);
+        $page = DB::transaction(function () use ($request): Page {
+            $page = Page::create(['slug' => $request->validated('slug'), 'is_legal_document' => $request->boolean('is_legal_document')]);
 
-        ($this->savePageVersion)($page, $request->validated('title'), $request->validated('body'), $request->user());
+            ($this->savePageVersion)($page, $request->validated('title'), $request->validated('body'), $request->user());
+
+            return $page;
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Page created.')]);
 
@@ -82,17 +86,16 @@ class PageController extends Controller
     /**
      * Update the slug and, when title or content changed, save a new version.
      */
-    public function update(UpdatePageRequest $request, Page $page, HtmlSanitizer $sanitizer): RedirectResponse
+    public function update(UpdatePageRequest $request, Page $page): RedirectResponse
     {
-        $page->update(['slug' => $request->validated('slug'), 'is_legal_document' => $request->has('is_legal_document') ? $request->boolean('is_legal_document') : $page->is_legal_document]);
+        DB::transaction(function () use ($request, $page): void {
+            $page->update([
+                'slug' => $request->validated('slug'),
+                'is_legal_document' => $request->has('is_legal_document') ? $request->boolean('is_legal_document') : $page->is_legal_document,
+            ]);
 
-        $current = $page->currentVersion;
-        $title = $request->validated('title');
-        $body = $request->validated('body');
-
-        if ($current === null || $current->title !== $title || $current->body !== $sanitizer->sanitize($body)) {
-            ($this->savePageVersion)($page, $title, $body, $request->user());
-        }
+            $this->savePageVersion->ifChanged($page, $request->validated('title'), $request->validated('body'), $request->user());
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Page updated.')]);
 

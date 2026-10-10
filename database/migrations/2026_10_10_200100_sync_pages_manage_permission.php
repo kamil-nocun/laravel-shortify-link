@@ -12,6 +12,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        //
+        // Syncing the catalog is idempotent and the permission rows stay harmlessly unused after a rollback.
     }
 };

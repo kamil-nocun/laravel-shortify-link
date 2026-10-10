@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import RichTextEditor from '@/components/RichTextEditor.vue';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,13 @@ function usePageForm() {
 }
 
 const form = usePageForm();
+
+const emit = defineEmits<{ dirty: [value: boolean] }>();
+
+watch(
+    () => form.isDirty,
+    (isDirty) => emit('dirty', isDirty),
+);
 </script>
 
 <template>
@@ -38,6 +46,13 @@ const form = usePageForm();
             />
             <p class="text-sm text-muted-foreground">
                 Public address: /content/{{ form.slug || 'slug' }}
+            </p>
+            <p
+                v-if="page?.status === 'published' && form.slug !== page.slug"
+                class="text-sm text-amber-600"
+            >
+                The published address /content/{{ page.slug }} will stop working
+                after you save.
             </p>
             <InputError :message="form.errors.slug" />
         </div>

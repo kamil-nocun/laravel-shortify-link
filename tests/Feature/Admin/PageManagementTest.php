@@ -145,6 +145,10 @@ test('users without pages.manage get 403', function (string $role) {
     $this->actingAs($actor)->put(route('admin.pages.update', $page), ['slug' => 'x', 'title' => 'T', 'body' => '<p>a</p>'])->assertForbidden();
     $this->actingAs($actor)->patch(route('admin.pages.status', $page), ['status' => 'published'])->assertForbidden();
     $this->actingAs($actor)->post(route('admin.pages.versions.restore', [$page, $version]))->assertForbidden();
+    $this->actingAs($actor)->get(route('admin.pages.create'))->assertForbidden();
+    $this->actingAs($actor)->get(route('admin.pages.edit', $page))->assertForbidden();
+    $this->actingAs($actor)->get(route('admin.pages.versions.index', $page))->assertForbidden();
+    $this->actingAs($actor)->get(route('admin.pages.versions.show', [$page, $version]))->assertForbidden();
 })->with(['admin', 'client']);
 
 test('the legal document flag is stored on create and toggled on update', function () {
@@ -177,4 +181,49 @@ test('an update that does not send the legal flag keeps it', function () {
     $this->actingAs($this->super)->put(route('admin.pages.update', $page), ['slug' => 'terms', 'title' => 'Privacy', 'body' => '<p>One</p>']);
 
     expect($page->fresh()->is_legal_document)->toBeTrue();
+});
+
+test('blank content is rejected but text or an image alone is content', function (string $body, bool $valid) {
+    $request = $this->actingAs($this->super)->post(route('admin.pages.store'), ['slug' => 'blank', 'title' => 'Blank', 'body' => $body]);
+
+    $valid ? $request->assertSessionHasNoErrors() : $request->assertSessionHasErrors('body');
+    expect(Page::where('slug', 'blank')->exists())->toBe($valid);
+})->with([
+    'empty paragraph' => ['<p></p>', false],
+    'spaces only' => ['<p> </p>', false],
+    'non-breaking space' => ['<p>&nbsp;</p>', false],
+    'script only' => ['<script>alert(1)</script>', false],
+    'text' => ['<p>Hello</p>', true],
+    'image only' => ['<img src="https://example.com/a.png" alt="a">', true],
+]);
+
+test('blank content is rejected on update too', function () {
+    $page = pageWithVersion();
+
+    $this->actingAs($this->super)->put(route('admin.pages.update', $page), ['slug' => 'privacy', 'title' => 'Privacy', 'body' => '<p></p>'])
+        ->assertSessionHasErrors('body');
+});
+
+test('a failing version save leaves no page behind on create and keeps the slug on update', function () {
+    $page = pageWithVersion('stable');
+    $failing = Mockery::mock(SavePageVersion::class);
+    $failing->shouldReceive('ifChanged')->andThrow(new RuntimeException('boom'));
+    $failing->shouldReceive('__invoke')->andThrow(new RuntimeException('boom'));
+    app()->instance(SavePageVersion::class, $failing);
+
+    $this->withoutExceptionHandling();
+
+    expect(fn () => $this->actingAs($this->super)->post(route('admin.pages.store'), ['slug' => 'new-page', 'title' => 'New', 'body' => '<p>a</p>']))->toThrow(RuntimeException::class);
+    expect(fn () => $this->actingAs($this->super)->put(route('admin.pages.update', $page), ['slug' => 'renamed', 'title' => 'Changed', 'body' => '<p>b</p>']))->toThrow(RuntimeException::class);
+
+    expect(Page::where('slug', 'new-page')->exists())->toBeFalse()
+        ->and($page->fresh()->slug)->toBe('stable');
+});
+
+test('restoring the current version creates nothing', function () {
+    $page = pageWithVersion();
+
+    $this->actingAs($this->super)->post(route('admin.pages.versions.restore', [$page, $page->current_version_id]))->assertRedirect(route('admin.pages.edit', $page));
+
+    expect($page->versions()->count())->toBe(1);
 });

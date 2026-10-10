@@ -8,6 +8,7 @@ const props = defineProps<{
     id: string;
     status: PageStatus;
     size?: 'default' | 'sm';
+    disabled?: boolean;
 }>();
 
 function toggle(): void {
@@ -20,7 +21,12 @@ function toggle(): void {
 </script>
 
 <template>
-    <Button variant="secondary" :size="size" @click="toggle">{{
-        status === 'published' ? 'Disable' : 'Enable'
-    }}</Button>
+    <Button
+        variant="secondary"
+        :size="size"
+        :disabled="disabled"
+        :title="disabled ? 'Save your changes first' : undefined"
+        @click="toggle"
+        >{{ status === 'published' ? 'Disable' : 'Enable' }}</Button
+    >
 </template>

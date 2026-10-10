@@ -39,3 +39,15 @@ test('records the author and accepts a null author', function () {
     expect(app(SavePageVersion::class)($page, 'T', '<p>a</p>', $author)->created_by)->toBe($author->id)
         ->and(app(SavePageVersion::class)($page, 'T', '<p>a</p>', null)->created_by)->toBeNull();
 });
+
+test('ifChanged saves nothing when title and sanitized content are the same', function () {
+    $page = Page::factory()->create();
+    $save = app(SavePageVersion::class);
+    $first = $save($page, 'Title', '<p onclick="x()">Same</p>', null);
+
+    expect($save->ifChanged($page->fresh(), 'Title', '<p>Same</p>', null))->toBeNull()
+        ->and($page->versions()->count())->toBe(1)
+        ->and($save->ifChanged($page->fresh(), 'Title', '<p>Different</p>', null))->not->toBeNull()
+        ->and($page->versions()->count())->toBe(2)
+        ->and($page->fresh()->current_version_id)->not->toBe($first->id);
+});

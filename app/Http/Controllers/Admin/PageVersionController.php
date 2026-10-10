@@ -53,7 +53,9 @@ class PageVersionController extends Controller
     {
         Gate::authorize('update', $page);
 
-        $savePageVersion($page, $version->title, $version->body, $request->user());
+        if ($version->id !== $page->current_version_id) {
+            $savePageVersion($page, $version->title, $version->body, $request->user());
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Version restored.')]);
 

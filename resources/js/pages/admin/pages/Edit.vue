@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link as InertiaLink } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import PageForm from '@/components/PageForm.vue';
@@ -15,6 +16,8 @@ const props = defineProps<{
     page: PageContent;
     errors: Record<string, string>;
 }>();
+
+const hasUnsavedChanges = ref(false);
 
 defineOptions({
     layout: {
@@ -48,12 +51,14 @@ defineOptions({
                 <PageStatusButton
                     :id="props.page.id"
                     :status="props.page.status"
+                    :disabled="hasUnsavedChanges"
                 />
             </div>
         </div>
         <InputError :message="errors.status" />
         <PageForm
             :page="props.page"
+            @dirty="hasUnsavedChanges = $event"
             submit-label="Save changes"
             :action="(form) => form.put(update(props.page.id).url)"
         />
