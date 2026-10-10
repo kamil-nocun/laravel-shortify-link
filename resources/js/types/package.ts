@@ -17,7 +17,6 @@ export type PackageOption = {
     id: string;
     name: string;
     link_limit: number;
-    domain_limit: number;
     available_periods: BillingPeriod[];
 };
 

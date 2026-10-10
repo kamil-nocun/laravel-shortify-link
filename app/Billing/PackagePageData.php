@@ -53,6 +53,7 @@ class PackagePageData
                     'id' => $package->id,
                     'name' => $package->name,
                     'link_limit' => $package->link_limit,
+                    'domain_limit' => $package->domain_limit,
                     'prices' => collect($package->availablePeriods())
                         ->filter(fn (BillingPeriod $period) => $package->stripePriceId($period) !== null)
                         ->mapWithKeys(fn (BillingPeriod $period) => [$period->value => $package->priceFor($period)])

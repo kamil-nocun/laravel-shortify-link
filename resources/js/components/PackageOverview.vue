@@ -13,6 +13,7 @@ type SellablePackage = {
     id: string;
     name: string;
     link_limit: number;
+    domain_limit: number;
     prices: Partial<Record<BillingPeriod, number>>;
 };
 
@@ -137,7 +138,7 @@ const buy = (pkg: SellablePackage) =>
             >
                 <p class="text-lg font-medium">{{ pkg.name }}</p>
                 <p class="text-sm text-muted-foreground">
-                    {{ pkg.link_limit }} links
+                    {{ pkg.link_limit }} links, {{ pkg.domain_limit }} domains
                 </p>
                 <div class="space-y-1 text-sm">
                     <label

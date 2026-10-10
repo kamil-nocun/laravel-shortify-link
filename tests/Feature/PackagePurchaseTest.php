@@ -29,7 +29,8 @@ test('the page lists sellable packages with their priced periods and the current
             ->where('current.package_name', 'Free')
             ->where('current.link_limit', 10)
             ->where('packages', fn ($packages) => collect($packages)->pluck('name')->all() === ['Pro']
-                && $packages[0]['prices'] === ['monthly' => 1900, 'yearly' => 19000]));
+                && $packages[0]['prices'] === ['monthly' => 1900, 'yearly' => 19000]
+                && $packages[0]['domain_limit'] === $this->package->domain_limit));
 });
 
 test('the page shows the active assignment and awaiting payment', function () {
