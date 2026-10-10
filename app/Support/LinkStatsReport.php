@@ -99,7 +99,7 @@ class LinkStatsReport
         $lastPage = max(1, (int) ceil($total / $perPage));
         $page = min($request->page($table), $lastPage);
 
-        $query = $clicks()->select($columns)->selectRaw('count(*) as total')->groupBy($columns);
+        $query = $clicks()->select($columns)->selectRaw('sum(clicks) as total')->groupBy($columns);
 
         if (str_starts_with($sort, 'count_')) {
             $query->orderBy('total', $direction);

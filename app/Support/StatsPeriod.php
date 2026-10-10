@@ -77,7 +77,7 @@ class StatsPeriod
             return [];
         }
 
-        $perDay = $clicks->selectRaw('DATE(clicked_at) as day, count(*) as total')->groupBy('day')->pluck('total', 'day');
+        $perDay = $clicks->selectRaw('DATE(clicked_at) as day, sum(clicks) as total')->groupBy('day')->pluck('total', 'day');
 
         return StatsSeries::build($perDay, $this->from, $this->to, $this->granularity);
     }

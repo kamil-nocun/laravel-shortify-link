@@ -26,7 +26,7 @@ class LinkController extends Controller
     {
         $filters = $request->safe()->only(['search', 'status', 'domain']) + ['search' => null, 'status' => null, 'domain' => null];
 
-        $links = $request->user()->links()->with('domain')->withCount('clicks')->latest()->filteredBy($filters);
+        $links = $request->user()->links()->with('domain')->withClickTotal()->latest()->filteredBy($filters);
 
         return Inertia::render('links/Index', [
             'links' => $links->paginate(15)->withQueryString(),

@@ -56,6 +56,7 @@ class Link extends Model
             'is_active' => 'boolean',
             'expires_at' => 'datetime',
             'disabled_by_admin_at' => 'datetime',
+            'clicks_count' => 'integer',
         ];
     }
 
@@ -122,6 +123,17 @@ class Link extends Model
             ->whereHas('user', fn (Builder $query) => $query->whereNull('blocked_at'))
             ->where(fn (Builder $query) => $query->whereNull('domain_id')->orWhereHas('domain', fn (Builder $query) => $query->active()))
             ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+    }
+
+    /**
+     * Select the total number of clicks, counting daily summaries by the clicks they represent, as clicks_count.
+     *
+     * @param  Builder<Link>  $query
+     */
+    #[Scope]
+    protected function withClickTotal(Builder $query): void
+    {
+        $query->addSelect(['clicks_count' => LinkClick::query()->selectRaw('coalesce(sum(clicks), 0)')->whereColumn('link_id', 'links.id')]);
     }
 
     /**
