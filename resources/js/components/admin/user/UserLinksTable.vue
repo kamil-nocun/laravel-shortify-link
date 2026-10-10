@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { disable, enable, stats as linkStats } from '@/routes/admin/links';
 import { show } from '@/routes/admin/users';
+import { create as createLink } from '@/routes/admin/users/links';
 import type { AdminUser, Link, Paginated } from '@/types';
 
 defineProps<{
@@ -31,6 +32,9 @@ const linkStatus = (link: Link) =>
     <div class="space-y-6">
         <div class="flex items-center justify-between">
             <h2 class="font-medium">Links</h2>
+            <Button v-if="user.can.createLink" size="sm" as-child>
+                <InertiaLink :href="createLink(user.id)">Add link</InertiaLink>
+            </Button>
         </div>
 
         <p v-if="links.data.length === 0" class="text-sm text-muted-foreground">

@@ -79,7 +79,7 @@ setLayoutProps({
         />
 
         <UserDomainsTable
-            v-if="user.can.manageDomains"
+            v-if="user.can.manageDomains || user.can.disableDomains"
             :user="user"
             :domains="domains"
             :domain-limit="domainLimit"

@@ -69,7 +69,10 @@ const deleteDomain = (domain: DomainRow) =>
                 >Add domain</Button
             >
         </form>
-        <p v-else class="text-sm text-muted-foreground">
+        <p
+            v-else-if="user.can.manageDomains"
+            class="text-sm text-muted-foreground"
+        >
             Domain limit reached for the user's package.
         </p>
 
@@ -115,6 +118,7 @@ const deleteDomain = (domain: DomainRow) =>
                         }}
                     </Button>
                     <Button
+                        v-if="user.can.manageDomains"
                         variant="outline"
                         size="sm"
                         :disabled="domain.links_count > 0"
