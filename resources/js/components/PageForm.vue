@@ -58,8 +58,7 @@ const form = usePageForm();
                     "
                 />
                 <Label for="is_legal_document" class="leading-normal"
-                    >Legal document: signed-in users must accept the current
-                    version on the "Accept the current documents" page</Label
+                    >Legal document (users must accept it)</Label
                 >
             </div>
             <InputError :message="form.errors.is_legal_document" />
