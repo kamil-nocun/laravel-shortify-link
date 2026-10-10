@@ -29,3 +29,9 @@ test('repairs unclosed tags', function () {
 test('keeps relative links to other pages', function () {
     expect((new HtmlSanitizer)->sanitize('<p><a href="/content/cookies">c</a></p>'))->toContain('href="/content/cookies"');
 });
+
+test('keeps everything the full editor toolbar produces', function () {
+    $html = '<h1>a</h1><h3>b</h3><h4>c</h4><p><u>u</u> <s>s</s> <code>c</code></p><ol><li>x</li></ol><pre><code>code</code></pre><hr />';
+
+    expect((new HtmlSanitizer)->sanitize($html))->toBe($html);
+});
