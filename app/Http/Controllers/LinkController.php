@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LinkStatus;
+use App\Http\Requests\Links\IndexLinksRequest;
 use App\Http\Requests\Links\StoreLinkRequest;
 use App\Http\Requests\Links\UpdateLinkRequest;
 use App\Models\Link;
@@ -19,10 +21,19 @@ class LinkController extends Controller
     /**
      * List the current user's links.
      */
-    public function index(Request $request): Response
+    public function index(IndexLinksRequest $request): Response
     {
+        $filters = $request->safe()->only(['search', 'status', 'domain']) + ['search' => null, 'status' => null, 'domain' => null];
+
+        $links = $request->user()->links()->with('domain')->withCount('clicks')->latest()
+            ->when($filters['search'], fn ($query, string $search) => $query->matching($search))
+            ->when($filters['status'], fn ($query, string $status) => $query->withStatus(LinkStatus::from($status)))
+            ->when($filters['domain'], fn ($query, string $domain) => $domain === 'main' ? $query->whereNull('domain_id') : $query->where('domain_id', $domain));
+
         return Inertia::render('links/Index', [
-            'links' => $request->user()->links()->with('domain')->withCount('clicks')->latest()->paginate(15),
+            'links' => $links->paginate(15)->withQueryString(),
+            'filters' => $filters,
+            'domains' => $request->user()->domains()->get(['id', 'host']),
             'packageNotice' => $this->packageNotice($request->user()),
             'quota' => ['used' => $request->user()->links()->count(), 'limit' => $request->user()->linkLimit()],
         ]);

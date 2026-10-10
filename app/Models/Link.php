@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LinkStatus;
 use Database\Factories\LinkFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -86,6 +87,39 @@ class Link extends Model
             ->whereHas('user', fn (Builder $query) => $query->whereNull('blocked_at'))
             ->where(fn (Builder $query) => $query->whereNull('domain_id')->orWhereHas('domain', fn (Builder $query) => $query->active()))
             ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+    }
+
+    /**
+     * Links whose title, code or target URL contains the term; LIKE wildcards in the term are literal.
+     *
+     * @param  Builder<Link>  $query
+     */
+    #[Scope]
+    protected function matching(Builder $query, string $term): void
+    {
+        $like = '%'.addcslashes($term, '%_\\').'%';
+
+        $query->where(fn (Builder $query) => $query->where('title', 'like', $like)
+            ->orWhere('code', 'like', $like)
+            ->orWhere('original_url', 'like', $like));
+    }
+
+    /**
+     * Links in the given status; precedence is disabled, expired, inactive, active.
+     *
+     * @param  Builder<Link>  $query
+     */
+    #[Scope]
+    protected function withStatus(Builder $query, LinkStatus $status): void
+    {
+        match ($status) {
+            LinkStatus::Disabled => $query->whereNotNull('disabled_by_admin_at'),
+            LinkStatus::Expired => $query->whereNull('disabled_by_admin_at')->where('expires_at', '<=', now()),
+            LinkStatus::Inactive => $query->whereNull('disabled_by_admin_at')
+                ->where(fn (Builder $query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->where('is_active', false),
+            LinkStatus::Active => $query->active(),
+        };
     }
 
     /**
