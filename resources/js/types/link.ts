@@ -125,3 +125,11 @@ export type AdministratorOption = {
     name: string;
     email: string;
 };
+
+export type AdminDomainRow = {
+    id: string;
+    host: string;
+    status: 'pending' | 'active' | 'disabled';
+    disabled_by_name: string | null;
+    links_count: number;
+};
