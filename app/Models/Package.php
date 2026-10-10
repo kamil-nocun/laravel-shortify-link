@@ -71,4 +71,22 @@ class Package extends Model
     {
         return array_values(array_filter(BillingPeriod::cases(), fn (BillingPeriod $period) => $this->priceFor($period) !== null));
     }
+
+    /**
+     * The package and billing period sold under a Stripe price, including withdrawn packages.
+     *
+     * @return array{0: Package, 1: BillingPeriod}|null
+     */
+    public static function findByStripePrice(string $priceId): ?array
+    {
+        foreach (BillingPeriod::cases() as $period) {
+            $package = static::withTrashed()->where('stripe_price_id_'.$period->value, $priceId)->first();
+
+            if ($package !== null) {
+                return [$package, $period];
+            }
+        }
+
+        return null;
+    }
 }

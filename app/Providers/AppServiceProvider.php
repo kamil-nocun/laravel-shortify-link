@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Billing\PackageBilling;
 use App\Billing\ProjectStripeEvents;
+use App\Billing\RecordInvoicePayment;
 use App\Billing\StripePackageBilling;
 use App\Models\Link;
 use App\Models\Subscription;
@@ -46,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
         Cashier::useSubscriptionItemModel(SubscriptionItem::class);
 
         Event::listen(WebhookReceived::class, [ProjectStripeEvents::class, 'onReceived']);
+        Event::listen(WebhookReceived::class, [RecordInvoicePayment::class, 'onReceived']);
         Event::listen(WebhookHandled::class, [ProjectStripeEvents::class, 'onHandled']);
     }
 

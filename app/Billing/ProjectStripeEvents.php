@@ -58,7 +58,7 @@ class ProjectStripeEvents
         $user = User::where('stripe_id', $invoice['customer'] ?? null)->first();
         $line = $invoice['lines']['data'][0] ?? [];
         $priceId = data_get($line, 'price.id') ?? data_get($line, 'pricing.price_details.price');
-        $resolved = $priceId === null ? null : $this->resolvePrice($priceId);
+        $resolved = $priceId === null ? null : Package::findByStripePrice($priceId);
 
         if ($user === null || $resolved === null) {
             Log::warning('Stripe invoice for an unknown customer or price.', ['customer' => $invoice['customer'] ?? null, 'price' => $priceId]);
@@ -93,21 +93,5 @@ class ProjectStripeEvents
         if ($id !== null) {
             PackageAssignment::where('subscription_id', $id)->delete();
         }
-    }
-
-    /**
-     * @return array{0: Package, 1: BillingPeriod}|null
-     */
-    private function resolvePrice(string $priceId): ?array
-    {
-        foreach (BillingPeriod::cases() as $period) {
-            $package = Package::withTrashed()->where('stripe_price_id_'.$period->value, $priceId)->first();
-
-            if ($package !== null) {
-                return [$package, $period];
-            }
-        }
-
-        return null;
     }
 }
