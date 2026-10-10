@@ -87,8 +87,10 @@ class RoleController extends Controller
 
         try {
             $role->delete();
-        } catch (QueryException) {
-            abort(403, __('A role held by users cannot be deleted.')); // a user took the role after the policy check
+        } catch (QueryException $exception) {
+            abort_if($exception->getCode() === '23000', 403, __('A role held by users cannot be deleted.'));
+
+            throw $exception;
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Role deleted.')]);
