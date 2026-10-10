@@ -4,6 +4,7 @@ import {
     BookOpen,
     CreditCard,
     Globe,
+    LayoutDashboard,
     FolderGit2,
     Link2,
     Package,
@@ -13,6 +14,7 @@ import {
 } from "@lucide/vue";
 import { computed } from "vue";
 import AppLogo from "@/components/AppLogo.vue";
+import ModeSwitcher from "@/components/ModeSwitcher.vue";
 import NavFooter from "@/components/NavFooter.vue";
 import NavMain from "@/components/NavMain.vue";
 import NavUser from "@/components/NavUser.vue";
@@ -26,7 +28,9 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { usePermissions } from "@/composables/usePermissions";
+import { useViewMode } from "@/composables/useViewMode";
 import { dashboard } from "@/routes";
+import { dashboard as adminDashboard } from "@/routes/admin";
 import { index as administratorsIndex } from "@/routes/admin/administrators";
 import { index as packagesIndex } from "@/routes/admin/packages";
 import { index as rolesIndex } from "@/routes/admin/roles";
@@ -38,50 +42,60 @@ import type { NavItem } from "@/types";
 
 const page = usePage();
 const { can } = usePermissions();
+const { isAdminMode } = useViewMode();
 
 const mainNavItems = computed<NavItem[]>(() =>
     [
         {
-            title: "Admin",
+            title: "Dashboard",
+            href: isAdminMode.value ? adminDashboard() : dashboard(),
+            icon: LayoutDashboard,
+            visible: true,
+        },
+        {
+            title: "Administrators",
             href: administratorsIndex(),
             icon: Shield,
-            visible: can("administrators.manage"),
+            visible: isAdminMode.value && can("administrators.manage"),
         },
         {
             title: "Packages",
             href: packagesIndex(),
             icon: Package,
-            visible: can("packages.manage"),
+            visible: isAdminMode.value && can("packages.manage"),
         },
         {
             title: "Roles",
             href: rolesIndex(),
             icon: ShieldCheck,
-            visible: can("roles.manage"),
+            visible: isAdminMode.value && can("roles.manage"),
         },
         {
             title: "Users",
             href: usersIndex(),
             icon: Users,
-            visible: can("users.view"),
+            visible: isAdminMode.value && can("users.view"),
         },
         {
             title: "My links",
             href: linksIndex(),
             icon: Link2,
-            visible: can("links.manage"),
+            visible: !isAdminMode.value && can("links.manage"),
         },
         {
             title: "My domains",
             href: domainsIndex(),
             icon: Globe,
-            visible: can("domains.manage"),
+            visible: !isAdminMode.value && can("domains.manage"),
         },
         {
             title: "My package",
             href: billingPackage(),
             icon: CreditCard,
-            visible: can("billing.manage") && !page.props.auth.isSuperAdmin,
+            visible:
+                !isAdminMode.value &&
+                can("billing.manage") &&
+                !page.props.auth.isSuperAdmin,
         },
     ]
         .filter((item) => item.visible)
@@ -108,12 +122,13 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="isAdminMode ? adminDashboard() : dashboard()">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
+            <ModeSwitcher />
         </SidebarHeader>
 
         <SidebarContent>

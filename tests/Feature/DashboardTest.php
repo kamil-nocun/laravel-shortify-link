@@ -70,3 +70,13 @@ test('period parameter is validated', function () {
     $this->actingAs($client)->get(route('dashboard', ['period' => '7d']))->assertOk();
     $this->actingAs($client)->get(route('dashboard', ['period' => 'bogus']))->assertSessionHasErrors('period');
 });
+
+test('shared props flag admins so the mode switcher shows', function (string $state) {
+    $this->actingAs(User::factory()->{$state}()->create())->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->where('auth.isAdmin', true));
+})->with(['admin', 'superAdmin']);
+
+test('shared props do not flag regular users', function () {
+    $this->actingAs(User::factory()->create())->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->where('auth.isAdmin', false));
+});
