@@ -312,7 +312,7 @@ test('options do not depend on the other filters', function () {
 test('filters default to null', function () {
     $this->actingAs($this->user)->get(route('links.stats', $this->link))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('filters', ['country' => null, 'city' => null, 'browser' => null, 'os' => null, 'device_type' => null]));
+            ->where('filters', ['country' => null, 'city' => null, 'browser' => null, 'os' => null, 'device_type' => null, 'entry' => null]));
 });
 
 test('a filter value longer than 255 characters fails validation', function () {
@@ -479,7 +479,7 @@ test('ties keep the same order across pages', function () {
 
 test('sort echoes the current values and defaults to count_desc', function () {
     $this->actingAs($this->user)->get(route('links.stats', $this->link))
-        ->assertInertia(fn (Assert $page) => $page->where('sort', array_fill_keys(['countries', 'cities', 'browsers', 'systems', 'devices'], 'count_desc')));
+        ->assertInertia(fn (Assert $page) => $page->where('sort', array_fill_keys(['countries', 'cities', 'browsers', 'systems', 'devices', 'entries'], 'count_desc')));
 
     $this->actingAs($this->user)->get(route('links.stats', [$this->link, 'sort' => ['cities' => 'name_asc']]))
         ->assertInertia(fn (Assert $page) => $page->where('sort.cities', 'name_asc')->where('sort.countries', 'count_desc'));

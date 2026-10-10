@@ -26,6 +26,7 @@ class LinkStatsReport
         'browsers' => ['browser'],
         'systems' => ['os'],
         'devices' => ['device_type'],
+        'entries' => ['entry'],
     ];
 
     /**
@@ -141,6 +142,7 @@ class LinkStatsReport
             'browser' => "COALESCE(browser, 'Unknown')",
             'os' => "COALESCE(os, 'Unknown')",
             'device_type' => "COALESCE(device_type, 'Unknown')",
+            'entry' => "COALESCE(entry, 'Unknown')",
             default => throw new \InvalidArgumentException("Unsortable column {$column}"),
         };
 
@@ -156,7 +158,7 @@ class LinkStatsReport
      */
     private function options(Closure $inRange): array
     {
-        $keys = ['country' => 'countries', 'city' => 'cities', 'browser' => 'browsers', 'os' => 'systems', 'device_type' => 'devices'];
+        $keys = ['country' => 'countries', 'city' => 'cities', 'browser' => 'browsers', 'os' => 'systems', 'device_type' => 'devices', 'entry' => 'entries'];
 
         $query = null;
 

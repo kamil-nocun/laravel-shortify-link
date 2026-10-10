@@ -22,14 +22,14 @@ class LinkStatsRequest extends FormRequest
      *
      * @var list<string>
      */
-    public const FILTERS = ['country', 'city', 'browser', 'os', 'device_type'];
+    public const FILTERS = ['country', 'city', 'browser', 'os', 'device_type', 'entry'];
 
     /**
      * Tables that are sorted and paginated independently.
      *
      * @var list<string>
      */
-    public const TABLES = ['countries', 'cities', 'browsers', 'systems', 'devices'];
+    public const TABLES = ['countries', 'cities', 'browsers', 'systems', 'devices', 'entries'];
 
     /**
      * Allowed rows per page of a table.
@@ -50,7 +50,7 @@ class LinkStatsRequest extends FormRequest
      *
      * @var list<string>
      */
-    public const SECTIONS = ['summary', 'options', 'countries', 'cities', 'browsers', 'systems', 'devices'];
+    public const SECTIONS = ['summary', 'options', 'countries', 'cities', 'browsers', 'systems', 'devices', 'entries'];
 
     /**
      * Only the link owner may see its stats.
