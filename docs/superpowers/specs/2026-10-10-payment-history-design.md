@@ -16,7 +16,8 @@ Poza zakresem: zwroty, windykacja, eksport PDF (etap 2b).
 
 - Źródłem danych jest lokalna tabela zasilana webhookami Stripe oraz jednorazowy backfill starszych faktur ze Stripe.
 - Do historii trafiają faktury we wszystkich stanach: wystawione, opłacone, nieudane, anulowane i nieściągalne. Szkice i faktury na 0 zł są pomijane.
-- Jeśli płatność ma zapisany `invoice_url`, korzystamy z niego: link „Pay invoice” pochodzi z najnowszej otwartej płatności w tabeli i nie powoduje zapytania do API Stripe przy wejściu na stronę. `PackageBilling::pendingInvoiceUrl` jest usuwany.
+- Link „Pay invoice” pochodzi z `invoice_url` najnowszej otwartej płatności w tabeli i wtedy nie powoduje zapytania do API Stripe.
+- Fallback: gdy konto czeka na płatność (niedokończona subskrypcja albo otwarta płatność), a w tabeli nie ma `invoice_url`, link pobiera `PackageBilling::pendingInvoiceUrl`. Konta bez oczekującej płatności nie wywołują Stripe. Błąd Stripe w fallbacku jest logowany i strona pokazuje się bez linku. `pendingInvoiceUrl` zostaje w interfejsie.
 - Stripe jest dalej dostępny wyłącznie przez `PackageBilling`; testy nie wywołują prawdziwego API.
 
 ## Model danych
@@ -66,4 +67,5 @@ Tabela „Payment history”: data, pakiet i okres, kwota, status, link do faktu
 - Nieznany klient: 200, brak zapisu.
 - Backfill: zapisuje faktury i jest idempotentny (atrapa `invoicesFor`).
 - Widoczność: użytkownik tylko własna historia, administrator własna i klientów, super administrator wszystkie, brak dostępu do kont poza zakresem.
-- Link „Pay invoice” pochodzi z tabeli, bez wywołania Stripe.
+- Link „Pay invoice” z `invoice_url` w tabeli, bez wywołania Stripe.
+- Fallback: brak `invoice_url` przy oczekującej płatności wywołuje `pendingInvoiceUrl`; konto bez oczekującej płatności nie wywołuje Stripe; błąd Stripe nie psuje strony.
