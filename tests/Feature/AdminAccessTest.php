@@ -1,25 +1,29 @@
 <?php
 
+use App\Models\Domain;
 use App\Models\Link;
 use App\Models\Package;
+use App\Models\PackageAssignment;
 use App\Models\User;
 use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Every admin.* route as [method, uri]; {user}, {link} and {package} parameters get a real model.
+ * Every admin.* route as [method, uri]; {user}, {link}, {domain} and {package} parameters get a real model.
  *
  * @return list<array{string, string}>
  */
 function adminRoutes(): array
 {
     $target = User::factory()->create();
+    PackageAssignment::factory()->for($target)->for(Package::factory()->create(['domain_limit' => 5]))->create();
+    $domain = Domain::factory()->for($target)->create();
     $link = Link::factory()->for($target)->create();
     $package = Package::factory()->create();
 
     return collect(Route::getRoutes()->getRoutes())
         ->filter(fn (LaravelRoute $route) => str_starts_with((string) $route->getName(), 'admin.'))
-        ->map(fn (LaravelRoute $route) => [$route->methods()[0], '/'.ltrim(str_replace(['{user}', '{link}', '{package}'], [$target->id, $link->id, $package->id], $route->uri()), '/')])
+        ->map(fn (LaravelRoute $route) => [$route->methods()[0], '/'.ltrim(str_replace(['{user}', '{link}', '{domain}', '{package}'], [$target->id, $link->id, $domain->id, $package->id], $route->uri()), '/')])
         ->sortBy(fn (array $route) => $route[0] === 'DELETE' && str_ends_with($route[1], $target->id))
         ->values()
         ->all();
