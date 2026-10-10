@@ -14,7 +14,6 @@ import {
 } from "@lucide/vue";
 import { computed } from "vue";
 import AppLogo from "@/components/AppLogo.vue";
-import ModeSwitcher from "@/components/ModeSwitcher.vue";
 import NavFooter from "@/components/NavFooter.vue";
 import NavMain from "@/components/NavMain.vue";
 import NavUser from "@/components/NavUser.vue";
@@ -128,7 +127,6 @@ const footerNavItems: NavItem[] = [
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
-            <ModeSwitcher />
         </SidebarHeader>
 
         <SidebarContent>
