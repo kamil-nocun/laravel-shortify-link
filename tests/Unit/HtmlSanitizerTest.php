@@ -35,3 +35,25 @@ test('keeps everything the full editor toolbar produces', function () {
 
     expect((new HtmlSanitizer)->sanitize($html))->toBe($html);
 });
+
+test('keeps tables with spans', function () {
+    $html = (new HtmlSanitizer)->sanitize('<table><tbody><tr><th colspan="2" rowspan="1">h</th></tr><tr><td>a</td><td>b</td></tr></tbody></table>');
+
+    expect($html)->toContain('<table>', '<th colspan="2" rowspan="1">h</th>', '<td>a</td>');
+});
+
+test('keeps only text-align from style attributes', function () {
+    $html = (new HtmlSanitizer)->sanitize('<p style="text-align: center; position: fixed; background: url(https://x/y)">a</p><h2 style="color: red">b</h2><p style="text-align: evil">c</p>');
+
+    expect($html)->toContain('<p style="text-align: center">a</p>')
+        ->and($html)->not->toContain('position')->not->toContain('url(')->not->toContain('color')->not->toContain('evil');
+});
+
+test('keeps https images and drops data, http and javascript sources', function () {
+    $sanitizer = new HtmlSanitizer;
+
+    expect($sanitizer->sanitize('<img src="https://example.com/a.png" alt="a" title="t">'))->toContain('src="https://example.com/a.png"', 'alt="a"')
+        ->and($sanitizer->sanitize('<img src="data:image/png;base64,AAAA">'))->not->toContain('data:')
+        ->and($sanitizer->sanitize('<img src="http://example.com/a.png">'))->not->toContain('http://')
+        ->and($sanitizer->sanitize('<img src="javascript:alert(1)" onerror="x()">'))->not->toContain('javascript')->not->toContain('onerror');
+});

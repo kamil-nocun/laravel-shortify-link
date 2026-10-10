@@ -209,3 +209,27 @@
         }
     }
 }
+
+@layer components {
+    .cms-content {
+        & table {
+            @apply my-4 w-full border-collapse;
+        }
+        & th,
+        & td {
+            @apply border px-3 py-2 text-left align-top;
+        }
+        & th {
+            @apply bg-muted font-semibold;
+        }
+        & img {
+            @apply my-4 h-auto max-w-full rounded;
+        }
+        & hr {
+            @apply my-6;
+        }
+        & pre {
+            @apply overflow-x-auto rounded bg-muted p-3 font-mono text-sm;
+        }
+    }
+}
