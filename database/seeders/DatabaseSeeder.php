@@ -24,5 +24,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Link::factory()->count(3)->for($user)->create();
+
+        $this->call(LegalPagesSeeder::class);
     }
 }
