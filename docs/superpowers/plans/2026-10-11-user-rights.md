@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Wymagane dokumenty: slugi `terms` i `privacy-policy` (stała `ConsentDocuments::SLUGS`); pomijane, gdy strona nie jest opublikowana lub nie ma wersji.
+- Wymagane dokumenty: slugi `terms`, `privacy-policy` i `cookies-policy` (stała `ConsentDocuments::SLUGS`); pomijane, gdy strona nie jest opublikowana lub nie ma wersji.
 - `user_consents`: UUID PK; `user_id` FK cascade; `page_version_id` FK restrict; `accepted_at`; unikalny `(user_id, page_version_id)`; bez IP i User-Agent.
 - Wyjątki middleware (nazwy tras): `consent.show`, `consent.store`, `content.show`, `logout`, `privacy.export`, `profile.destroy`, `verification.*`. Trasy `links.redirect` i `domains.check` wyłączone z tego middleware (bez sesji).
 - Eksport: `GET settings/privacy/export`, nazwa trasy `privacy.export`, plik `shortify-export-YYYY-MM-DD.zip` z `profile.csv`, `links.csv`, `domains.csv`, `payments.csv`, `consents.csv` (UTF-8, `,`, nagłówki angielskie); komórki zaczynające się od `=`, `+`, `-`, `@`, tabulatora lub CR poprzedzane `'`. Bez statystyk odwiedzających.
@@ -38,7 +38,7 @@
 - Test: `tests/Feature/ConsentDocumentsTest.php`
 
 **Interfaces:**
-- Produces: `UserConsent` (`user_id`, `page_version_id`, `accepted_at`; relacje `user()`, `pageVersion()`); `User::consents(): HasMany`; `ConsentDocuments::SLUGS` (`['terms', 'privacy-policy']`); `ConsentDocuments::current(): Collection<int, PageVersion>`; `ConsentDocuments::pendingFor(User $user): Collection<int, PageVersion>`; `ConsentDocuments::accept(User $user): void`.
+- Produces: `UserConsent` (`user_id`, `page_version_id`, `accepted_at`; relacje `user()`, `pageVersion()`); `User::consents(): HasMany`; `ConsentDocuments::SLUGS` (`['terms', 'privacy-policy', 'cookies-policy']`); `ConsentDocuments::current(): Collection<int, PageVersion>`; `ConsentDocuments::pendingFor(User $user): Collection<int, PageVersion>`; `ConsentDocuments::accept(User $user): void`.
 
 - [ ] **Step 1: Padające testy** w `ConsentDocumentsTest.php` (helper tworzy opublikowaną stronę ze slugiem i wersją przez `SavePageVersion`):
   - `current returns the current versions of published required pages only` (strona w szkicu, strona bez wersji i strona spoza listy są pominięte),

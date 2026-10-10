@@ -1,7 +1,6 @@
 <?php
 
 use App\Actions\SavePageVersion;
-use App\Models\Page;
 use App\Models\PageVersion;
 use App\Models\User;
 use App\Models\UserConsent;
@@ -11,14 +10,9 @@ use Illuminate\Database\QueryException;
 test('current returns the current versions of published required pages only', function () {
     $terms = documentPage('terms');
     documentPage('privacy-policy', published: false);
-    documentPage('cookies-policy');
+    documentPage('imprint');
 
     expect(ConsentDocuments::current()->pluck('id')->all())->toBe([$terms->current_version_id]);
-
-    documentPage('imprint-draft', withVersion: false);
-    Page::factory()->published()->create(['slug' => 'privacy-policy-empty']);
-
-    expect(ConsentDocuments::current())->toHaveCount(1);
 });
 
 test('a published required page without a version is skipped', function () {

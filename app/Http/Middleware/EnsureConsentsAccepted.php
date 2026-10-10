@@ -18,7 +18,7 @@ class EnsureConsentsAccepted
     {
         $user = $request->user();
 
-        if ($user === null || $request->routeIs(self::EXEMPT) || ConsentDocuments::pendingFor($user)->isEmpty()) {
+        if ($user === null || $user->isSuperAdmin() || $request->routeIs(self::EXEMPT) || ConsentDocuments::pendingFor($user)->isEmpty()) {
             return $next($request);
         }
 

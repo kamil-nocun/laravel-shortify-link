@@ -15,7 +15,7 @@ class ConsentDocuments
     /**
      * CMS pages every user has to accept.
      */
-    public const SLUGS = ['terms', 'privacy-policy'];
+    public const SLUGS = ['terms', 'privacy-policy', 'cookies-policy'];
 
     /**
      * Current versions of the published required pages that have content.

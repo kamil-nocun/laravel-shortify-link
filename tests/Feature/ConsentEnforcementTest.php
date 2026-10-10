@@ -102,3 +102,18 @@ test('the documents themselves stay readable while consent is pending', function
 
     $this->actingAs($user)->get(route('content.show', 'terms'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('content/Show'));
 });
+
+test('a super admin is never asked for consent but other administrators are', function () {
+    documentPage('terms');
+    documentPage('privacy-policy');
+    documentPage('cookies-policy');
+
+    $this->actingAs(User::factory()->superAdmin()->create())->get(route('dashboard'))->assertOk();
+    $this->actingAs(User::factory()->admin()->create())->get(route('dashboard'))->assertRedirect(route('consent.show'));
+});
+
+test('the cookies policy is one of the documents to accept', function () {
+    documentPage('cookies-policy');
+
+    $this->actingAs(User::factory()->create())->get(route('dashboard'))->assertRedirect(route('consent.show'));
+});

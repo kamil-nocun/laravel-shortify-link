@@ -16,7 +16,7 @@ Poza zakresem: strona "Prywatność" w ustawieniach poza przyciskiem eksportu, a
 
 ## Założenia
 
-- Wymagane dokumenty: strony `terms` i `privacy-policy`.
+- Wymagane dokumenty: strony `terms`, `privacy-policy` i `cookies-policy`.
 - Edycja dokumentu w CMS tworzy nową wersję i wymusza ponowną akceptację przez wszystkich użytkowników.
 - Eksport jest generowany na żądanie i pobierany natychmiast (dane jednego konta są małe).
 - Format eksportu: ZIP z osobnym plikiem CSV na zbiór danych. Bez nowych zależności (rozszerzenie PHP `zip` jest dostępne).
@@ -27,7 +27,7 @@ Poza zakresem: strona "Prywatność" w ustawieniach poza przyciskiem eksportu, a
 **Model danych** — `user_consents` (UUID): `id`, `user_id` (FK cascade), `page_version_id` (FK restrict; wersje nie są nigdy usuwane), `accepted_at`; unikalny `(user_id, page_version_id)`. IP i User-Agent nie są zapisywane.
 
 **`App\Support\ConsentDocuments`:**
-- `SLUGS = ['terms', 'privacy-policy']`.
+- `SLUGS = ['terms', 'privacy-policy', 'cookies-policy']`.
 - `current(): Collection<PageVersion>` zwraca aktualne wersje opublikowanych stron z listy, które mają wersję; pozostałe są pomijane (nic do zaakceptowania, nic nie blokuje).
 - `pendingFor(User $user): Collection<PageVersion>` zwraca aktualne wersje, których użytkownik nie zaakceptował.
 - `accept(User $user): void` zapisuje zgody na wszystkie aktualne wersje (`insertOrIgnore` po kluczu unikalnym).
@@ -35,6 +35,8 @@ Poza zakresem: strona "Prywatność" w ustawieniach poza przyciskiem eksportu, a
 **Rejestracja:** pole `accept_terms` (wymagane, `accepted`) z linkami do dokumentów w formularzu rejestracji; `CreateNewUser` po utworzeniu konta wywołuje `ConsentDocuments::accept()`. Jeśli żaden dokument nie jest opublikowany, checkbox i jego wymóg nie są wyświetlane ani walidowane.
 
 **Wymuszenie po zalogowaniu:** middleware `App\Http\Middleware\EnsureConsentsAccepted` w grupie tras zalogowanych. Gdy `pendingFor($user)` jest niepuste, przekierowuje na `consent.show` (JSON: 409). Wyjątki, aby prawa nie zależały od zgody: `consent.show`, `consent.store`, wylogowanie, `privacy.export`, `profile.destroy`.
+
+**Super admin** jest zwolniony z wymuszania zgód (middleware go pomija); pozostali administratorzy podlegają im jak klienci.
 
 **Ekran zgody:** `GET consent` (`consent.show`, strona Inertia `consent/Show`) pokazuje oczekujące dokumenty (tytuł, link `content.show` w nowej karcie) i przycisk akceptacji; `POST consent` (`consent.store`) wywołuje `accept()` i przekierowuje na zamierzony adres lub dashboard. Użytkownik bez zgody może się wylogować lub usunąć konto.
 
