@@ -1,5 +1,8 @@
 <?php
 
+use App\Enums\Permission;
+use App\Models\PermissionRecord;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
 use App\Support\PermissionCatalog;
@@ -23,7 +26,7 @@ test('super admin creates administrator and e-mails password link', function () 
     Notification::fake();
     $super = User::factory()->superAdmin()->create();
 
-    $this->actingAs($super)->post(route('admin.administrators.store'), ['name' => 'Ada', 'email' => 'ada@example.com'])
+    $this->actingAs($super)->post(route('admin.administrators.store'), ['name' => 'Ada', 'email' => 'ada@example.com', 'role_id' => roleId(PermissionCatalog::ADMINISTRATOR_ROLE)])
         ->assertRedirect(route('admin.administrators.index'));
 
     $created = User::where('email', 'ada@example.com')->firstOrFail();
@@ -77,4 +80,41 @@ test('administrators index lists the role name', function () {
 
     $this->actingAs($super)->get(route('admin.administrators.index'))
         ->assertInertia(fn (Assert $page) => $page->where('administrators.data.0.role', PermissionCatalog::ADMINISTRATOR_ROLE));
+});
+
+test('an administrator role is required', function () {
+    $super = User::factory()->superAdmin()->create();
+
+    $this->actingAs($super)->post(route('admin.administrators.store'), ['name' => 'Ada', 'email' => 'ada@example.com'])
+        ->assertSessionHasErrors('role_id');
+    expect(User::where('email', 'ada@example.com')->exists())->toBeFalse();
+});
+
+test('an administrators manager without users.change_role only creates administrators within their own permissions', function () {
+    Notification::fake();
+    $actor = User::factory()->admin()->create();
+    $actor->permissionOverrides()->attach(PermissionRecord::where('key', Permission::AdministratorsManage)->firstOrFail(), ['granted' => true]);
+    $above = Role::factory()->create();
+    $above->permissions()->attach(PermissionRecord::whereIn('key', ['admin.access', 'roles.manage'])->pluck('id'));
+    $within = Role::factory()->create();
+    $within->permissions()->attach(PermissionRecord::whereIn('key', ['admin.access', 'users.view'])->pluck('id'));
+
+    $this->actingAs($actor)->post(route('admin.administrators.store'), ['name' => 'Ada', 'email' => 'ada@example.com', 'role_id' => $above->id])
+        ->assertSessionHasErrors('role_id');
+    expect(User::where('email', 'ada@example.com')->exists())->toBeFalse();
+
+    $this->actingAs($actor)->post(route('admin.administrators.store'), ['name' => 'Ada', 'email' => 'ada@example.com', 'role_id' => $within->id])
+        ->assertRedirect(route('admin.administrators.index'));
+    expect(User::where('email', 'ada@example.com')->value('role_id'))->toBe($within->id);
+});
+
+test('super admin creates an administrator with any administrator role', function () {
+    Notification::fake();
+    $super = User::factory()->superAdmin()->create();
+    $role = Role::factory()->create();
+    $role->permissions()->attach(PermissionRecord::whereIn('key', ['admin.access', 'roles.manage', 'packages.manage'])->pluck('id'));
+
+    $this->actingAs($super)->post(route('admin.administrators.store'), ['name' => 'Ada', 'email' => 'ada@example.com', 'role_id' => $role->id])
+        ->assertRedirect(route('admin.administrators.index'));
+    expect(User::where('email', 'ada@example.com')->value('role_id'))->toBe($role->id);
 });

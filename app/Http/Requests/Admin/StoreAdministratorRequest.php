@@ -4,6 +4,8 @@ namespace App\Http\Requests\Admin;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Rules\RoleWithinActorPermissions;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 
 class StoreAdministratorRequest extends StoreUserRequest
@@ -14,12 +16,15 @@ class StoreAdministratorRequest extends StoreUserRequest
     }
 
     /**
-     * An administrator role: not super and granting admin panel access.
+     * Every administrator gets a chosen administrator role (not super, granting admin panel access) within the actor's own permissions.
      *
-     * @return array<int, mixed>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
-    protected function roleRules(): array
+    public function rules(): array
     {
-        return ['bail', 'nullable', 'uuid', Rule::in(Role::administratorIds())];
+        return [
+            ...parent::rules(),
+            'role_id' => ['bail', 'required', 'uuid', Rule::in(Role::administratorIds()), new RoleWithinActorPermissions($this->user())],
+        ];
     }
 }

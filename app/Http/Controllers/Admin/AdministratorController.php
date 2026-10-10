@@ -75,7 +75,7 @@ class AdministratorController extends Controller
     public function store(StoreAdministratorRequest $request): RedirectResponse
     {
         $user = new User($request->safe()->except(['administrators', 'role_id']));
-        $user->role_id = $request->validated('role_id') ?? Role::where('name', PermissionCatalog::ADMINISTRATOR_ROLE)->value('id');
+        $user->role_id = $request->validated('role_id');
         $user->password = Str::password(32);
         $user->email_verified_at = now();
         $user->save();
