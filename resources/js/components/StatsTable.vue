@@ -8,7 +8,6 @@ import type { StatsTable } from '@/types';
 const props = defineProps<{
     title: string;
     label: string;
-    chartType: 'doughnut' | 'bar';
     total: number;
     table: StatsTable;
     sort: string;
@@ -98,7 +97,7 @@ const toggle = (key: 'name' | 'count') => {
         </p>
         <div v-else-if="view === 'chart'" class="space-y-2 px-4 pb-4">
             <BreakdownChart
-                :type="chartType"
+                type="doughnut"
                 :items="
                     table.rows.map((row) => ({
                         label: row.name,

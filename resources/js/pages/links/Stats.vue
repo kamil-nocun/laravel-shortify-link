@@ -634,9 +634,6 @@ const pageTable = (key: StatsTableKey, delta: number) => {
                 :key="key"
                 :title="tableTitles[key]"
                 :label="tableLabels[key]"
-                :chart-type="
-                    key === 'countries' || key === 'cities' ? 'bar' : 'doughnut'
-                "
                 :total="total"
                 :table="tables[key]"
                 :sort="wanted.sort[key]"

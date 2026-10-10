@@ -31,6 +31,14 @@ const props = defineProps<{
 
 const colors = useChartColors();
 
+function sliceColor(index: number, count: number): string {
+    const { palette } = colors.value;
+
+    return count <= palette.length
+        ? palette[index]
+        : `hsl(${Math.round((index * 360) / count)} 65% 55%)`;
+}
+
 const height = computed(() =>
     props.type === 'doughnut'
         ? '16rem'
@@ -45,11 +53,8 @@ const data = computed(() => ({
             data: props.items.map((item) => item.value),
             backgroundColor:
                 props.type === 'doughnut'
-                    ? props.items.map(
-                          (_, index) =>
-                              colors.value.palette[
-                                  index % colors.value.palette.length
-                              ],
+                    ? props.items.map((_, index) =>
+                          sliceColor(index, props.items.length),
                       )
                     : colors.value.primary,
             borderWidth: props.type === 'doughnut' ? 0 : undefined,
